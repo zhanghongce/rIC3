@@ -1,6 +1,5 @@
-use crate::utils;
-use aig::{Aig, AigEdge, AigLatch};
-use biodivine_lib_bdd::{Bdd, BddPartialValuation, BddVariableSet};
+use crate::utils::{self, aig_with_bdd::dnf_to_bdd};
+use aig::{Aig, AigEdge};
 use logic_form::{Clause, Cnf, Lit, Var};
 use sat_solver::SatSolver;
 use std::{collections::HashMap, ops::DerefMut};
@@ -84,24 +83,6 @@ impl SortNetwork {
 //     vars_set.mk_dnf(&bad_bdd)
 // }
 
-pub fn get_bdd(latchs: &[AigLatch], dnf: &[Vec<AigEdge>]) -> Bdd {
-    let mut latch_to_bdd_id = HashMap::new();
-    for (i, l) in latchs.iter().enumerate() {
-        latch_to_bdd_id.insert(l.input, i);
-    }
-    let vars_set = BddVariableSet::new_anonymous(latchs.len() as _);
-    let vars = vars_set.variables();
-    let mut bdd = Vec::new();
-    for clause in dnf {
-        let mut cube = Vec::new();
-        for l in clause.iter() {
-            cube.push((vars[latch_to_bdd_id[&l.node_id()]], !l.compl()));
-        }
-        bdd.push(BddPartialValuation::from_values(&cube));
-    }
-    vars_set.mk_dnf(&bdd)
-}
-
 pub fn preimage(aig: Aig, logic: &[AigEdge], reached_states: &[Vec<AigEdge>]) -> Vec<Vec<AigEdge>> {
     let mut block_reached_cnf = Cnf::new();
     for cube in reached_states {
@@ -163,10 +144,10 @@ pub fn preimage(aig: Aig, logic: &[AigEdge], reached_states: &[Vec<AigEdge>]) ->
             }
             solver.add_clause(&blocking_clause);
             ans.push(cube);
-            dbg!(ans.len());
+            // dbg!(ans.len());
         }
-        // dbg!(limit);
-        // dbg!(ans.len());
+        dbg!(limit);
+        dbg!(ans.len());
     }
     // dbg!(&ans.len());
     // dbg!(&ans);
@@ -237,7 +218,9 @@ pub fn preimage(aig: Aig, logic: &[AigEdge], reached_states: &[Vec<AigEdge>]) ->
 pub fn solve(aig: Aig) -> bool {
     let logic = aig.bads[0];
     let frontier = preimage(aig.clone(), &[logic], &[]);
-    let mut frontier_bdd = get_bdd(&aig.latchs, &frontier);
+    dbg!(frontier.len());
+    let mut frontier_bdd = dnf_to_bdd(&aig, &frontier);
+    dbg!(frontier_bdd.size());
     // let mut bad_states_dnf = frontier.clone();
     let mut bad_states_bdd = frontier_bdd.clone();
     let mut deep = 0;
@@ -246,8 +229,9 @@ pub fn solve(aig: Aig) -> bool {
         dbg!(bad_states_bdd.size());
         deep += 1;
         let mut tmp_aig = aig.clone();
-        let avai_logic = utils::bdd2aig::sat_up_bdd_logic_next(&mut tmp_aig, &frontier_bdd);
-        let block_logic = utils::bdd2aig::sat_up_bdd_logic_input(&mut tmp_aig, &bad_states_bdd);
+        let avai_logic = utils::aig_with_bdd::sat_up_bdd_logic_next(&mut tmp_aig, &frontier_bdd);
+        let block_logic =
+            utils::aig_with_bdd::sat_up_bdd_logic_input(&mut tmp_aig, &bad_states_bdd);
         let logic = tmp_aig.new_and_node(avai_logic, !block_logic);
         let mut new_frontier = Vec::new();
         new_frontier.extend(preimage(tmp_aig, &[logic], &[]));
@@ -259,7 +243,7 @@ pub fn solve(aig: Aig) -> bool {
         // bad_states_bdd = get_bdd(&aig.latchs, &bad_states_dnf);
         // dbg!(bad_states_bdd.size());
         // bad_states_dnf = bdd_to_dnf(aig.clone(), &bad_states_bdd);
-        frontier_bdd = get_bdd(&aig.latchs, &new_frontier);
+        frontier_bdd = dnf_to_bdd(&aig, &new_frontier);
         bad_states_bdd = bad_states_bdd.or(&frontier_bdd);
         // frontier = bdd_to_dnf(aig.clone(), &new_frontier_bdd);
     }

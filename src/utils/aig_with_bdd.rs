@@ -1,5 +1,5 @@
 use aig::{Aig, AigEdge};
-use biodivine_lib_bdd::{Bdd, BddPointer};
+use biodivine_lib_bdd::{Bdd, BddPartialValuation, BddPointer, BddVariableSet};
 use std::collections::HashMap;
 
 fn sat_up_bdd_logic_recursive(
@@ -47,4 +47,37 @@ pub fn sat_up_bdd_logic_next(aig: &mut Aig, bdd: &Bdd) -> AigEdge {
         var_map.insert(i, aig.latchs[i].next);
     }
     sat_up_bdd_logic_recursive(aig, bdd, bdd.root_pointer(), &var_map, &mut HashMap::new())
+}
+
+pub fn dnf_to_bdd(aig: &Aig, dnf: &[Vec<AigEdge>]) -> Bdd {
+    let mut latch_to_bdd_id = HashMap::new();
+    for (i, l) in aig.latchs.iter().enumerate() {
+        latch_to_bdd_id.insert(l.input, i);
+    }
+    let vars_set = BddVariableSet::new_anonymous(aig.latchs.len() as _);
+    let vars = vars_set.variables();
+    let mut bdd = Vec::new();
+    for clause in dnf {
+        let mut cube = Vec::new();
+        for l in clause.iter() {
+            cube.push((vars[latch_to_bdd_id[&l.node_id()]], !l.compl()));
+        }
+        bdd.push(BddPartialValuation::from_values(&cube));
+    }
+    vars_set.mk_dnf(&bdd)
+}
+
+pub fn bdd_to_dnf(aig: &Aig, bdd: &Bdd) -> Vec<Vec<AigEdge>> {
+    let dnf: Vec<Vec<AigEdge>> = bdd
+        .sat_clauses()
+        .map(|v| {
+            let cube: Vec<AigEdge> = v
+                .to_values()
+                .iter()
+                .map(|(var, val)| AigEdge::new(aig.latchs[Into::<usize>::into(*var)].input, !val))
+                .collect();
+            cube
+        })
+        .collect();
+    dnf
 }

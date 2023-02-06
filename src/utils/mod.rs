@@ -1,1 +1,2 @@
-pub mod bdd2aig;
+pub mod aig_with_bdd;
+pub mod generalize;
