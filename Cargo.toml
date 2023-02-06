@@ -1,0 +1,12 @@
+[package]
+name = "hwmc"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+aig = { path = "../aig" }
+sat-solver = { path = "../sat-solver" }
+logic-form = { path = "../logic-form" }
+biodivine-lib-bdd = { path = "../biodivine-lib-bdd" }
