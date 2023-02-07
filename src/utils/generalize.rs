@@ -1,11 +1,11 @@
-use aig::{Aig, AigEdge, TernaryValue};
+use aig::{Aig, AigEdge, TernaryValue, AigCube};
 use std::assert_matches::assert_matches;
 
 pub fn generalize_by_ternary_simulation(
     aig: &Aig,
     cex: &[AigEdge],
     assumptions: &[AigEdge],
-) -> Vec<AigEdge> {
+) -> AigCube {
     let mut value = vec![TernaryValue::X; aig.nodes.len()];
     let mut primary_inputs = Vec::new();
     let mut latch_inputs = Vec::new();
@@ -43,7 +43,7 @@ pub fn generalize_by_ternary_simulation(
             }
         }
     }
-    let mut cube = Vec::new();
+    let mut cube = AigCube::new();
     for (i, value) in latch_inputs.iter().enumerate().take(aig.latchs.len()) {
         match value {
             TernaryValue::True => {

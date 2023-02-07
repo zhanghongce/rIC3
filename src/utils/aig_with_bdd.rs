@@ -1,4 +1,4 @@
-use aig::{Aig, AigEdge};
+use aig::{Aig, AigDnf, AigEdge};
 use biodivine_lib_bdd::{Bdd, BddPartialValuation, BddPointer, BddVariableSet};
 use std::collections::HashMap;
 
@@ -49,7 +49,7 @@ pub fn sat_up_bdd_logic_next(aig: &mut Aig, bdd: &Bdd) -> AigEdge {
     sat_up_bdd_logic_recursive(aig, bdd, bdd.root_pointer(), &var_map, &mut HashMap::new())
 }
 
-pub fn dnf_to_bdd(aig: &Aig, dnf: &[Vec<AigEdge>]) -> Bdd {
+pub fn dnf_to_bdd(aig: &Aig, dnf: &AigDnf) -> Bdd {
     let mut latch_to_bdd_id = HashMap::new();
     for (i, l) in aig.latchs.iter().enumerate() {
         latch_to_bdd_id.insert(l.input, i);
@@ -57,7 +57,7 @@ pub fn dnf_to_bdd(aig: &Aig, dnf: &[Vec<AigEdge>]) -> Bdd {
     let vars_set = BddVariableSet::new_anonymous(aig.latchs.len() as _);
     let vars = vars_set.variables();
     let mut bdd = Vec::new();
-    for clause in dnf {
+    for clause in dnf.iter() {
         let mut cube = Vec::new();
         for l in clause.iter() {
             cube.push((vars[latch_to_bdd_id[&l.node_id()]], !l.compl()));

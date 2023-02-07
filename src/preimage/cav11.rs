@@ -1,5 +1,5 @@
 use crate::utils::{self, aig_with_bdd::dnf_to_bdd};
-use aig::{Aig, AigEdge};
+use aig::{Aig, AigCube, AigDnf, AigEdge};
 use logic_form::{Clause, Cnf, Lit, Var};
 use sat_solver::SatSolver;
 use std::{collections::HashMap, ops::DerefMut};
@@ -83,7 +83,7 @@ impl SortNetwork {
 //     vars_set.mk_dnf(&bad_bdd)
 // }
 
-pub fn preimage(aig: Aig, logic: &[AigEdge], reached_states: &[Vec<AigEdge>]) -> Vec<Vec<AigEdge>> {
+pub fn preimage(aig: Aig, logic: &[AigEdge], reached_states: &[Vec<AigEdge>]) -> AigDnf {
     let mut block_reached_cnf = Cnf::new();
     for cube in reached_states {
         let mut clause = Clause::new();
@@ -117,7 +117,7 @@ pub fn preimage(aig: Aig, logic: &[AigEdge], reached_states: &[Vec<AigEdge>]) ->
             }
         }
     }
-    let mut ans = Vec::new();
+    let mut ans = AigDnf::new();
     let mut solver = sat_solver::minisat::Solver::new();
     solver.add_cnf(&cnf);
     solver.add_cnf(&block_reached_cnf);
@@ -133,7 +133,7 @@ pub fn preimage(aig: Aig, logic: &[AigEdge], reached_states: &[Vec<AigEdge>]) ->
         sort_outputs[limit] = !sort_outputs[limit];
         while let Some(cex) = solver.solve(&sort_outputs) {
             let mut blocking_clause = Clause::new();
-            let mut cube = Vec::new();
+            let mut cube = AigCube::new();
             for lit in cex {
                 if let Some(origin) = dual_to_origin.get(&lit.var()) {
                     if !lit.compl() {
@@ -233,8 +233,8 @@ pub fn solve(aig: Aig) -> bool {
         let block_logic =
             utils::aig_with_bdd::sat_up_bdd_logic_input(&mut tmp_aig, &bad_states_bdd);
         let logic = tmp_aig.new_and_node(avai_logic, !block_logic);
-        let mut new_frontier = Vec::new();
-        new_frontier.extend(preimage(tmp_aig, &[logic], &[]));
+        let mut new_frontier = AigDnf::new();
+        new_frontier = new_frontier + preimage(tmp_aig, &[logic], &[]);
         // bad_states_dnf.extend_from_slice(&new_frontier);
         dbg!(new_frontier.len());
         if new_frontier.is_empty() {
