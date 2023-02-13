@@ -1,26 +1,19 @@
 use aig::{Aig, AigCube, AigEdge, TernaryValue};
+use sat_solver::SatModel;
 use std::assert_matches::assert_matches;
 
-pub fn generalize_by_ternary_simulation(
+pub fn generalize_by_ternary_simulation<'a, M: SatModel<'a>>(
     aig: &Aig,
-    cex: &[AigEdge],
+    model: M,
     assumptions: &[AigEdge],
 ) -> AigCube {
-    let mut value = vec![TernaryValue::X; aig.nodes.len()];
     let mut primary_inputs = Vec::new();
     let mut latch_inputs = Vec::new();
-    for lit in cex {
-        value[lit.node_id()] = if lit.compl() {
-            TernaryValue::False
-        } else {
-            TernaryValue::True
-        };
-    }
     for input in &aig.inputs {
-        primary_inputs.push(value[*input]);
+        primary_inputs.push(model.var_value((*input).into()).into());
     }
     for latch in &aig.latchs {
-        latch_inputs.push(value[latch.input])
+        latch_inputs.push(model.var_value(latch.input.into()).into());
     }
     let simulation = aig.ternary_simulate(&primary_inputs, &latch_inputs);
     for logic in assumptions {
