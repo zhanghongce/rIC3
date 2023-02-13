@@ -12,7 +12,7 @@ fn logic_dnf(aig: &Aig, logic: AigEdge) -> AigDnf {
     while let Some(cex) = solver.solve(&[logic]) {
         let cube = generalize_by_ternary_simulation(aig, cex, &[logic]);
         solver.add_clause(&!cube.clone());
-        dnf.push(cube);
+        dnf.add_cube(cube);
     }
     dnf
 }
@@ -133,14 +133,16 @@ pub fn solve(aig: Aig) -> bool {
         while let Some(cex) = solver.solve(&[logic]) {
             let cube = generalize_by_ternary_simulation(&aig_tmp, cex, &[logic]);
             solver.add_clause(&!cube.clone());
-            new_frontier.push(cube);
+            new_frontier.add_cube(cube);
         }
         if new_frontier.is_empty() {
             dbg!(deep);
             return true;
         } else {
             dbg!(new_frontier.len());
-            bad_dnf.extend_from_slice(&new_frontier);
+            for cube in new_frontier.iter() {
+                bad_dnf.add_cube(cube.clone());
+            }
             dbg!(bad_dnf.len());
             frontier_bdd = dnf_to_bdd(&aig, &new_frontier);
             // bad_bdd = bad_bdd.or(&frontier_bdd);

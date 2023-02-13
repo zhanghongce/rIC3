@@ -1,4 +1,4 @@
-use aig::{Aig, AigEdge, TernaryValue, AigCube};
+use aig::{Aig, AigCube, AigEdge, TernaryValue};
 use std::assert_matches::assert_matches;
 
 pub fn generalize_by_ternary_simulation(
