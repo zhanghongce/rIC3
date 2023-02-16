@@ -19,15 +19,22 @@ fn main() {
     // let aig = aig::Aig::from_file("../MC-Benchmark/hwmcc08/pdtvishuffman7.aag").unwrap();
     // let aig = aig::Aig::from_file("../MC-Benchmark/hwmcc20/aig/2019/goel/opensource/h_TreeArb/h_TreeArb.aag").unwrap();
     // let aig = aig::Aig::from_file("../MC-Benchmark/hwmcc08/srg5ptimo.aag").unwrap();
-    // let aig = aig::Aig::from_file("../MC-Benchmark/hwmcc20/aig/2019/goel/opensource/vcegar_QF_BV_itc99_b13_p10/vcegar_QF_BV_itc99_b13_p10.aag").unwrap();
-    // let aig = aig::Aig::from_file("../MC-Benchmark/hwmcc20/aig/2020/mann/simple_alu.aag").unwrap();
-    // let aig = aig::Aig::from_file("../MC-Benchmark/hwmcc20/aig/2019/beem/anderson.3.prop1-back-serstep.aag").unwrap();
-    
-    // let aig = aig::Aig::from_file("../MC-Benchmark/hwmcc20/aig/2019/beem/at.6.prop1-back-serstep.aag").unwrap();
+
+    // Safe
+
+    // let aig = aig::Aig::from_file("../MC-Benchmark/hwmcc20/aig/2020/mann/rast-p00.aag").unwrap();
+
+    // let aig = aig::Aig::from_file("../MC-Benchmark/hwmcc20/aig/2019/goel/industry/cal143/cal143.aag").unwrap();
+    let aig =
+        aig::Aig::from_file("../MC-Benchmark/hwmcc20/aig/2019/goel/industry/cal102/cal102.aag")
+            .unwrap();
     // let aig = aig::Aig::from_file("../MC-Benchmark/hwmcc17/single/intel007.aag").unwrap();
-    let aig = aig::Aig::from_file("../MC-Benchmark/hwmcc15/single/139442p0.aag").unwrap();
-    println!("{}", aig);
+
+    // Unsafe
+    // let aig = aig::Aig::from_file("../MC-Benchmark/hwmcc20/aig/2019/beem/at.6.prop1-back-serstep.aag").unwrap();
+
+    // println!("{}", aig);
     // dbg!(preimage::circuit_sat::solve(aig.clone()));
-    dbg!(pdr::pdr::solve(aig.clone()));
+    dbg!(pdr::pdr::solve(aig));
     println!("{:?}", start.elapsed());
 }

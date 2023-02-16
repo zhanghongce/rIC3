@@ -74,20 +74,10 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "14c189c53d098945499cdfa7ecc63567cf3886b3332b312a5b4585d8d3a6a610"
 
 [[package]]
-name = "cadical"
-version = "0.1.14"
-dependencies = [
- "cc",
-]
-
-[[package]]
 name = "cc"
 version = "1.0.79"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "50d30906286121d95be3d479533b458f87493b30a4b5f79a607db8f5d11aa91f"
-dependencies = [
- "jobserver",
-]
 
 [[package]]
 name = "cexpr"
@@ -155,15 +145,6 @@ dependencies = [
  "biodivine-lib-bdd",
  "logic-form",
  "sat-solver",
-]
-
-[[package]]
-name = "jobserver"
-version = "0.1.25"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "068b1ee6743e4d11fb9c6a1e6064b3693a1b600e7f5f5988047d98b3dc9fb90b"
-dependencies = [
- "libc",
 ]
 
 [[package]]
@@ -360,7 +341,6 @@ version = "0.1.0"
 dependencies = [
  "abc-glucose",
  "aig",
- "cadical",
  "logic-form",
  "minisat",
 ]

@@ -15,7 +15,7 @@ pub fn generalize_by_ternary_simulation<'a, M: SatModel<'a>>(
     for latch in &aig.latchs {
         latch_inputs.push(model.var_value(latch.input.into()).into());
     }
-    let simulation = aig.ternary_simulate(&primary_inputs, &latch_inputs);
+    let mut simulation = aig.ternary_simulate(&primary_inputs, &latch_inputs);
     for logic in assumptions {
         assert_matches!(
             simulation[logic.node_id()].not_if(logic.compl()),
@@ -26,12 +26,17 @@ pub fn generalize_by_ternary_simulation<'a, M: SatModel<'a>>(
         if let TernaryValue::True | TernaryValue::False = latch_inputs[i] {
             let origin = latch_inputs[i];
             latch_inputs[i] = TernaryValue::X;
-            let simulation = aig.ternary_simulate(&primary_inputs, &latch_inputs);
+            simulation =
+                aig.update_ternary_simulate(simulation, aig.latchs[i].input, TernaryValue::X);
             for logic in assumptions {
                 match simulation[logic.node_id()].not_if(logic.compl()) {
                     TernaryValue::True => (),
                     TernaryValue::False => panic!(),
-                    TernaryValue::X => latch_inputs[i] = origin,
+                    TernaryValue::X => {
+                        latch_inputs[i] = origin;
+                        simulation =
+                            aig.update_ternary_simulate(simulation, aig.latchs[i].input, origin);
+                    }
                 }
             }
         }
