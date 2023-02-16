@@ -1,8 +1,9 @@
+use super::statistic::Statistic;
 use crate::utils::{generalize::generalize_by_ternary_simulation, state_transform::StateTransform};
 use aig::{Aig, AigCube};
-use logic_form::{Cnf, Cube, Dnf, Lit};
+use logic_form::{Clause, Cnf, Cube, Lit};
 use sat_solver::{minisat::Solver, SatResult, SatSolver, UnsatConflict};
-use std::{collections::BinaryHeap, fmt::Debug, mem::take, ops::AddAssign};
+use std::{collections::BinaryHeap, mem::take};
 
 pub struct Pdr {
     aig: Aig,
@@ -26,8 +27,6 @@ impl Pdr {
         self.delta_frames.push(Vec::new());
         self.statistic.num_frames = self.depth();
     }
-
-    fn trivial_blocked(&self, cube: Cube) {}
 
     fn blocked(
         &mut self,
@@ -78,6 +77,7 @@ impl Pdr {
     }
 
     fn frame_add_cube(&mut self, frame: usize, cube: Cube, to_all: bool) {
+        assert!(cube.is_sorted_by_key(|x| x.var()));
         let begin = if to_all { 1 } else { frame };
         self.delta_frames[frame].push(cube.clone());
         let clause = !cube;
@@ -91,9 +91,7 @@ impl Pdr {
         let mut i = 0;
         cube.sort_by_key(|x| *x.var());
         while i < cube.len() {
-            // cube.sort_by(|x, y| x.var().cmp(&y.var()));
             let removed = cube.remove(i);
-            // cube.sort_by(|x, y| x.var().cmp(&y.var()));
             if !cube.subsume(&self.aig.latch_init_cube().to_cube()) {
                 self.statistic.num_mic_blocked += 1;
                 if let (true, conflict) = self.blocked(frame, &cube, false, true) {
@@ -109,8 +107,6 @@ impl Pdr {
                 self.statistic.num_mic_drop_fail += 1;
             }
             cube.insert(i, removed);
-            // let last_idx = cube.len() - 1;
-            // cube.swap(i, last_idx);
             i += 1;
         }
         cube
@@ -129,25 +125,31 @@ impl Pdr {
 
     fn rec_block(&mut self, frame: usize, cube: Cube) -> bool {
         let mut heap = BinaryHeap::new();
+        let mut heap_num = vec![0; frame + 1];
         heap.push(HeapFrameCube::new(frame, cube));
+        heap_num[frame] += 1;
         while let Some(HeapFrameCube { frame, cube }) = heap.pop() {
-            // dbg!(heap.len());
+            assert!(cube.is_sorted_by_key(|x| x.var()));
             if frame == 0 {
                 return false;
             }
-
+            println!("{:?}", heap_num);
+            heap_num[frame] -= 1;
             self.statistic.num_rec_block_blocked += 1;
             match self.blocked(frame, &cube, true, true) {
                 (true, conflict) => {
                     let (frame, core) = self.generalize(frame, conflict);
                     if frame < self.depth() {
                         heap.push(HeapFrameCube::new(frame + 1, cube));
+                        heap_num[frame + 1] += 1;
                     }
                     self.frame_add_cube(frame - 1, core, true);
                 }
                 (false, cex) => {
                     heap.push(HeapFrameCube::new(frame - 1, cex));
                     heap.push(HeapFrameCube::new(frame, cube));
+                    heap_num[frame - 1] += 1;
+                    heap_num[frame] += 1;
                 }
             }
         }
@@ -183,20 +185,16 @@ impl Pdr {
     pub fn new(aig: Aig) -> Self {
         let mut solvers = vec![Solver::new()];
         let transition_cnf = aig.get_cnf();
-        let init_iter = aig
-            .latchs
-            .iter()
-            .map(|l| Cube::from([Lit::new(l.input.into(), l.init)]));
-        let init = Dnf::from_iter(init_iter.clone());
         solvers[0].add_cnf(&transition_cnf);
-        solvers[0].add_cnf(&!init);
-        let init = Vec::from_iter(init_iter);
+        for l in aig.latchs.iter() {
+            solvers[0].add_clause(&Clause::from([Lit::new(l.input.into(), !l.init)]));
+        }
         let state_transform = StateTransform::new(&aig);
         Self {
             aig,
             transition_cnf,
             state_transform,
-            delta_frames: vec![init],
+            delta_frames: vec![vec![]],
             solvers,
             statistic: Statistic::default(),
         }
@@ -212,18 +210,29 @@ impl Pdr {
                 self.statistic.num_get_bad_state += 1;
                 let cex = generalize_by_ternary_simulation(&self.aig, model, &[self.aig.bads[0]])
                     .to_cube();
+                self.statistic();
                 if !self.rec_block(last_frame_index, cex) {
-                    dbg!(&self.statistic);
+                    self.statistic();
                     return false;
                 }
             }
-            dbg!(&self.statistic);
+            self.statistic();
             self.new_frame();
             if self.propagate() {
-                dbg!(&self.statistic);
+                self.statistic();
                 return true;
             }
         }
+    }
+}
+
+impl Pdr {
+    fn statistic(&self) {
+        for frame in self.delta_frames.iter() {
+            print!("{} ", frame.len())
+        }
+        println!();
+        println!("{:?}", self.statistic);
     }
 }
 
@@ -257,39 +266,6 @@ impl Eq for HeapFrameCube {
 impl Ord for HeapFrameCube {
     fn cmp(&self, other: &Self) -> std::cmp::Ordering {
         other.frame.cmp(&self.frame)
-    }
-}
-
-#[derive(Debug, Default)]
-struct Statistic {
-    num_blocked: usize,
-    num_frames: usize,
-    num_mic_blocked: usize,
-    num_generalize_blocked: usize,
-    num_propagete_blocked: usize,
-    num_rec_block_blocked: usize,
-    num_mic_drop_success: usize,
-    num_mic_drop_fail: usize,
-    num_get_bad_state: usize,
-    average_mic_cube_len: StatisticAverage,
-}
-
-#[derive(Default)]
-struct StatisticAverage {
-    sum: usize,
-    num: usize,
-}
-
-impl Debug for StatisticAverage {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.sum as f32 / self.num as f32)
-    }
-}
-
-impl AddAssign<usize> for StatisticAverage {
-    fn add_assign(&mut self, rhs: usize) {
-        self.sum += rhs;
-        self.num += 1;
     }
 }
 
