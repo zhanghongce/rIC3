@@ -1,4 +1,4 @@
-use super::statistic::Statistic;
+use super::{activity::Activity, statistic::Statistic};
 use crate::utils::{generalize::generalize_by_ternary_simulation, state_transform::StateTransform};
 use aig::{Aig, AigCube};
 use logic_form::{Clause, Cnf, Cube, Lit};
@@ -8,9 +8,11 @@ use std::{collections::BinaryHeap, mem::take};
 pub struct Pdr {
     aig: Aig,
     transition_cnf: Cnf,
+    init_cube: Cube,
     state_transform: StateTransform,
     delta_frames: Vec<Vec<Cube>>,
     solvers: Vec<Solver>,
+    activity: Activity,
 
     statistic: Statistic,
 }
@@ -86,28 +88,43 @@ impl Pdr {
         }
     }
 
+    fn down(&mut self, frame: usize, cube: Cube) -> Option<Cube> {
+        if cube.subsume(&self.init_cube) {
+            return None;
+        }
+        self.statistic.num_down_blocked += 1;
+        match self.blocked(frame, &cube, false, true) {
+            (true, conflict) => Some(conflict),
+            (false, _) => {
+                // let cex_set: HashSet<Lit> = HashSet::from_iter(cex.into_iter());
+                // cube = cube.into_iter().filter(|l| cex_set.contains(l)).collect();
+                None
+            }
+        }
+    }
+
     fn mic(&mut self, frame: usize, mut cube: Cube) -> Cube {
         self.statistic.average_mic_cube_len += cube.len();
         let mut i = 0;
-        cube.sort_by_key(|x| *x.var());
+        assert!(cube.is_sorted_by_key(|x| *x.var()));
+        cube = self.activity.sort_by_activity_ascending(cube);
         while i < cube.len() {
-            let removed = cube.remove(i);
-            if !cube.subsume(&self.aig.latch_init_cube().to_cube()) {
-                self.statistic.num_mic_blocked += 1;
-                if let (true, conflict) = self.blocked(frame, &cube, false, true) {
+            let mut removed_cube = cube.clone();
+            removed_cube.remove(i);
+            match self.down(frame, removed_cube) {
+                Some(new_cube) => {
+                    cube = new_cube;
                     self.statistic.num_mic_drop_success += 1;
-                    for j in 0..i {
-                        assert!(conflict[j] == cube[j]);
-                    }
-                    if conflict.len() < cube.len() {
-                        cube = conflict;
-                    }
-                    continue;
                 }
-                self.statistic.num_mic_drop_fail += 1;
+                None => {
+                    self.statistic.num_mic_drop_fail += 1;
+                    i += 1;
+                }
             }
-            cube.insert(i, removed);
-            i += 1;
+        }
+        cube.sort_by_key(|x| *x.var());
+        for l in cube.iter() {
+            self.activity.pump_activity(l);
         }
         cube
     }
@@ -133,7 +150,8 @@ impl Pdr {
             if frame == 0 {
                 return false;
             }
-            println!("{:?}", heap_num);
+            // println!("{:?}", heap_num);
+            // self.statistic();
             heap_num[frame] -= 1;
             self.statistic.num_rec_block_blocked += 1;
             match self.blocked(frame, &cube, true, true) {
@@ -185,17 +203,21 @@ impl Pdr {
     pub fn new(aig: Aig) -> Self {
         let mut solvers = vec![Solver::new()];
         let transition_cnf = aig.get_cnf();
+        let init_cube = aig.latch_init_cube().to_cube();
         solvers[0].add_cnf(&transition_cnf);
         for l in aig.latchs.iter() {
             solvers[0].add_clause(&Clause::from([Lit::new(l.input.into(), !l.init)]));
         }
         let state_transform = StateTransform::new(&aig);
+        let activity = Activity::new(&aig);
         Self {
             aig,
             transition_cnf,
+            init_cube,
             state_transform,
             delta_frames: vec![vec![]],
             solvers,
+            activity,
             statistic: Statistic::default(),
         }
     }
@@ -210,7 +232,7 @@ impl Pdr {
                 self.statistic.num_get_bad_state += 1;
                 let cex = generalize_by_ternary_simulation(&self.aig, model, &[self.aig.bads[0]])
                     .to_cube();
-                self.statistic();
+                // self.statistic();
                 if !self.rec_block(last_frame_index, cex) {
                     self.statistic();
                     return false;

@@ -1,17 +1,18 @@
-use logic_form::Cube;
-use std::fmt::Debug;
-use std::{collections::HashMap, ops::AddAssign};
+use std::{fmt::Debug, ops::AddAssign};
+
 #[derive(Debug, Default)]
 pub struct Statistic {
     pub num_blocked: usize,
     pub num_frames: usize,
-    pub num_mic_blocked: usize,
+    pub num_down_blocked: usize,
     pub num_generalize_blocked: usize,
     pub num_propagete_blocked: usize,
     pub num_rec_block_blocked: usize,
     pub num_mic_drop_success: usize,
     pub num_mic_drop_fail: usize,
     pub num_get_bad_state: usize,
+    pub num_removed_double_success: usize,
+    pub num_removed_double_try: usize,
     pub average_mic_cube_len: StatisticAverage,
 }
 

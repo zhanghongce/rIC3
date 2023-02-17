@@ -24,12 +24,12 @@ fn main() {
 
     // let aig = aig::Aig::from_file("../MC-Benchmark/hwmcc20/aig/2020/mann/rast-p00.aag").unwrap();
 
-    let aig =
-        aig::Aig::from_file("../MC-Benchmark/hwmcc20/aig/2019/goel/industry/cal143/cal143.aag")
-            .unwrap();
     // let aig =
-    //     aig::Aig::from_file("../MC-Benchmark/hwmcc20/aig/2019/goel/industry/cal102/cal102.aag")
+    //     aig::Aig::from_file("../MC-Benchmark/hwmcc20/aig/2019/goel/industry/cal143/cal143.aag")
     //         .unwrap();
+    let aig =
+        aig::Aig::from_file("../MC-Benchmark/hwmcc20/aig/2019/goel/industry/cal102/cal102.aag")
+            .unwrap();
     // let aig = aig::Aig::from_file("../MC-Benchmark/hwmcc17/single/intel007.aag").unwrap();
 
     // Unsafe
