@@ -14,11 +14,14 @@ pub struct Statistic {
     pub num_removed_double_success: usize,
     pub num_removed_double_try: usize,
     pub average_mic_cube_len: StatisticAverage,
+    pub average_mic_droped_var: StatisticAverage,
+    pub average_mic_droped_var_percent: StatisticAverage,
+    pub average_mic_single_removable_percent: StatisticAverage,
 }
 
 #[derive(Default)]
 pub struct StatisticAverage {
-    sum: usize,
+    sum: f64,
     num: usize,
 }
 
@@ -30,6 +33,13 @@ impl Debug for StatisticAverage {
 
 impl AddAssign<usize> for StatisticAverage {
     fn add_assign(&mut self, rhs: usize) {
+        self.sum += rhs as f64;
+        self.num += 1;
+    }
+}
+
+impl AddAssign<f64> for StatisticAverage {
+    fn add_assign(&mut self, rhs: f64) {
         self.sum += rhs;
         self.num += 1;
     }

@@ -30,13 +30,7 @@ impl Pdr {
         self.statistic.num_frames = self.depth();
     }
 
-    fn blocked(
-        &mut self,
-        frame: usize,
-        cube: &Cube,
-        need_cex: bool,
-        need_conflict: bool,
-    ) -> (bool, Cube) {
+    fn blocked<'a>(&'a mut self, frame: usize, cube: &Cube) -> BlockResult<'a> {
         self.statistic.num_blocked += 1;
         let mut assumption = self.state_transform.cube_next(cube);
         let act = self.solvers[frame - 1].new_var();
@@ -45,35 +39,25 @@ impl Pdr {
         tmp_cls.push(!act);
         self.solvers[frame - 1].add_clause(&tmp_cls);
         match self.solvers[frame - 1].solve(&assumption) {
-            SatResult::Sat(model) => {
-                if need_cex {
-                    let last = assumption.len() - 1;
-                    let act = !assumption.remove(last);
-                    let cex = generalize_by_ternary_simulation(
-                        &self.aig,
-                        model,
-                        &AigCube::from_cube(assumption),
-                    )
-                    .to_cube();
-                    self.solvers[frame - 1].release_var(act);
-                    (false, cex)
-                } else {
-                    (false, Cube::new())
-                }
+            SatResult::Sat(_) => {
+                let last = assumption.len() - 1;
+                let act = !assumption.remove(last);
+                self.solvers[frame - 1].release_var(act);
+                BlockResult::No(BlockResultNo {
+                    solver: &mut self.solvers[frame - 1],
+                    aig: &self.aig,
+                    assumption,
+                })
             }
-            SatResult::Unsat(conflict) => {
-                if need_conflict {
-                    let last = assumption.len() - 1;
-                    let act = !assumption.remove(last);
-                    let ans = self
-                        .state_transform
-                        .previous(assumption.into_iter().filter(|l| conflict.has_lit(!*l)))
-                        .collect();
-                    self.solvers[frame - 1].release_var(act);
-                    (true, ans)
-                } else {
-                    (true, Cube::new())
-                }
+            SatResult::Unsat(_) => {
+                let last = assumption.len() - 1;
+                let act = !assumption.remove(last);
+                self.solvers[frame - 1].release_var(act);
+                BlockResult::Yes(BlockResultYes {
+                    solver: &mut self.solvers[frame - 1],
+                    state_transform: &self.state_transform,
+                    assumption,
+                })
             }
         }
     }
@@ -93,20 +77,47 @@ impl Pdr {
             return None;
         }
         self.statistic.num_down_blocked += 1;
-        match self.blocked(frame, &cube, false, true) {
-            (true, conflict) => Some(conflict),
-            (false, _) => {
-                // let cex_set: HashSet<Lit> = HashSet::from_iter(cex.into_iter());
-                // cube = cube.into_iter().filter(|l| cex_set.contains(l)).collect();
-                None
-            }
+        match self.blocked(frame, &cube) {
+            BlockResult::Yes(conflict) => Some(conflict.get_conflict()),
+            BlockResult::No(_) => None,
         }
     }
 
+    // fn ctg_down(&mut self, frame: usize, cube: Cube, rec_depth: usize) -> Option<Cube> {
+    //     let ctgs = 0;
+    //     loop {
+    //         if cube.subsume(&self.init_cube) {
+    //             return None;
+    //         }
+    //         // match self.blocked(frame, &cube, true, true) {
+    //         //     (true, conflict) => Some(conflict),
+    //         //     (false, cex) => {
+    //         //         // if rec_depth > 1 {
+    //         //         //     return None;
+    //         //         // }
+    //         //         // let cex_set: HashSet<Lit> = HashSet::from_iter(cex.into_iter());
+    //         //         // cube = cube.into_iter().filter(|l| cex_set.contains(l)).collect();
+    //         //         todo!();
+    //         //     }
+    //         // }
+    //     }
+    // }
+
     fn mic(&mut self, frame: usize, mut cube: Cube) -> Cube {
         self.statistic.average_mic_cube_len += cube.len();
+        let origin_len = cube.len();
         let mut i = 0;
         assert!(cube.is_sorted_by_key(|x| *x.var()));
+        // let mut single_removable = 0;
+        // for i in 0..origin_len {
+        //     let mut removed_cube = cube.clone();
+        //     removed_cube.remove(i);
+        //     if let Some(_) = self.down(frame, removed_cube) {
+        //         single_removable += 1;
+        //     }
+        // }
+        // self.statistic.average_mic_single_removable_percent +=
+        // single_removable as f64 / origin_len as f64;
         cube = self.activity.sort_by_activity_ascending(cube);
         while i < cube.len() {
             let mut removed_cube = cube.clone();
@@ -126,6 +137,9 @@ impl Pdr {
         for l in cube.iter() {
             self.activity.pump_activity(l);
         }
+        self.statistic.average_mic_droped_var += origin_len - cube.len();
+        self.statistic.average_mic_droped_var_percent +=
+            (origin_len - cube.len()) as f64 / origin_len as f64;
         cube
     }
 
@@ -133,7 +147,7 @@ impl Pdr {
         let cube = self.mic(frame, cube);
         for i in frame + 1..=self.depth() {
             self.statistic.num_generalize_blocked += 1;
-            if let (false, _) = self.blocked(i, &cube, false, false) {
+            if let BlockResult::No(_) = self.blocked(i, &cube) {
                 return (i, cube);
             }
         }
@@ -150,12 +164,13 @@ impl Pdr {
             if frame == 0 {
                 return false;
             }
-            // println!("{:?}", heap_num);
-            // self.statistic();
+            println!("{:?}", heap_num);
+            self.statistic();
             heap_num[frame] -= 1;
             self.statistic.num_rec_block_blocked += 1;
-            match self.blocked(frame, &cube, true, true) {
-                (true, conflict) => {
+            match self.blocked(frame, &cube) {
+                BlockResult::Yes(conflict) => {
+                    let conflict = conflict.get_conflict();
                     let (frame, core) = self.generalize(frame, conflict);
                     if frame < self.depth() {
                         heap.push(HeapFrameCube::new(frame + 1, cube));
@@ -163,8 +178,8 @@ impl Pdr {
                     }
                     self.frame_add_cube(frame - 1, core, true);
                 }
-                (false, cex) => {
-                    heap.push(HeapFrameCube::new(frame - 1, cex));
+                BlockResult::No(model) => {
+                    heap.push(HeapFrameCube::new(frame - 1, model.get_model()));
                     heap.push(HeapFrameCube::new(frame, cube));
                     heap_num[frame - 1] += 1;
                     heap_num[frame] += 1;
@@ -179,14 +194,18 @@ impl Pdr {
             let frame = take(&mut self.delta_frames[frame_idx]);
             for cube in frame {
                 self.statistic.num_propagete_blocked += 1;
-                if let (true, conflict) = self.blocked(frame_idx + 1, &cube, false, true) {
-                    assert!(conflict.len() <= cube.len());
-                    let to_all = conflict.len() < cube.len();
-                    self.frame_add_cube(frame_idx + 1, conflict, to_all);
-                } else {
-                    // 利用cex？
-                    self.delta_frames[frame_idx].push(cube);
-                }
+                match self.blocked(frame_idx + 1, &cube) {
+                    BlockResult::Yes(conflict) => {
+                        let conflict = conflict.get_conflict();
+                        assert!(conflict.len() <= cube.len());
+                        let to_all = conflict.len() < cube.len();
+                        self.frame_add_cube(frame_idx + 1, conflict, to_all);
+                    }
+                    BlockResult::No(_) => {
+                        // 利用cex？
+                        self.delta_frames[frame_idx].push(cube);
+                    }
+                };
             }
             if self.delta_frames[frame_idx].is_empty() {
                 return true;
@@ -255,6 +274,63 @@ impl Pdr {
         }
         println!();
         println!("{:?}", self.statistic);
+    }
+}
+
+enum BlockResult<'a> {
+    Yes(BlockResultYes<'a>),
+    No(BlockResultNo<'a>),
+}
+
+impl<'a> BlockResult<'a> {
+    fn map<Y, N>(self, yes: Y, no: N)
+    where
+        Y: FnOnce(BlockResultYes<'a>),
+        N: FnOnce(BlockResultNo<'a>),
+    {
+        match self {
+            BlockResult::Yes(conflict) => yes(conflict),
+            BlockResult::No(model) => no(model),
+        }
+    }
+}
+
+struct BlockResultYes<'a> {
+    solver: &'a mut Solver,
+    state_transform: &'a StateTransform,
+    assumption: Cube,
+}
+
+impl BlockResultYes<'_> {
+    fn get_conflict(mut self) -> Cube {
+        let conflict = unsafe { self.solver.get_conflict() };
+        let ans = self
+            .state_transform
+            .previous(
+                take(&mut self.assumption)
+                    .into_iter()
+                    .filter(|l| conflict.has_lit(!*l)),
+            )
+            .collect();
+        ans
+    }
+}
+
+struct BlockResultNo<'a> {
+    solver: &'a mut Solver,
+    aig: &'a Aig,
+    assumption: Cube,
+}
+
+impl BlockResultNo<'_> {
+    fn get_model(mut self) -> Cube {
+        let model = unsafe { self.solver.get_model() };
+        generalize_by_ternary_simulation(
+            self.aig,
+            model,
+            &AigCube::from_cube(take(&mut self.assumption)),
+        )
+        .to_cube()
     }
 }
 
