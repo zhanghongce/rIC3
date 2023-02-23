@@ -2,8 +2,11 @@ use super::{activity::Activity, statistic::Statistic};
 use crate::utils::{generalize::generalize_by_ternary_simulation, state_transform::StateTransform};
 use aig::{Aig, AigCube};
 use logic_form::{Clause, Cnf, Cube, Lit};
-use sat_solver::{minisat::Solver, SatResult, SatSolver, UnsatConflict};
-use std::{collections::BinaryHeap, mem::take};
+use sat_solver::{minisat::Solver, SatModel, SatResult, SatSolver, UnsatConflict};
+use std::{
+    collections::{BinaryHeap, HashSet},
+    mem::take,
+};
 
 pub struct Pdr {
     aig: Aig,
@@ -13,6 +16,7 @@ pub struct Pdr {
     delta_frames: Vec<Vec<Cube>>,
     solvers: Vec<Solver>,
     activity: Activity,
+    num_act: Vec<usize>,
 
     statistic: Statistic,
 }
@@ -28,11 +32,31 @@ impl Pdr {
         self.solvers.push(solver);
         self.delta_frames.push(Vec::new());
         self.statistic.num_frames = self.depth();
+        self.num_act.push(0);
+    }
+
+    fn pump_active_var(&mut self, frame: usize) {
+        if frame == 0 {
+            return;
+        }
+        self.num_act[frame] += 1;
+        if self.num_act[frame] > 300 {
+            self.statistic.num_sat_solver_restart += 1;
+            self.num_act[frame] = 0;
+            self.solvers[frame] = Solver::new();
+            self.solvers[frame].add_cnf(&self.transition_cnf);
+            for i in frame..=self.depth() {
+                for cube in self.delta_frames[i].iter() {
+                    self.solvers[frame].add_clause(&!cube.clone());
+                }
+            }
+        }
     }
 
     fn blocked<'a>(&'a mut self, frame: usize, cube: &Cube) -> BlockResult<'a> {
         self.statistic.num_blocked += 1;
         let mut assumption = self.state_transform.cube_next(cube);
+        self.pump_active_var(frame - 1);
         let act = self.solvers[frame - 1].new_var();
         assumption.push(act);
         let mut tmp_cls = !cube.clone();
@@ -64,11 +88,20 @@ impl Pdr {
 
     fn frame_add_cube(&mut self, frame: usize, cube: Cube, to_all: bool) {
         assert!(cube.is_sorted_by_key(|x| x.var()));
+        for i in 1..=frame {
+            let cubes = take(&mut self.delta_frames[i]);
+            for c in cubes {
+                if !cube.subsume(&c) {
+                    self.delta_frames[i].push(c);
+                }
+            }
+        }
         let begin = if to_all { 1 } else { frame };
         self.delta_frames[frame].push(cube.clone());
         let clause = !cube;
         for i in begin..=frame {
             self.solvers[i].add_clause(&clause);
+            self.solvers[i].simplify();
         }
     }
 
@@ -83,27 +116,58 @@ impl Pdr {
         }
     }
 
-    // fn ctg_down(&mut self, frame: usize, cube: Cube, rec_depth: usize) -> Option<Cube> {
-    //     let ctgs = 0;
-    //     loop {
-    //         if cube.subsume(&self.init_cube) {
-    //             return None;
-    //         }
-    //         // match self.blocked(frame, &cube, true, true) {
-    //         //     (true, conflict) => Some(conflict),
-    //         //     (false, cex) => {
-    //         //         // if rec_depth > 1 {
-    //         //         //     return None;
-    //         //         // }
-    //         //         // let cex_set: HashSet<Lit> = HashSet::from_iter(cex.into_iter());
-    //         //         // cube = cube.into_iter().filter(|l| cex_set.contains(l)).collect();
-    //         //         todo!();
-    //         //     }
-    //         // }
-    //     }
-    // }
+    fn ctg_down(
+        &mut self,
+        frame: usize,
+        mut cube: Cube,
+        rec_depth: usize,
+        keep: &HashSet<Lit>,
+    ) -> Option<Cube> {
+        let mut ctgs = 0;
+        loop {
+            if cube.subsume(&self.init_cube) {
+                return None;
+            }
+            match self.blocked(frame, &cube) {
+                BlockResult::Yes(conflict) => return Some(conflict.get_conflict()),
+                BlockResult::No(model) => {
+                    if rec_depth > 1 {
+                        return None;
+                    }
+                    let model = model.get_model();
+                    if ctgs < 3 && frame > 1 && !model.subsume(&self.init_cube) {
+                        if let BlockResult::Yes(conflict) = self.blocked(frame - 1, &model) {
+                            ctgs += 1;
+                            let conflict = conflict.get_conflict();
+                            let mut i = frame;
+                            while i <= self.depth() {
+                                if let BlockResult::No(_) = self.blocked(i, &conflict) {
+                                    break;
+                                }
+                                i += 1;
+                            }
+                            let conflict = self.rec_mic(i - 1, conflict, rec_depth + 1);
+                            self.frame_add_cube(i - 1, conflict, true);
+                            continue;
+                        }
+                    }
+                    ctgs = 0;
+                    let cex_set: HashSet<Lit> = HashSet::from_iter(model.into_iter());
+                    let mut cube_new = Cube::new();
+                    for lit in cube {
+                        if cex_set.contains(&lit) {
+                            cube_new.push(lit);
+                        } else if keep.contains(&lit) {
+                            return None;
+                        }
+                    }
+                    cube = cube_new;
+                }
+            }
+        }
+    }
 
-    fn mic(&mut self, frame: usize, mut cube: Cube) -> Cube {
+    fn rec_mic(&mut self, frame: usize, mut cube: Cube, rec_depth: usize) -> Cube {
         self.statistic.average_mic_cube_len += cube.len();
         let origin_len = cube.len();
         let mut i = 0;
@@ -119,16 +183,19 @@ impl Pdr {
         // self.statistic.average_mic_single_removable_percent +=
         // single_removable as f64 / origin_len as f64;
         cube = self.activity.sort_by_activity_ascending(cube);
+        let mut keep = HashSet::new();
         while i < cube.len() {
             let mut removed_cube = cube.clone();
             removed_cube.remove(i);
-            match self.down(frame, removed_cube) {
+            match self.ctg_down(frame, removed_cube, rec_depth, &keep) {
+                // match self.down(frame, removed_cube) {
                 Some(new_cube) => {
                     cube = new_cube;
                     self.statistic.num_mic_drop_success += 1;
                 }
                 None => {
                     self.statistic.num_mic_drop_fail += 1;
+                    keep.insert(cube[i]);
                     i += 1;
                 }
             }
@@ -143,6 +210,10 @@ impl Pdr {
         cube
     }
 
+    fn mic(&mut self, frame: usize, cube: Cube) -> Cube {
+        self.rec_mic(frame, cube, 1)
+    }
+
     fn generalize(&mut self, frame: usize, cube: Cube) -> (usize, Cube) {
         let cube = self.mic(frame, cube);
         for i in frame + 1..=self.depth() {
@@ -153,6 +224,31 @@ impl Pdr {
         }
         (self.depth() + 1, cube)
     }
+
+    fn trivial_contained(&mut self, frame: usize, cube: &Cube) -> bool {
+        self.statistic.num_trivial_contained += 1;
+        for i in frame..=self.depth() {
+            for c in self.delta_frames[i].iter() {
+                if c.subsume(cube) {
+                    self.statistic.num_trivial_contained_success += 1;
+                    return true;
+                }
+            }
+        }
+        false
+    }
+
+    // fn sat_contained(&mut self, frame: usize, cube: &Cube) -> bool {
+    //     assert!(frame > 0);
+    //     self.statistic.num_sat_contained += 1;
+    //     match self.solvers[frame].solve(&cube) {
+    //         SatResult::Sat(_) => false,
+    //         SatResult::Unsat(_) => {
+    //             self.statistic.num_sat_contained_success += 1;
+    //             true
+    //         }
+    //     }
+    // }
 
     fn rec_block(&mut self, frame: usize, cube: Cube) -> bool {
         let mut heap = BinaryHeap::new();
@@ -167,6 +263,9 @@ impl Pdr {
             println!("{:?}", heap_num);
             self.statistic();
             heap_num[frame] -= 1;
+            if self.trivial_contained(frame, &cube) {
+                continue;
+            }
             self.statistic.num_rec_block_blocked += 1;
             match self.blocked(frame, &cube) {
                 BlockResult::Yes(conflict) => {
@@ -198,6 +297,7 @@ impl Pdr {
                     BlockResult::Yes(conflict) => {
                         let conflict = conflict.get_conflict();
                         assert!(conflict.len() <= cube.len());
+                        assert!(conflict.subsume(&cube));
                         let to_all = conflict.len() < cube.len();
                         self.frame_add_cube(frame_idx + 1, conflict, to_all);
                     }
@@ -238,6 +338,7 @@ impl Pdr {
             solvers,
             activity,
             statistic: Statistic::default(),
+            num_act: vec![0],
         }
     }
 
@@ -282,19 +383,6 @@ enum BlockResult<'a> {
     No(BlockResultNo<'a>),
 }
 
-impl<'a> BlockResult<'a> {
-    fn map<Y, N>(self, yes: Y, no: N)
-    where
-        Y: FnOnce(BlockResultYes<'a>),
-        N: FnOnce(BlockResultNo<'a>),
-    {
-        match self {
-            BlockResult::Yes(conflict) => yes(conflict),
-            BlockResult::No(model) => no(model),
-        }
-    }
-}
-
 struct BlockResultYes<'a> {
     solver: &'a mut Solver,
     state_transform: &'a StateTransform,
@@ -331,6 +419,11 @@ impl BlockResultNo<'_> {
             &AigCube::from_cube(take(&mut self.assumption)),
         )
         .to_cube()
+    }
+
+    fn lit_value(&mut self, lit: Lit) -> bool {
+        let model = unsafe { self.solver.get_model() };
+        model.lit_value(lit)
     }
 }
 

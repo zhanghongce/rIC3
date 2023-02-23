@@ -4,6 +4,7 @@ use std::{fmt::Debug, ops::AddAssign};
 pub struct Statistic {
     pub num_blocked: usize,
     pub num_frames: usize,
+    pub num_sat_solver_restart: usize,
     pub num_down_blocked: usize,
     pub num_generalize_blocked: usize,
     pub num_propagete_blocked: usize,
@@ -13,6 +14,10 @@ pub struct Statistic {
     pub num_get_bad_state: usize,
     pub num_removed_double_success: usize,
     pub num_removed_double_try: usize,
+    pub num_trivial_contained: usize,
+    pub num_trivial_contained_success: usize,
+    pub num_sat_contained: usize,
+    pub num_sat_contained_success: usize,
     pub average_mic_cube_len: StatisticAverage,
     pub average_mic_droped_var: StatisticAverage,
     pub average_mic_droped_var_percent: StatisticAverage,
