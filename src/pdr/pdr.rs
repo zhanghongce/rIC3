@@ -1,22 +1,27 @@
-use super::{activity::Activity, statistic::Statistic};
-use crate::utils::{generalize::generalize_by_ternary_simulation, state_transform::StateTransform};
-use aig::{Aig, AigCube};
-use logic_form::{Clause, Cnf, Cube, Lit};
-use sat_solver::{minisat::Solver, SatModel, SatResult, SatSolver, UnsatConflict};
+use super::{
+    activity::Activity,
+    share::PdrShare,
+    solver::{BlockResult, PdrSolver},
+    statistic::Statistic,
+};
+use crate::{
+    pdr::heap_frame_cube::HeapFrameCube,
+    utils::{generalize::generalize_by_ternary_simulation, state_transform::StateTransform},
+};
+use aig::Aig;
+use logic_form::{Clause, Cube, Lit};
+use sat_solver::SatResult;
 use std::{
     collections::{BinaryHeap, HashSet},
     mem::take,
+    sync::Arc,
 };
 
 pub struct Pdr {
-    aig: Aig,
-    transition_cnf: Cnf,
-    init_cube: Cube,
-    state_transform: StateTransform,
     delta_frames: Vec<Vec<Cube>>,
-    solvers: Vec<Solver>,
+    solvers: Vec<PdrSolver>,
+    share: Arc<PdrShare>,
     activity: Activity,
-    num_act: Vec<usize>,
 
     statistic: Statistic,
 }
@@ -27,63 +32,9 @@ impl Pdr {
     }
 
     fn new_frame(&mut self) {
-        let mut solver = Solver::new();
-        solver.add_cnf(&self.transition_cnf);
-        self.solvers.push(solver);
+        self.solvers.push(PdrSolver::new(self.share.clone()));
         self.delta_frames.push(Vec::new());
         self.statistic.num_frames = self.depth();
-        self.num_act.push(0);
-    }
-
-    fn pump_active_var(&mut self, frame: usize) {
-        if frame == 0 {
-            return;
-        }
-        self.num_act[frame] += 1;
-        if self.num_act[frame] > 300 {
-            self.statistic.num_sat_solver_restart += 1;
-            self.num_act[frame] = 0;
-            self.solvers[frame] = Solver::new();
-            self.solvers[frame].add_cnf(&self.transition_cnf);
-            for i in frame..=self.depth() {
-                for cube in self.delta_frames[i].iter() {
-                    self.solvers[frame].add_clause(&!cube.clone());
-                }
-            }
-        }
-    }
-
-    fn blocked<'a>(&'a mut self, frame: usize, cube: &Cube) -> BlockResult<'a> {
-        self.statistic.num_blocked += 1;
-        let mut assumption = self.state_transform.cube_next(cube);
-        self.pump_active_var(frame - 1);
-        let act = self.solvers[frame - 1].new_var();
-        assumption.push(act);
-        let mut tmp_cls = !cube.clone();
-        tmp_cls.push(!act);
-        self.solvers[frame - 1].add_clause(&tmp_cls);
-        match self.solvers[frame - 1].solve(&assumption) {
-            SatResult::Sat(_) => {
-                let last = assumption.len() - 1;
-                let act = !assumption.remove(last);
-                self.solvers[frame - 1].release_var(act);
-                BlockResult::No(BlockResultNo {
-                    solver: &mut self.solvers[frame - 1],
-                    aig: &self.aig,
-                    assumption,
-                })
-            }
-            SatResult::Unsat(_) => {
-                let last = assumption.len() - 1;
-                let act = !assumption.remove(last);
-                self.solvers[frame - 1].release_var(act);
-                BlockResult::Yes(BlockResultYes {
-                    solver: &mut self.solvers[frame - 1],
-                    state_transform: &self.state_transform,
-                    assumption,
-                })
-            }
-        }
     }
 
     fn frame_add_cube(&mut self, frame: usize, cube: Cube, to_all: bool) {
@@ -101,12 +52,21 @@ impl Pdr {
         let clause = !cube;
         for i in begin..=frame {
             self.solvers[i].add_clause(&clause);
-            self.solvers[i].simplify();
         }
     }
 
+    fn blocked<'a>(&'a mut self, frame: usize, cube: &Cube) -> BlockResult<'a> {
+        assert!(frame > 0);
+        if frame == 1 {
+            self.solvers[frame - 1].pump_act_and_check_restart(&self.delta_frames[0..1]);
+        } else {
+            self.solvers[frame - 1].pump_act_and_check_restart(&self.delta_frames[frame - 1..]);
+        }
+        self.solvers[frame - 1].blocked(cube)
+    }
+
     fn down(&mut self, frame: usize, cube: Cube) -> Option<Cube> {
-        if cube.subsume(&self.init_cube) {
+        if cube.subsume(&self.share.init_cube) {
             return None;
         }
         self.statistic.num_down_blocked += 1;
@@ -125,7 +85,7 @@ impl Pdr {
     ) -> Option<Cube> {
         let mut ctgs = 0;
         loop {
-            if cube.subsume(&self.init_cube) {
+            if cube.subsume(&self.share.init_cube) {
                 return None;
             }
             match self.blocked(frame, &cube) {
@@ -135,7 +95,7 @@ impl Pdr {
                         return None;
                     }
                     let model = model.get_model();
-                    if ctgs < 3 && frame > 1 && !model.subsume(&self.init_cube) {
+                    if ctgs < 3 && frame > 1 && !model.subsume(&self.share.init_cube) {
                         if let BlockResult::Yes(conflict) = self.blocked(frame - 1, &model) {
                             ctgs += 1;
                             let conflict = conflict.get_conflict();
@@ -172,16 +132,6 @@ impl Pdr {
         let origin_len = cube.len();
         let mut i = 0;
         assert!(cube.is_sorted_by_key(|x| *x.var()));
-        // let mut single_removable = 0;
-        // for i in 0..origin_len {
-        //     let mut removed_cube = cube.clone();
-        //     removed_cube.remove(i);
-        //     if let Some(_) = self.down(frame, removed_cube) {
-        //         single_removable += 1;
-        //     }
-        // }
-        // self.statistic.average_mic_single_removable_percent +=
-        // single_removable as f64 / origin_len as f64;
         cube = self.activity.sort_by_activity_ascending(cube);
         let mut keep = HashSet::new();
         while i < cube.len() {
@@ -311,34 +261,35 @@ impl Pdr {
                 return true;
             }
         }
-        for i in 1..=self.depth() {
-            self.solvers[i].simplify();
-        }
         false
     }
 }
 
 impl Pdr {
     pub fn new(aig: Aig) -> Self {
-        let mut solvers = vec![Solver::new()];
         let transition_cnf = aig.get_cnf();
         let init_cube = aig.latch_init_cube().to_cube();
-        solvers[0].add_cnf(&transition_cnf);
-        for l in aig.latchs.iter() {
-            solvers[0].add_clause(&Clause::from([Lit::new(l.input.into(), !l.init)]));
-        }
         let state_transform = StateTransform::new(&aig);
-        let activity = Activity::new(&aig);
-        Self {
+        let share = Arc::new(PdrShare {
             aig,
-            transition_cnf,
             init_cube,
+            transition_cnf,
             state_transform,
-            delta_frames: vec![vec![]],
+        });
+        let mut solvers = vec![PdrSolver::new(share.clone())];
+        let mut init_frame = Vec::new();
+        for l in share.aig.latchs.iter() {
+            let clause = Clause::from([Lit::new(l.input.into(), !l.init)]);
+            init_frame.push(!clause.clone());
+            solvers[0].add_clause(&clause);
+        }
+        let activity = Activity::new(&share.aig);
+        Self {
+            delta_frames: vec![init_frame],
             solvers,
             activity,
             statistic: Statistic::default(),
-            num_act: vec![0],
+            share,
         }
     }
 
@@ -347,11 +298,15 @@ impl Pdr {
         loop {
             let last_frame_index = self.depth();
             while let SatResult::Sat(model) =
-                self.solvers[last_frame_index].solve(&[self.aig.bads[0].to_lit()])
+                self.solvers[last_frame_index].solve(&[self.share.aig.bads[0].to_lit()])
             {
                 self.statistic.num_get_bad_state += 1;
-                let cex = generalize_by_ternary_simulation(&self.aig, model, &[self.aig.bads[0]])
-                    .to_cube();
+                let cex = generalize_by_ternary_simulation(
+                    &self.share.aig,
+                    model,
+                    &[self.share.aig.bads[0]],
+                )
+                .to_cube();
                 // self.statistic();
                 if !self.rec_block(last_frame_index, cex) {
                     self.statistic();
@@ -375,88 +330,6 @@ impl Pdr {
         }
         println!();
         println!("{:?}", self.statistic);
-    }
-}
-
-enum BlockResult<'a> {
-    Yes(BlockResultYes<'a>),
-    No(BlockResultNo<'a>),
-}
-
-struct BlockResultYes<'a> {
-    solver: &'a mut Solver,
-    state_transform: &'a StateTransform,
-    assumption: Cube,
-}
-
-impl BlockResultYes<'_> {
-    fn get_conflict(mut self) -> Cube {
-        let conflict = unsafe { self.solver.get_conflict() };
-        let ans = self
-            .state_transform
-            .previous(
-                take(&mut self.assumption)
-                    .into_iter()
-                    .filter(|l| conflict.has_lit(!*l)),
-            )
-            .collect();
-        ans
-    }
-}
-
-struct BlockResultNo<'a> {
-    solver: &'a mut Solver,
-    aig: &'a Aig,
-    assumption: Cube,
-}
-
-impl BlockResultNo<'_> {
-    fn get_model(mut self) -> Cube {
-        let model = unsafe { self.solver.get_model() };
-        generalize_by_ternary_simulation(
-            self.aig,
-            model,
-            &AigCube::from_cube(take(&mut self.assumption)),
-        )
-        .to_cube()
-    }
-
-    fn lit_value(&mut self, lit: Lit) -> bool {
-        let model = unsafe { self.solver.get_model() };
-        model.lit_value(lit)
-    }
-}
-
-struct HeapFrameCube {
-    frame: usize,
-    cube: Cube,
-}
-
-impl HeapFrameCube {
-    pub fn new(frame: usize, cube: Cube) -> Self {
-        Self { frame, cube }
-    }
-}
-
-impl PartialEq for HeapFrameCube {
-    fn eq(&self, other: &Self) -> bool {
-        self.frame == other.frame
-    }
-}
-
-impl PartialOrd for HeapFrameCube {
-    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
-        other.frame.partial_cmp(&self.frame)
-    }
-}
-
-impl Eq for HeapFrameCube {
-    fn assert_receiver_is_total_eq(&self) {}
-}
-
-impl Ord for HeapFrameCube {
-    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
-        other.frame.cmp(&self.frame)
     }
 }
 

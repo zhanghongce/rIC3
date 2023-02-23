@@ -40,7 +40,7 @@ fn main() {
     //         .unwrap(); // 30s vs 10s
     let aig =
         aig::Aig::from_file("../MC-Benchmark/hwmcc20/aig/2019/goel/industry/cal112/cal112.aag")
-            .unwrap(); // 173s vs 158s
+            .unwrap(); // 167s vs 158s
 
     // let aig = aig::Aig::from_file("../MC-Benchmark/hwmcc17/single/intel007.aag").unwrap();
 
@@ -48,7 +48,6 @@ fn main() {
     // let aig = aig::Aig::from_file("../MC-Benchmark/hwmcc20/aig/2019/beem/at.6.prop1-back-serstep.aag").unwrap(); // 21s
 
     // println!("{}", aig);
-    // dbg!(preimage::circuit_sat::solve(aig.clone()));
     dbg!(pdr::pdr::solve(aig));
     println!("{:?}", start.elapsed());
 }
