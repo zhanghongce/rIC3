@@ -18,7 +18,7 @@ use std::{
 };
 
 pub struct Pdr {
-    pub delta_frames: Vec<Vec<Cube>>,
+    pub frames: Vec<Vec<Cube>>,
     solvers: Vec<PdrSolver>,
     share: Arc<BasicShare>,
     activity: Activity,
@@ -28,27 +28,27 @@ pub struct Pdr {
 
 impl Pdr {
     fn depth(&self) -> usize {
-        self.delta_frames.len() - 1
+        self.frames.len() - 1
     }
 
     pub fn new_frame(&mut self) {
         self.solvers.push(PdrSolver::new(self.share.clone()));
-        self.delta_frames.push(Vec::new());
+        self.frames.push(Vec::new());
         self.statistic.num_frames = self.depth();
     }
 
     fn frame_add_cube(&mut self, frame: usize, cube: Cube, to_all: bool) {
         assert!(cube.is_sorted_by_key(|x| x.var()));
         for i in 1..=frame {
-            let cubes = take(&mut self.delta_frames[i]);
+            let cubes = take(&mut self.frames[i]);
             for c in cubes {
                 if !cube.subsume(&c) {
-                    self.delta_frames[i].push(c);
+                    self.frames[i].push(c);
                 }
             }
         }
         let begin = if to_all { 1 } else { frame };
-        self.delta_frames[frame].push(cube.clone());
+        self.frames[frame].push(cube.clone());
         let clause = !cube;
         for i in begin..=frame {
             self.solvers[i].add_clause(&clause);
@@ -58,9 +58,9 @@ impl Pdr {
     fn blocked<'a>(&'a mut self, frame: usize, cube: &Cube) -> BlockResult<'a> {
         assert!(frame > 0);
         if frame == 1 {
-            self.solvers[frame - 1].pump_act_and_check_restart(&self.delta_frames[0..1]);
+            self.solvers[frame - 1].pump_act_and_check_restart(&self.frames[0..1]);
         } else {
-            self.solvers[frame - 1].pump_act_and_check_restart(&self.delta_frames[frame - 1..]);
+            self.solvers[frame - 1].pump_act_and_check_restart(&self.frames[frame - 1..]);
         }
         self.solvers[frame - 1].blocked(cube)
     }
@@ -174,7 +174,7 @@ impl Pdr {
     fn trivial_contained(&mut self, frame: usize, cube: &Cube) -> bool {
         self.statistic.num_trivial_contained += 1;
         for i in frame..=self.depth() {
-            for c in self.delta_frames[i].iter() {
+            for c in self.frames[i].iter() {
                 if c.subsume(cube) {
                     self.statistic.num_trivial_contained_success += 1;
                     return true;
@@ -225,7 +225,7 @@ impl Pdr {
 
     fn propagate(&mut self) -> bool {
         for frame_idx in 1..self.depth() {
-            let frame = take(&mut self.delta_frames[frame_idx]);
+            let frame = take(&mut self.frames[frame_idx]);
             for cube in frame {
                 self.statistic.num_propagete_blocked += 1;
                 match self.blocked(frame_idx + 1, &cube) {
@@ -238,11 +238,11 @@ impl Pdr {
                     }
                     BlockResult::No(_) => {
                         // 利用cex？
-                        self.delta_frames[frame_idx].push(cube);
+                        self.frames[frame_idx].push(cube);
                     }
                 };
             }
-            if self.delta_frames[frame_idx].is_empty() {
+            if self.frames[frame_idx].is_empty() {
                 return true;
             }
         }
@@ -261,7 +261,7 @@ impl Pdr {
         }
         let activity = Activity::new(&share.aig);
         Self {
-            delta_frames: vec![init_frame],
+            frames: vec![init_frame],
             solvers,
             activity,
             statistic: Statistic::default(),

@@ -52,7 +52,7 @@ impl AddAssign<f64> for StatisticAverage {
 
 impl Pdr {
     pub fn statistic(&self) {
-        for frame in self.delta_frames.iter() {
+        for frame in self.frames.iter() {
             print!("{} ", frame.len())
         }
         println!();
