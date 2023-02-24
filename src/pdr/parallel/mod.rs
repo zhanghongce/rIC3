@@ -1,7 +1,15 @@
+mod partition;
+
 // mod solver_pool;
 
 // use self::solver_pool::SolverPool;
-// use super::{activity::Activity, share::PdrShare, solver::BlockResult, statistic::Statistic};
+
+// use super::{
+//     activity::Activity,
+//     share::PdrShare,
+//     solver::{BlockResult, PdrSolver},
+//     statistic::Statistic,
+// };
 // use crate::{
 //     pdr::heap_frame_cube::HeapFrameCube,
 //     utils::{generalize::generalize_by_ternary_simulation, state_transform::StateTransform},
@@ -10,7 +18,7 @@
 // use logic_form::{Clause, Cube, Lit};
 // use sat_solver::SatResult;
 // use std::{
-//     collections::{BinaryHeap, HashSet},
+//     collections::{BinaryHeap, HashSet, VecDeque},
 //     mem::take,
 //     sync::Arc,
 // };
@@ -20,8 +28,8 @@
 //     solvers: Vec<SolverPool>,
 //     share: Arc<PdrShare>,
 //     activity: Activity,
-//     num_solver_per_frame: usize,
 
+//     num_solver_per_frame: usize,
 //     statistic: Statistic,
 // }
 
@@ -31,10 +39,7 @@
 //     }
 
 //     fn new_frame(&mut self) {
-//         self.solvers.push(SolverPool::new(
-//             self.share.clone(),
-//             self.num_solver_per_frame,
-//         ));
+//         self.solvers.push(SolverPool::new(self.share.clone(), self.num_solver_per_frame));
 //         self.delta_frames.push(Vec::new());
 //         self.statistic.num_frames = self.depth();
 //     }
@@ -58,8 +63,14 @@
 //     }
 
 //     fn blocked<'a>(&'a mut self, frame: usize, cube: &Cube) -> BlockResult<'a> {
-//         self.solvers[frame - 1].pump_act_and_check_restart(&self.delta_frames[frame - 1..]);
-//         self.solvers[frame - 1].blocked(cube)
+//         // assert!(frame > 0);
+//         // if frame == 1 {
+//         //     self.solvers[frame - 1].pump_act_and_check_restart(&self.delta_frames[0..1]);
+//         // } else {
+//         //     self.solvers[frame - 1].pump_act_and_check_restart(&self.delta_frames[frame - 1..]);
+//         // }
+//         // self.solvers[frame - 1].blocked(cube)
+//         todo!()
 //     }
 
 //     fn down(&mut self, frame: usize, cube: Cube) -> Option<Cube> {
@@ -73,69 +84,18 @@
 //         }
 //     }
 
-//     fn ctg_down(
-//         &mut self,
-//         frame: usize,
-//         mut cube: Cube,
-//         rec_depth: usize,
-//         keep: &HashSet<Lit>,
-//     ) -> Option<Cube> {
-//         let mut ctgs = 0;
-//         loop {
-//             if cube.subsume(&self.share.init_cube) {
-//                 return None;
-//             }
-//             match self.blocked(frame, &cube) {
-//                 BlockResult::Yes(conflict) => return Some(conflict.get_conflict()),
-//                 BlockResult::No(model) => {
-//                     if rec_depth > 1 {
-//                         return None;
-//                     }
-//                     let model = model.get_model();
-//                     if ctgs < 3 && frame > 1 && !model.subsume(&self.share.init_cube) {
-//                         if let BlockResult::Yes(conflict) = self.blocked(frame - 1, &model) {
-//                             ctgs += 1;
-//                             let conflict = conflict.get_conflict();
-//                             let mut i = frame;
-//                             while i <= self.depth() {
-//                                 if let BlockResult::No(_) = self.blocked(i, &conflict) {
-//                                     break;
-//                                 }
-//                                 i += 1;
-//                             }
-//                             let conflict = self.rec_mic(i - 1, conflict, rec_depth + 1);
-//                             self.frame_add_cube(i - 1, conflict, true);
-//                             continue;
-//                         }
-//                     }
-//                     ctgs = 0;
-//                     let cex_set: HashSet<Lit> = HashSet::from_iter(model.into_iter());
-//                     let mut cube_new = Cube::new();
-//                     for lit in cube {
-//                         if cex_set.contains(&lit) {
-//                             cube_new.push(lit);
-//                         } else if keep.contains(&lit) {
-//                             return None;
-//                         }
-//                     }
-//                     cube = cube_new;
-//                 }
-//             }
-//         }
-//     }
-
-//     fn rec_mic(&mut self, frame: usize, mut cube: Cube, rec_depth: usize) -> Cube {
+//     fn parallel_mic(&mut self, frame: usize, mut cube: Cube) -> Cube {
 //         self.statistic.average_mic_cube_len += cube.len();
 //         let origin_len = cube.len();
 //         let mut i = 0;
 //         assert!(cube.is_sorted_by_key(|x| *x.var()));
 //         cube = self.activity.sort_by_activity_ascending(cube);
 //         let mut keep = HashSet::new();
+//         let mut drop_candidate = VecDeque::new();
 //         while i < cube.len() {
 //             let mut removed_cube = cube.clone();
 //             removed_cube.remove(i);
-//             match self.ctg_down(frame, removed_cube, rec_depth, &keep) {
-//                 // match self.down(frame, removed_cube) {
+//             match self.down(frame, removed_cube) {
 //                 Some(new_cube) => {
 //                     cube = new_cube;
 //                     self.statistic.num_mic_drop_success += 1;
@@ -184,18 +144,6 @@
 //         }
 //         false
 //     }
-
-//     // fn sat_contained(&mut self, frame: usize, cube: &Cube) -> bool {
-//     //     assert!(frame > 0);
-//     //     self.statistic.num_sat_contained += 1;
-//     //     match self.solvers[frame].solve(&cube) {
-//     //         SatResult::Sat(_) => false,
-//     //         SatResult::Unsat(_) => {
-//     //             self.statistic.num_sat_contained_success += 1;
-//     //             true
-//     //         }
-//     //     }
-//     // }
 
 //     fn rec_block(&mut self, frame: usize, cube: Cube) -> bool {
 //         let mut heap = BinaryHeap::new();
@@ -273,8 +221,7 @@
 //             transition_cnf,
 //             state_transform,
 //         });
-//         let num_solver_per_frame = 4;
-//         let mut solvers = vec![SolverPool::new(share.clone(), num_solver_per_frame)];
+//         let mut solvers = vec![PdrSolver::new(share.clone())];
 //         let mut init_frame = Vec::new();
 //         for l in share.aig.latchs.iter() {
 //             let clause = Clause::from([Lit::new(l.input.into(), !l.init)]);
@@ -288,7 +235,6 @@
 //             activity,
 //             statistic: Statistic::default(),
 //             share,
-//             num_solver_per_frame,
 //         }
 //     }
 
@@ -296,8 +242,9 @@
 //         self.new_frame();
 //         loop {
 //             let last_frame_index = self.depth();
-//             let solver = self.solvers[last_frame_index].fetch().unwrap();
-//             while let SatResult::Sat(model) = solver.solve(&[self.share.aig.bads[0].to_lit()]) {
+//             while let SatResult::Sat(model) =
+//                 self.solvers[last_frame_index].solve(&[self.share.aig.bads[0].to_lit()])
+//             {
 //                 self.statistic.num_get_bad_state += 1;
 //                 let cex = generalize_by_ternary_simulation(
 //                     &self.share.aig,
@@ -305,7 +252,6 @@
 //                     &[self.share.aig.bads[0]],
 //                 )
 //                 .to_cube();
-//                 self.solvers[last_frame_index].release(solver);
 //                 // self.statistic();
 //                 if !self.rec_block(last_frame_index, cex) {
 //                     self.statistic();

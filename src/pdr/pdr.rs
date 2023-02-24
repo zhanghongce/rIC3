@@ -76,13 +76,7 @@ impl Pdr {
         }
     }
 
-    fn ctg_down(
-        &mut self,
-        frame: usize,
-        mut cube: Cube,
-        rec_depth: usize,
-        keep: &HashSet<Lit>,
-    ) -> Option<Cube> {
+    fn ctg_down(&mut self, frame: usize, mut cube: Cube, keep: &HashSet<Lit>) -> Option<Cube> {
         let mut ctgs = 0;
         loop {
             if cube.subsume(&self.share.init_cube) {
@@ -91,9 +85,6 @@ impl Pdr {
             match self.blocked(frame, &cube) {
                 BlockResult::Yes(conflict) => return Some(conflict.get_conflict()),
                 BlockResult::No(model) => {
-                    if rec_depth > 1 {
-                        return None;
-                    }
                     let model = model.get_model();
                     if ctgs < 3 && frame > 1 && !model.subsume(&self.share.init_cube) {
                         if let BlockResult::Yes(conflict) = self.blocked(frame - 1, &model) {
@@ -106,7 +97,7 @@ impl Pdr {
                                 }
                                 i += 1;
                             }
-                            let conflict = self.rec_mic(i - 1, conflict, rec_depth + 1);
+                            let conflict = self.mic(i - 1, conflict, true);
                             self.frame_add_cube(i - 1, conflict, true);
                             continue;
                         }
@@ -127,7 +118,12 @@ impl Pdr {
         }
     }
 
-    fn rec_mic(&mut self, frame: usize, mut cube: Cube, rec_depth: usize) -> Cube {
+    fn mic(&mut self, frame: usize, mut cube: Cube, simple: bool) -> Cube {
+        if simple {
+            self.statistic.num_simple_mic += 1;
+        } else {
+            self.statistic.num_normal_mic += 1;
+        }
         self.statistic.average_mic_cube_len += cube.len();
         let origin_len = cube.len();
         let mut i = 0;
@@ -137,8 +133,12 @@ impl Pdr {
         while i < cube.len() {
             let mut removed_cube = cube.clone();
             removed_cube.remove(i);
-            match self.ctg_down(frame, removed_cube, rec_depth, &keep) {
-                // match self.down(frame, removed_cube) {
+            let res = if simple {
+                self.down(frame, removed_cube)
+            } else {
+                self.ctg_down(frame, removed_cube, &keep)
+            };
+            match res {
                 Some(new_cube) => {
                     cube = new_cube;
                     self.statistic.num_mic_drop_success += 1;
@@ -160,12 +160,8 @@ impl Pdr {
         cube
     }
 
-    fn mic(&mut self, frame: usize, cube: Cube) -> Cube {
-        self.rec_mic(frame, cube, 1)
-    }
-
     fn generalize(&mut self, frame: usize, cube: Cube) -> (usize, Cube) {
-        let cube = self.mic(frame, cube);
+        let cube = self.mic(frame, cube, false);
         for i in frame + 1..=self.depth() {
             self.statistic.num_generalize_blocked += 1;
             if let BlockResult::No(_) = self.blocked(i, &cube) {
@@ -188,18 +184,6 @@ impl Pdr {
         false
     }
 
-    // fn sat_contained(&mut self, frame: usize, cube: &Cube) -> bool {
-    //     assert!(frame > 0);
-    //     self.statistic.num_sat_contained += 1;
-    //     match self.solvers[frame].solve(&cube) {
-    //         SatResult::Sat(_) => false,
-    //         SatResult::Unsat(_) => {
-    //             self.statistic.num_sat_contained_success += 1;
-    //             true
-    //         }
-    //     }
-    // }
-
     fn rec_block(&mut self, frame: usize, cube: Cube) -> bool {
         let mut heap = BinaryHeap::new();
         let mut heap_num = vec![0; frame + 1];
@@ -210,8 +194,8 @@ impl Pdr {
             if frame == 0 {
                 return false;
             }
-            println!("{:?}", heap_num);
-            self.statistic();
+            // println!("{:?}", heap_num);
+            // self.statistic();
             heap_num[frame] -= 1;
             if self.trivial_contained(frame, &cube) {
                 continue;

@@ -1,6 +1,6 @@
+use crate::utils::state_transform::StateTransform;
 use aig::Aig;
 use logic_form::{Cnf, Cube};
-use crate::utils::state_transform::StateTransform;
 
 pub struct PdrShare {
     pub aig: Aig,
