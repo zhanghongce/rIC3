@@ -1,9 +1,9 @@
-use crate::{pdr::share::PdrShare, utils::generalize::generalize_by_ternary_simulation};
+use crate::{pdr::basic_share::BasicShare, utils::generalize::generalize_by_ternary_simulation};
 use logic_form::{Cube, Lit};
 use sat_solver::{minisat::Solver, SatResult, SatSolver};
 use std::collections::HashSet;
 
-pub fn bad_state_partition(share: &PdrShare, frame: &Vec<Cube>) -> Vec<Cube> {
+pub fn bad_state_partition(share: &BasicShare, frame: &Vec<Cube>) -> Vec<Cube> {
     let mut solver = Solver::new();
     solver.add_cnf(&share.transition_cnf);
     for c in frame {

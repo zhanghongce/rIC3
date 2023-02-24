@@ -7,7 +7,16 @@ pub struct ParallelPdr {
 }
 
 impl ParallelPdr {
+    fn new_frame(&mut self) {
+        for pdr in self.pdrs.iter_mut() {
+            pdr.new_frame();
+        }
+    }
+}
+
+impl ParallelPdr {
     pub fn check(&mut self) -> bool {
+        self.new_frame();
         todo!()
     }
 }

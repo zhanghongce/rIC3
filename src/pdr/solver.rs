@@ -1,4 +1,4 @@
-use super::share::PdrShare;
+use super::basic_share::BasicShare;
 use crate::utils::generalize::generalize_by_ternary_simulation;
 use aig::AigCube;
 use logic_form::{Clause, Cube, Lit};
@@ -12,11 +12,11 @@ pub struct PdrSolver {
     solver: Solver,
     num_act: usize,
 
-    share: Arc<PdrShare>,
+    share: Arc<BasicShare>,
 }
 
 impl PdrSolver {
-    pub fn new(share: Arc<PdrShare>) -> Self {
+    pub fn new(share: Arc<BasicShare>) -> Self {
         let mut solver = Solver::new();
         solver.add_cnf(&share.as_ref().transition_cnf);
         Self {
@@ -89,7 +89,7 @@ pub enum BlockResult<'a> {
 
 pub struct BlockResultYes<'a> {
     solver: &'a mut Solver,
-    share: Arc<PdrShare>,
+    share: Arc<BasicShare>,
     assumption: Cube,
 }
 
@@ -112,7 +112,7 @@ impl BlockResultYes<'_> {
 
 pub struct BlockResultNo<'a> {
     solver: &'a mut Solver,
-    share: Arc<PdrShare>,
+    share: Arc<BasicShare>,
     assumption: Cube,
 }
 

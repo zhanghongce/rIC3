@@ -1,6 +1,6 @@
 use super::{
     activity::Activity,
-    share::PdrShare,
+    basic_share::BasicShare,
     solver::{BlockResult, PdrSolver},
     statistic::Statistic,
 };
@@ -20,7 +20,7 @@ use std::{
 pub struct Pdr {
     pub delta_frames: Vec<Vec<Cube>>,
     solvers: Vec<PdrSolver>,
-    share: Arc<PdrShare>,
+    share: Arc<BasicShare>,
     activity: Activity,
 
     pub statistic: Statistic,
@@ -31,7 +31,7 @@ impl Pdr {
         self.delta_frames.len() - 1
     }
 
-    fn new_frame(&mut self) {
+    pub fn new_frame(&mut self) {
         self.solvers.push(PdrSolver::new(self.share.clone()));
         self.delta_frames.push(Vec::new());
         self.statistic.num_frames = self.depth();
@@ -251,7 +251,7 @@ impl Pdr {
 }
 
 impl Pdr {
-    pub fn new(share: Arc<PdrShare>) -> Self {
+    pub fn new(share: Arc<BasicShare>) -> Self {
         let mut solvers = vec![PdrSolver::new(share.clone())];
         let mut init_frame = Vec::new();
         for l in share.aig.latchs.iter() {
@@ -303,7 +303,7 @@ pub fn solve(aig: Aig) -> bool {
     let transition_cnf = aig.get_cnf();
     let init_cube = aig.latch_init_cube().to_cube();
     let state_transform = StateTransform::new(&aig);
-    let share = Arc::new(PdrShare {
+    let share = Arc::new(BasicShare {
         aig,
         init_cube,
         transition_cnf,
