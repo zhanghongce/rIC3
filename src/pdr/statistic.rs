@@ -1,5 +1,7 @@
 use std::{fmt::Debug, ops::AddAssign};
 
+use super::pdr::Pdr;
+
 #[derive(Debug, Default)]
 pub struct Statistic {
     pub num_blocked: usize,
@@ -45,5 +47,15 @@ impl AddAssign<f64> for StatisticAverage {
     fn add_assign(&mut self, rhs: f64) {
         self.sum += rhs;
         self.num += 1;
+    }
+}
+
+impl Pdr {
+    pub fn statistic(&self) {
+        for frame in self.delta_frames.iter() {
+            print!("{} ", frame.len())
+        }
+        println!();
+        println!("{:?}", self.statistic);
     }
 }

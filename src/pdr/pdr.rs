@@ -18,12 +18,12 @@ use std::{
 };
 
 pub struct Pdr {
-    delta_frames: Vec<Vec<Cube>>,
+    pub delta_frames: Vec<Vec<Cube>>,
     solvers: Vec<PdrSolver>,
     share: Arc<PdrShare>,
     activity: Activity,
 
-    statistic: Statistic,
+    pub statistic: Statistic,
 }
 
 impl Pdr {
@@ -184,8 +184,9 @@ impl Pdr {
         false
     }
 
-    fn rec_block(&mut self, frame: usize, cube: Cube) -> bool {
+    fn block(&mut self, cube: Cube) -> bool {
         let mut heap = BinaryHeap::new();
+        let frame = self.depth();
         let mut heap_num = vec![0; frame + 1];
         heap.push(HeapFrameCube::new(frame, cube));
         heap_num[frame] += 1;
@@ -250,16 +251,7 @@ impl Pdr {
 }
 
 impl Pdr {
-    pub fn new(aig: Aig) -> Self {
-        let transition_cnf = aig.get_cnf();
-        let init_cube = aig.latch_init_cube().to_cube();
-        let state_transform = StateTransform::new(&aig);
-        let share = Arc::new(PdrShare {
-            aig,
-            init_cube,
-            transition_cnf,
-            state_transform,
-        });
+    pub fn new(share: Arc<PdrShare>) -> Self {
         let mut solvers = vec![PdrSolver::new(share.clone())];
         let mut init_frame = Vec::new();
         for l in share.aig.latchs.iter() {
@@ -292,7 +284,7 @@ impl Pdr {
                 )
                 .to_cube();
                 // self.statistic();
-                if !self.rec_block(last_frame_index, cex) {
+                if !self.block(cex) {
                     self.statistic();
                     return false;
                 }
@@ -307,17 +299,16 @@ impl Pdr {
     }
 }
 
-impl Pdr {
-    fn statistic(&self) {
-        for frame in self.delta_frames.iter() {
-            print!("{} ", frame.len())
-        }
-        println!();
-        println!("{:?}", self.statistic);
-    }
-}
-
 pub fn solve(aig: Aig) -> bool {
-    let mut pdr = Pdr::new(aig);
+    let transition_cnf = aig.get_cnf();
+    let init_cube = aig.latch_init_cube().to_cube();
+    let state_transform = StateTransform::new(&aig);
+    let share = Arc::new(PdrShare {
+        aig,
+        init_cube,
+        transition_cnf,
+        state_transform,
+    });
+    let mut pdr = Pdr::new(share);
     pdr.check()
 }

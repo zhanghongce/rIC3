@@ -32,15 +32,18 @@ fn main() {
     // let aig =
     //     aig::Aig::from_file("../MC-Benchmark/hwmcc20/aig/2019/goel/industry/cal143/cal143.aag")
     //         .unwrap(); // 30s vs 10s
+
+    // let aig =
+    //     aig::Aig::from_file("../MC-Benchmark/hwmcc20/aig/2019/goel/industry/cal102/cal102.aag")
+    //         .unwrap(); // 100s vs 88s
+
+    // let aig =
+    //     aig::Aig::from_file("../MC-Benchmark/hwmcc20/aig/2019/goel/industry/cal140/cal140.aag")
+    //         .unwrap(); // 30s vs 10s
+
     let aig =
-        aig::Aig::from_file("../MC-Benchmark/hwmcc20/aig/2019/goel/industry/cal102/cal102.aag")
-            .unwrap(); // 100s vs 88s
-                       // let aig =
-                       //     aig::Aig::from_file("../MC-Benchmark/hwmcc20/aig/2019/goel/industry/cal140/cal140.aag")
-                       //         .unwrap(); // 30s vs 10s
-                       // let aig =
-                       //     aig::Aig::from_file("../MC-Benchmark/hwmcc20/aig/2019/goel/industry/cal112/cal112.aag")
-                       //         .unwrap(); // 167s vs 158s
+        aig::Aig::from_file("../MC-Benchmark/hwmcc20/aig/2019/goel/industry/cal112/cal112.aag")
+            .unwrap(); // 167s vs 158s
 
     // let aig = aig::Aig::from_file("../MC-Benchmark/hwmcc17/single/intel007.aag").unwrap();
 
