@@ -6,7 +6,11 @@ use super::{
 };
 use crate::{
     pdr::heap_frame_cube::HeapFrameCube,
-    utils::{generalize::generalize_by_ternary_simulation, state_transform::StateTransform},
+    utils::{
+        generalize::generalize_by_ternary_simulation,
+        relation::{cube_subsume, cube_subsume_init},
+        state_transform::StateTransform,
+    },
 };
 use aig::Aig;
 use logic_form::{Clause, Cube, Lit};
@@ -37,18 +41,21 @@ impl Pdr {
         self.statistic.num_frames = self.depth();
     }
 
-    fn frame_add_cube(&mut self, frame: usize, cube: Cube, to_all: bool) {
+    fn frame_add_cube(&mut self, frame: usize, cube: Cube) {
         assert!(cube.is_sorted_by_key(|x| x.var()));
         assert!(!self.trivial_contained(frame, &cube));
+        let mut begin = 1;
         for i in 1..=frame {
             let cubes = take(&mut self.frames[i]);
             for c in cubes {
-                if !cube.subsume(&c) {
+                if cube_subsume(&c, &cube) {
+                    begin = i + 1;
+                }
+                if !cube_subsume(&cube, &c) {
                     self.frames[i].push(c);
                 }
             }
         }
-        let begin = if to_all { 1 } else { frame };
         self.frames[frame].push(cube.clone());
         let clause = !cube;
         for i in begin..=frame {
@@ -60,7 +67,7 @@ impl Pdr {
         self.statistic.num_trivial_contained += 1;
         for i in frame..=self.depth() {
             for c in self.frames[i].iter() {
-                if c.subsume(cube) {
+                if cube_subsume(c, cube) {
                     self.statistic.num_trivial_contained_success += 1;
                     return true;
                 }
@@ -71,6 +78,7 @@ impl Pdr {
 
     fn blocked<'a>(&'a mut self, frame: usize, cube: &Cube) -> BlockResult<'a> {
         assert!(frame > 0);
+        self.statistic.num_blocked += 1;
         if frame == 1 {
             self.solvers[frame - 1].pump_act_and_check_restart(&self.frames[0..1]);
         } else {
@@ -80,7 +88,7 @@ impl Pdr {
     }
 
     fn down(&mut self, frame: usize, cube: Cube) -> Option<Cube> {
-        if cube.subsume(&self.share.init_cube) {
+        if cube_subsume_init(&cube) {
             return None;
         }
         self.statistic.num_down_blocked += 1;
@@ -94,7 +102,7 @@ impl Pdr {
         self.statistic.num_ctg_down += 1;
         let mut ctgs = 0;
         loop {
-            if cube.subsume(&self.share.init_cube) {
+            if cube_subsume_init(&cube) {
                 return None;
             }
             self.statistic.num_ctg_down_blocked += 1;
@@ -102,7 +110,7 @@ impl Pdr {
                 BlockResult::Yes(conflict) => return Some(conflict.get_conflict()),
                 BlockResult::No(model) => {
                     let model = model.get_model();
-                    if ctgs < 3 && frame > 1 && !model.subsume(&self.share.init_cube) {
+                    if ctgs < 3 && frame > 1 && !cube_subsume_init(&model) {
                         if let BlockResult::Yes(conflict) = self.blocked(frame - 1, &model) {
                             ctgs += 1;
                             let conflict = conflict.get_conflict();
@@ -114,7 +122,7 @@ impl Pdr {
                                 i += 1;
                             }
                             let conflict = self.mic(i - 1, conflict, true);
-                            self.frame_add_cube(i - 1, conflict, true);
+                            self.frame_add_cube(i - 1, conflict);
                             continue;
                         }
                     }
@@ -198,8 +206,8 @@ impl Pdr {
             if frame == 0 {
                 return false;
             }
-            println!("{:?}", heap_num);
-            self.statistic();
+            // println!("{:?}", heap_num);
+            // self.statistic();
             heap_num[frame] -= 1;
             if self.trivial_contained(frame, &cube) {
                 continue;
@@ -214,7 +222,7 @@ impl Pdr {
                         heap_num[frame + 1] += 1;
                     }
                     if !self.trivial_contained(frame - 1, &core) {
-                        self.frame_add_cube(frame - 1, core, true);
+                        self.frame_add_cube(frame - 1, core);
                     }
                 }
                 BlockResult::No(model) => {
@@ -239,10 +247,7 @@ impl Pdr {
                 match self.blocked(frame_idx + 1, &cube) {
                     BlockResult::Yes(conflict) => {
                         let conflict = conflict.get_conflict();
-                        assert!(conflict.len() <= cube.len());
-                        assert!(conflict.subsume(&cube));
-                        let to_all = conflict.len() < cube.len();
-                        self.frame_add_cube(frame_idx + 1, conflict, to_all);
+                        self.frame_add_cube(frame_idx + 1, conflict);
                     }
                     BlockResult::No(_) => {
                         // 利用cex？x
@@ -308,11 +313,10 @@ impl Pdr {
 
 pub fn solve(aig: Aig) -> bool {
     let transition_cnf = aig.get_cnf();
-    let init_cube = aig.latch_init_cube().to_cube();
+    assert!(aig.latch_init_cube().to_cube().iter().all(|l| l.compl()));
     let state_transform = StateTransform::new(&aig);
     let share = Arc::new(BasicShare {
         aig,
-        init_cube,
         transition_cnf,
         state_transform,
     });

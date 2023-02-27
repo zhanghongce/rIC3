@@ -19,15 +19,13 @@ fn main() {
 
     // Safe
 
-    // let aig = aig::Aig::from_file("../MC-Benchmark/hwmcc20/aig/2020/mann/rast-p00.aag").unwrap(); //  vs 17s
-
     // let aig =
     // aig::Aig::from_file("../MC-Benchmark/hwmcc20/aig/2019/goel/industry/cal227/cal227.aag")
     //     .unwrap(); //
 
-    let aig =
-        aig::Aig::from_file("../MC-Benchmark/hwmcc20/aig/2019/beem/brp2.6.prop3-back-serstep.aag")
-            .unwrap(); //
+    // let aig =
+    //     aig::Aig::from_file("../MC-Benchmark/hwmcc20/aig/2019/beem/brp2.6.prop3-back-serstep.aag")
+    //         .unwrap(); //
 
     // let aig = aig::Aig::from_file(
     //     "../MC-Benchmark/hwmcc20/aig/2019/beem/pgm_protocol.7.prop1-back-serstep.aag",
@@ -38,9 +36,9 @@ fn main() {
     //     aig::Aig::from_file("../MC-Benchmark/hwmcc20/aig/2019/goel/industry/cal143/cal143.aag")
     //         .unwrap(); // 26s vs 10s
 
-    // let aig =
-    //     aig::Aig::from_file("../MC-Benchmark/hwmcc20/aig/2019/goel/industry/cal102/cal102.aag")
-    //         .unwrap(); // 100s vs 88s
+    let aig =
+        aig::Aig::from_file("../MC-Benchmark/hwmcc20/aig/2019/goel/industry/cal102/cal102.aag")
+            .unwrap(); // 100s vs 88s
 
     // let aig =
     //     aig::Aig::from_file("../MC-Benchmark/hwmcc20/aig/2019/goel/industry/cal140/cal140.aag")
@@ -50,7 +48,7 @@ fn main() {
     //     aig::Aig::from_file("../MC-Benchmark/hwmcc20/aig/2019/goel/industry/cal112/cal112.aag")
     //         .unwrap(); // 167s vs 158s
 
-    // let aig = aig::Aig::from_file("../MC-Benchmark/hwmcc17/single/intel007.aag").unwrap(); // 28s
+    // let aig = aig::Aig::from_file("../MC-Benchmark/hwmcc17/single/intel007.aag").unwrap(); // 21s
 
     // Unsafe
     // let aig = aig::Aig::from_file("../MC-Benchmark/hwmcc20/aig/2019/beem/at.6.prop1-back-serstep.aag").unwrap(); // 21s

@@ -1,5 +1,5 @@
 use super::basic::BasicShare;
-use crate::utils::generalize::generalize_by_ternary_simulation;
+use crate::utils::{generalize::generalize_by_ternary_simulation, relation::cube_subsume};
 use aig::AigCube;
 use logic_form::{Clause, Cube, Lit};
 use sat_solver::{
@@ -32,8 +32,21 @@ impl PdrSolver {
             self.num_act = 0;
             self.solver = Solver::new();
             self.solver.add_cnf(&self.share.transition_cnf);
-            for dnf in frames {
+            let previous_subsume = |to_frame, cube: &Cube| {
+                for dnf in frames.iter().take(to_frame) {
+                    for c in dnf {
+                        if cube_subsume(c, cube) {
+                            return true;
+                        }
+                    }
+                }
+                false
+            };
+            for (i, dnf) in frames.iter().enumerate() {
                 for cube in dnf {
+                    if i > 0 && previous_subsume(i - 1, cube) {
+                        continue;
+                    }
                     self.solver.add_clause(&!cube.clone());
                 }
             }
@@ -41,7 +54,6 @@ impl PdrSolver {
     }
 
     pub fn blocked<'a>(&'a mut self, cube: &Cube) -> BlockResult<'a> {
-        // self.statistic.num_blocked += 1;
         let mut assumption = self.share.state_transform.cube_next(cube);
         let act = self.solver.new_var();
         assumption.push(act);
