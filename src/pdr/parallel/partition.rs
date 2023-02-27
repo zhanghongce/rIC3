@@ -1,4 +1,4 @@
-use crate::{pdr::basic_share::BasicShare, utils::generalize::generalize_by_ternary_simulation};
+use crate::{pdr::basic::BasicShare, utils::generalize::generalize_by_ternary_simulation};
 use logic_form::{Cube, Lit};
 use sat_solver::{minisat::Solver, SatResult, SatSolver};
 use std::collections::HashSet;

@@ -1,6 +1,6 @@
 use super::{
     activity::Activity,
-    basic_share::BasicShare,
+    basic::BasicShare,
     solver::{BlockResult, PdrSolver},
     statistic::Statistic,
 };
@@ -39,6 +39,7 @@ impl Pdr {
 
     fn frame_add_cube(&mut self, frame: usize, cube: Cube, to_all: bool) {
         assert!(cube.is_sorted_by_key(|x| x.var()));
+        assert!(!self.trivial_contained(frame, &cube));
         for i in 1..=frame {
             let cubes = take(&mut self.frames[i]);
             for c in cubes {
@@ -53,6 +54,19 @@ impl Pdr {
         for i in begin..=frame {
             self.solvers[i].add_clause(&clause);
         }
+    }
+
+    fn trivial_contained(&mut self, frame: usize, cube: &Cube) -> bool {
+        self.statistic.num_trivial_contained += 1;
+        for i in frame..=self.depth() {
+            for c in self.frames[i].iter() {
+                if c.subsume(cube) {
+                    self.statistic.num_trivial_contained_success += 1;
+                    return true;
+                }
+            }
+        }
+        false
     }
 
     fn blocked<'a>(&'a mut self, frame: usize, cube: &Cube) -> BlockResult<'a> {
@@ -77,11 +91,13 @@ impl Pdr {
     }
 
     fn ctg_down(&mut self, frame: usize, mut cube: Cube, keep: &HashSet<Lit>) -> Option<Cube> {
+        self.statistic.num_ctg_down += 1;
         let mut ctgs = 0;
         loop {
             if cube.subsume(&self.share.init_cube) {
                 return None;
             }
+            self.statistic.num_ctg_down_blocked += 1;
             match self.blocked(frame, &cube) {
                 BlockResult::Yes(conflict) => return Some(conflict.get_conflict()),
                 BlockResult::No(model) => {
@@ -171,20 +187,7 @@ impl Pdr {
         (self.depth() + 1, cube)
     }
 
-    fn trivial_contained(&mut self, frame: usize, cube: &Cube) -> bool {
-        self.statistic.num_trivial_contained += 1;
-        for i in frame..=self.depth() {
-            for c in self.frames[i].iter() {
-                if c.subsume(cube) {
-                    self.statistic.num_trivial_contained_success += 1;
-                    return true;
-                }
-            }
-        }
-        false
-    }
-
-    fn block(&mut self, cube: Cube) -> bool {
+    pub fn block(&mut self, cube: Cube) -> bool {
         let mut heap = BinaryHeap::new();
         let frame = self.depth();
         let mut heap_num = vec![0; frame + 1];
@@ -195,8 +198,8 @@ impl Pdr {
             if frame == 0 {
                 return false;
             }
-            // println!("{:?}", heap_num);
-            // self.statistic();
+            println!("{:?}", heap_num);
+            self.statistic();
             heap_num[frame] -= 1;
             if self.trivial_contained(frame, &cube) {
                 continue;
@@ -210,7 +213,9 @@ impl Pdr {
                         heap.push(HeapFrameCube::new(frame + 1, cube));
                         heap_num[frame + 1] += 1;
                     }
-                    self.frame_add_cube(frame - 1, core, true);
+                    if !self.trivial_contained(frame - 1, &core) {
+                        self.frame_add_cube(frame - 1, core, true);
+                    }
                 }
                 BlockResult::No(model) => {
                     heap.push(HeapFrameCube::new(frame - 1, model.get_model()));
@@ -225,9 +230,12 @@ impl Pdr {
 
     fn propagate(&mut self) -> bool {
         for frame_idx in 1..self.depth() {
-            let frame = take(&mut self.frames[frame_idx]);
+            let frame = self.frames[frame_idx].clone();
             for cube in frame {
-                self.statistic.num_propagete_blocked += 1;
+                self.statistic.num_propagate_blocked += 1;
+                if self.trivial_contained(frame_idx + 1, &cube) {
+                    continue;
+                }
                 match self.blocked(frame_idx + 1, &cube) {
                     BlockResult::Yes(conflict) => {
                         let conflict = conflict.get_conflict();
@@ -237,8 +245,7 @@ impl Pdr {
                         self.frame_add_cube(frame_idx + 1, conflict, to_all);
                     }
                     BlockResult::No(_) => {
-                        // 利用cex？
-                        self.frames[frame_idx].push(cube);
+                        // 利用cex？x
                     }
                 };
             }

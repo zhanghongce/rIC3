@@ -1,5 +1,5 @@
 mod activity;
-mod basic_share;
+mod basic;
 mod heap_frame_cube;
 pub mod parallel;
 #[allow(clippy::module_inception)]

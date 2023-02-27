@@ -1,4 +1,4 @@
-use super::basic_share::BasicShare;
+use super::basic::BasicShare;
 use crate::utils::generalize::generalize_by_ternary_simulation;
 use aig::AigCube;
 use logic_form::{Clause, Cube, Lit};
@@ -81,6 +81,10 @@ impl PdrSolver {
         self.solver.solve(assumptions)
     }
 }
+
+unsafe impl Sync for PdrSolver {}
+
+unsafe impl Send for PdrSolver {}
 
 pub enum BlockResult<'a> {
     Yes(BlockResultYes<'a>),
