@@ -32,21 +32,21 @@ impl PdrSolver {
             self.num_act = 0;
             self.solver = Solver::new();
             self.solver.add_cnf(&self.share.transition_cnf);
-            let previous_subsume = |to_frame, cube: &Cube| {
-                for dnf in frames.iter().take(to_frame) {
-                    for c in dnf {
-                        if cube_subsume(c, cube) {
-                            return true;
-                        }
-                    }
-                }
-                false
-            };
-            for (i, dnf) in frames.iter().enumerate() {
+            // let previous_subsume = |to_frame, cube: &Cube| {
+            //     for dnf in frames.iter().take(to_frame) {
+            //         for c in dnf {
+            //             if cube_subsume(c, cube) {
+            //                 return true;
+            //             }
+            //         }
+            //     }
+            //     false
+            // };
+            for (_, dnf) in frames.iter().enumerate() {
                 for cube in dnf {
-                    if i > 0 && previous_subsume(i - 1, cube) {
-                        continue;
-                    }
+                    // if i > 0 && previous_subsume(i - 1, cube) {
+                    //     continue;
+                    // }
                     self.solver.add_clause(&!cube.clone());
                 }
             }

@@ -206,8 +206,8 @@ impl Pdr {
             if frame == 0 {
                 return false;
             }
-            // println!("{:?}", heap_num);
-            // self.statistic();
+            println!("{:?}", heap_num);
+            self.statistic();
             heap_num[frame] -= 1;
             if self.trivial_contained(frame, &cube) {
                 continue;

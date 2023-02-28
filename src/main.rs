@@ -27,18 +27,18 @@ fn main() {
     //     aig::Aig::from_file("../MC-Benchmark/hwmcc20/aig/2019/beem/brp2.6.prop3-back-serstep.aag")
     //         .unwrap(); //
 
-    // let aig = aig::Aig::from_file(
-    //     "../MC-Benchmark/hwmcc20/aig/2019/beem/pgm_protocol.7.prop1-back-serstep.aag",
-    // )
-    // .unwrap(); // 911s vs 600s
+    let aig = aig::Aig::from_file(
+        "../MC-Benchmark/hwmcc20/aig/2019/beem/pgm_protocol.7.prop1-back-serstep.aag",
+    )
+    .unwrap(); // 911s vs 600s
 
     // let aig =
     //     aig::Aig::from_file("../MC-Benchmark/hwmcc20/aig/2019/goel/industry/cal143/cal143.aag")
     //         .unwrap(); // 26s vs 10s
 
-    let aig =
-        aig::Aig::from_file("../MC-Benchmark/hwmcc20/aig/2019/goel/industry/cal102/cal102.aag")
-            .unwrap(); // 100s vs 88s
+    // let aig =
+    //     aig::Aig::from_file("../MC-Benchmark/hwmcc20/aig/2019/goel/industry/cal102/cal102.aag")
+    //         .unwrap(); // 100s vs 88s
 
     // let aig =
     //     aig::Aig::from_file("../MC-Benchmark/hwmcc20/aig/2019/goel/industry/cal140/cal140.aag")
