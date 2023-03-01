@@ -77,6 +77,7 @@ impl Pdr {
     }
 
     fn blocked<'a>(&'a mut self, frame: usize, cube: &Cube) -> BlockResult<'a> {
+        assert!(!cube_subsume_init(cube));
         assert!(frame > 0);
         self.statistic.num_blocked += 1;
         if frame == 1 {
@@ -203,6 +204,7 @@ impl Pdr {
         heap_num[frame] += 1;
         while let Some(HeapFrameCube { frame, cube }) = heap.pop() {
             assert!(cube.is_sorted_by_key(|x| x.var()));
+            assert!(!cube_subsume_init(&cube));
             if frame == 0 {
                 return false;
             }
@@ -212,6 +214,7 @@ impl Pdr {
             if self.trivial_contained(frame, &cube) {
                 continue;
             }
+
             self.statistic.num_rec_block_blocked += 1;
             match self.blocked(frame, &cube) {
                 BlockResult::Yes(conflict) => {

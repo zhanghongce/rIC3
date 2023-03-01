@@ -1,5 +1,5 @@
 use super::basic::BasicShare;
-use crate::utils::{generalize::generalize_by_ternary_simulation, relation::cube_subsume};
+use crate::utils::{generalize::generalize_by_ternary_simulation, relation::cube_subsume_init};
 use aig::AigCube;
 use logic_form::{Clause, Cube, Lit};
 use sat_solver::{
@@ -110,18 +110,24 @@ pub struct BlockResultYes<'a> {
 }
 
 impl BlockResultYes<'_> {
-    pub fn get_conflict(mut self) -> Cube {
+    pub fn get_conflict(self) -> Cube {
+        assert!(!cube_subsume_init(&self.assumption));
         let conflict = unsafe { self.solver.get_conflict() };
-        let ans = self
+        let conflict: Cube = self
+            .assumption
+            .iter()
+            .filter_map(|l| conflict.has_lit(!*l).then_some(*l))
+            .collect();
+        let mut ans = self
             .share
             .as_ref()
             .state_transform
-            .previous(
-                take(&mut self.assumption)
-                    .into_iter()
-                    .filter(|l| conflict.has_lit(!*l)),
-            )
+            .previous(conflict.into_iter())
             .collect();
+        if cube_subsume_init(&ans) {
+            let pos_lit = self.assumption.iter().find(|l| !l.compl()).unwrap();
+            ans.push(*pos_lit);
+        }
         ans
     }
 }
@@ -135,12 +141,13 @@ pub struct BlockResultNo<'a> {
 impl BlockResultNo<'_> {
     pub fn get_model(mut self) -> Cube {
         let model = unsafe { self.solver.get_model() };
-        generalize_by_ternary_simulation(
+        let res = generalize_by_ternary_simulation(
             &self.share.as_ref().aig,
             model,
             &AigCube::from_cube(take(&mut self.assumption)),
         )
-        .to_cube()
+        .to_cube();
+        res
     }
 
     fn lit_value(&mut self, lit: Lit) -> bool {
