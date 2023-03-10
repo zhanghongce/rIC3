@@ -19,7 +19,10 @@ impl PartialEq for HeapFrameCube {
 
 impl PartialOrd for HeapFrameCube {
     fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
-        other.frame.partial_cmp(&self.frame)
+        match other.frame.partial_cmp(&self.frame) {
+            Some(core::cmp::Ordering::Equal) => other.cube.len().partial_cmp(&self.cube.len()),
+            ord => return ord,
+        }
     }
 }
 
