@@ -9,7 +9,7 @@ use sat_solver::{
 use std::{mem::take, sync::Arc};
 
 pub struct PdrSolver {
-    solver: Solver,
+    pub solver: Solver,
     num_act: usize,
 
     share: Arc<BasicShare>,
@@ -18,6 +18,7 @@ pub struct PdrSolver {
 impl PdrSolver {
     pub fn new(share: Arc<BasicShare>) -> Self {
         let mut solver = Solver::new();
+        solver.set_random_seed(91648253_f64);
         solver.add_cnf(&share.as_ref().transition_cnf);
         Self {
             solver,
@@ -29,24 +30,9 @@ impl PdrSolver {
     pub fn pump_act_and_check_restart(&mut self, frames: &[Vec<Cube>]) {
         self.num_act += 1;
         if self.num_act > 300 {
-            self.num_act = 0;
-            self.solver = Solver::new();
-            self.solver.add_cnf(&self.share.transition_cnf);
-            // let previous_subsume = |to_frame, cube: &Cube| {
-            //     for dnf in frames.iter().take(to_frame) {
-            //         for c in dnf {
-            //             if cube_subsume(c, cube) {
-            //                 return true;
-            //             }
-            //         }
-            //     }
-            //     false
-            // };
-            for (_, dnf) in frames.iter().enumerate() {
+            *self = Self::new(self.share.clone());
+            for dnf in frames.iter() {
                 for cube in dnf {
-                    // if i > 0 && previous_subsume(i - 1, cube) {
-                    //     continue;
-                    // }
                     self.solver.add_clause(&!cube.clone());
                 }
             }

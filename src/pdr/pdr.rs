@@ -14,7 +14,7 @@ use crate::{
 };
 use aig::Aig;
 use logic_form::{Clause, Cube, Lit};
-use sat_solver::SatResult;
+use sat_solver::{SatResult, SatSolver};
 use std::{
     collections::{BinaryHeap, HashSet},
     mem::take,
@@ -42,6 +42,7 @@ impl Pdr {
     }
 
     fn frame_add_cube(&mut self, frame: usize, cube: Cube) {
+        assert!(frame > 0);
         assert!(cube.is_sorted_by_key(|x| x.var()));
         assert!(!self.trivial_contained(frame, &cube));
         let mut begin = 1;
@@ -166,6 +167,11 @@ impl Pdr {
             match res {
                 Some(new_cube) => {
                     cube = new_cube;
+                    let clause = !cube.clone();
+                    for i in 1..=frame {
+                        self.solvers[i].add_clause(&clause);
+                        self.solvers[i].solver.simplify();
+                    }
                     self.statistic.num_mic_drop_success += 1;
                 }
                 None => {
@@ -229,6 +235,11 @@ impl Pdr {
                     }
                 }
                 BlockResult::No(model) => {
+                    // let pred = model.get_model();
+                    // let clause = !pred.clone();
+                    // for i in 1..frame - 1 {
+                    //     self.solvers[i].add_clause(&clause);
+                    // }
                     heap.push(HeapFrameCube::new(frame - 1, model.get_model()));
                     heap.push(HeapFrameCube::new(frame, cube));
                     heap_num[frame - 1] += 1;
