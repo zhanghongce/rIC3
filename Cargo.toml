@@ -6,7 +6,7 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-aig = { path = "../aig" }
+aig = { path = "../aig-rs" }
 sat-solver = { path = "../sat-solver" }
 logic-form = { path = "../logic-form" }
-biodivine-lib-bdd = { path = "../biodivine-lib-bdd" }
+cudd = { path = "../cudd-rs" }

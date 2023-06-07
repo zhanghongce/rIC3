@@ -26,6 +26,7 @@ pub struct Pdr {
     solvers: Vec<PdrSolver>,
     share: Arc<BasicShare>,
     activity: Activity,
+    min_frame_update: usize,
 
     pub statistic: Statistic,
 }
@@ -59,6 +60,7 @@ impl Pdr {
         }
         self.frames[frame].push(cube.clone());
         let clause = !cube;
+        self.min_frame_update = self.min_frame_update.min(begin);
         for i in begin..=frame {
             self.solvers[i].add_clause(&clause);
         }
@@ -235,11 +237,6 @@ impl Pdr {
                     }
                 }
                 BlockResult::No(model) => {
-                    // let pred = model.get_model();
-                    // let clause = !pred.clone();
-                    // for i in 1..frame - 1 {
-                    //     self.solvers[i].add_clause(&clause);
-                    // }
                     heap.push(HeapFrameCube::new(frame - 1, model.get_model()));
                     heap.push(HeapFrameCube::new(frame, cube));
                     heap_num[frame - 1] += 1;
@@ -251,7 +248,7 @@ impl Pdr {
     }
 
     fn propagate(&mut self) -> bool {
-        for frame_idx in 1..self.depth() {
+        for frame_idx in self.min_frame_update..self.depth() {
             let frame = self.frames[frame_idx].clone();
             for cube in frame {
                 self.statistic.num_propagate_blocked += 1;
@@ -272,6 +269,7 @@ impl Pdr {
                 return true;
             }
         }
+        self.min_frame_update = self.depth();
         false
     }
 }
@@ -292,6 +290,7 @@ impl Pdr {
             activity,
             statistic: Statistic::default(),
             share,
+            min_frame_update: 1,
         }
     }
 

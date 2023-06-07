@@ -1,9 +1,9 @@
 #![feature(assert_matches, is_sorted)]
 
 #[allow(dead_code)]
-mod pdr;
+mod image;
 #[allow(dead_code)]
-mod preimage;
+mod pdr;
 #[allow(dead_code)]
 mod utils;
 
@@ -50,10 +50,9 @@ fn main() {
 
     // let aig = aig::Aig::from_file("../MC-Benchmark/hwmcc17/single/intel007.aag").unwrap(); // 21s
 
-    // Unsafe
     // let aig = aig::Aig::from_file("../MC-Benchmark/hwmcc20/aig/2019/beem/at.6.prop1-back-serstep.aag").unwrap(); // 21s
 
-    // println!("{}", aig);
+    println!("{}", aig);
     dbg!(pdr::pdr::solve(aig));
     println!("{:?}", start.elapsed());
 }
