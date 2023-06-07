@@ -1,6 +1,6 @@
 use std::{fmt::Debug, ops::AddAssign};
 
-use super::pdr::Pdr;
+use super::Pdr;
 
 #[derive(Debug, Default)]
 pub struct Statistic {

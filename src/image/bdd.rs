@@ -15,7 +15,7 @@ pub fn solve(aig: Aig, forword: bool) -> bool {
     let start = Instant::now();
     loop {
         deep += 1;
-        // dbg!(deep);
+        dbg!(deep);
         if &frontier & &to != cudd.constant(false) {
             dbg!(start.elapsed());
             return false;
