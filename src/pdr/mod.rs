@@ -11,6 +11,7 @@ use self::{
     statistic::Statistic,
 };
 use crate::{
+    command::Args,
     pdr::basic::HeapFrameCube,
     utils::{
         generalize::generalize_by_ternary_simulation,
@@ -114,8 +115,10 @@ impl Pdr {
             if frame == 0 {
                 return false;
             }
-            println!("{:?}", heap_num);
-            self.statistic();
+            if self.share.args.verbose {
+                println!("{:?}", heap_num);
+                self.statistic();
+            }
             heap_num[frame] -= 1;
             if self.trivial_contained(frame, &cube) {
                 continue;
@@ -219,7 +222,7 @@ impl Pdr {
     }
 }
 
-pub fn solve(aig: Aig) -> bool {
+pub fn solve(aig: Aig, args: Args) -> bool {
     let transition_cnf = aig.get_cnf();
     assert!(aig.latch_init_cube().to_cube().iter().all(|l| l.compl()));
     let state_transform = StateTransform::new(&aig);
@@ -227,6 +230,7 @@ pub fn solve(aig: Aig) -> bool {
         aig,
         transition_cnf,
         state_transform,
+        args,
         statistic: Mutex::new(Statistic::default()),
     });
     let mut pdr = Pdr::new(share);

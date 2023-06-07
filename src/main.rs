@@ -1,5 +1,6 @@
 #![feature(assert_matches, is_sorted)]
 
+mod command;
 #[allow(dead_code)]
 mod image;
 #[allow(dead_code)]
@@ -7,10 +8,11 @@ mod pdr;
 #[allow(dead_code)]
 mod utils;
 
+use clap::Parser;
 use std::time::Instant;
 
 fn main() {
-    let start = Instant::now();
+    let args = command::Args::parse();
     // let aig = aig::Aig::from_file("../MC-Benchmark/examples/counter/10bit/counter.aag").unwrap();
     // let aig = aig::Aig::from_file("../MC-Benchmark/hwmcc20/aig/2019/goel/crafted/paper_v3/paper_v3.aag").unwrap();
     // let aig = aig::Aig::from_file("../MC-Benchmark/hwmcc19/single/aig/goel/opensource/vis_arrays_buf_bug/vis_arrays_buf_bug.aag").unwrap();
@@ -32,9 +34,13 @@ fn main() {
     // )
     // .unwrap(); // 911s vs 600s
 
+    // let aig =
+    //     aig::Aig::from_file("../MC-Benchmark/hwmcc20/aig/2019/goel/industry/cal143/cal143.aag")
+    //         .unwrap(); // 26s vs 10s
+
     let aig =
-        aig::Aig::from_file("../MC-Benchmark/hwmcc20/aig/2019/goel/industry/cal143/cal143.aag")
-            .unwrap(); // 26s vs 10s
+        aig::Aig::from_file("../MC-Benchmark/hwmcc20/aig/2019/goel/industry/cal118/cal118.aag")
+            .unwrap(); // 37s vs 13s
 
     // let aig =
     //     aig::Aig::from_file("../MC-Benchmark/hwmcc20/aig/2019/goel/industry/cal102/cal102.aag")
@@ -52,6 +58,7 @@ fn main() {
 
     // let aig = aig::Aig::from_file("../MC-Benchmark/hwmcc20/aig/2019/beem/at.6.prop1-back-serstep.aag").unwrap(); // 21s
 
-    dbg!(pdr::solve(aig));
+    let start = Instant::now();
+    dbg!(pdr::solve(aig, args));
     println!("{:?}", start.elapsed());
 }

@@ -11,7 +11,6 @@ use std::{mem::take, sync::Arc, time::Instant};
 pub struct PdrSolver {
     pub solver: Solver,
     num_act: usize,
-
     share: Arc<BasicShare>,
 }
 
