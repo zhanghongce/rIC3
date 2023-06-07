@@ -1,29 +1,26 @@
-use std::{fmt::Debug, ops::AddAssign};
+use std::{fmt::Debug, ops::AddAssign, time::Duration};
 
 use super::Pdr;
 
 #[derive(Debug, Default)]
 pub struct Statistic {
     pub num_blocked: usize,
-    pub num_frames: usize,
     pub num_sat_solver_restart: usize,
     pub num_down_blocked: usize,
-    pub num_generalize_blocked: usize,
-    pub num_propagate_blocked: usize,
-    pub num_rec_block_blocked: usize,
     pub num_mic_drop_success: usize,
     pub num_mic_drop_fail: usize,
     pub num_normal_mic: usize,
     pub num_simple_mic: usize,
     pub num_ctg_down: usize,
-    pub num_ctg_down_blocked: usize,
     pub num_get_bad_state: usize,
-    pub num_trivial_contained: usize,
-    pub num_trivial_contained_success: usize,
     pub average_mic_cube_len: StatisticAverage,
     pub average_mic_droped_var: StatisticAverage,
     pub average_mic_droped_var_percent: StatisticAverage,
     pub average_mic_single_removable_percent: StatisticAverage,
+
+    pub simple_mic_time: Duration,
+    pub mic_time: Duration,
+    pub blocked_check_time: Duration,
 }
 
 #[derive(Default)]
@@ -58,6 +55,6 @@ impl Pdr {
             print!("{} ", frame.len())
         }
         println!();
-        println!("{:?}", self.statistic);
+        println!("{:?}", self.share.statistic.lock().unwrap());
     }
 }

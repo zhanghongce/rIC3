@@ -1,6 +1,5 @@
 mod activity;
 mod basic;
-mod heap_frame_cube;
 mod mic;
 mod solver;
 mod statistic;
@@ -12,7 +11,7 @@ use self::{
     statistic::Statistic,
 };
 use crate::{
-    pdr::heap_frame_cube::HeapFrameCube,
+    pdr::basic::HeapFrameCube,
     utils::{
         generalize::generalize_by_ternary_simulation,
         relation::{cube_subsume, cube_subsume_init},
@@ -22,7 +21,11 @@ use crate::{
 use aig::Aig;
 use logic_form::{Clause, Cube, Lit};
 use sat_solver::SatResult;
-use std::{collections::BinaryHeap, mem::take, sync::Arc};
+use std::{
+    collections::BinaryHeap,
+    mem::take,
+    sync::{Arc, Mutex},
+};
 
 pub struct Pdr {
     pub frames: Vec<Vec<Cube>>,
@@ -30,8 +33,6 @@ pub struct Pdr {
     share: Arc<BasicShare>,
     activity: Activity,
     min_frame_update: usize,
-
-    pub statistic: Statistic,
 }
 
 impl Pdr {
@@ -42,7 +43,6 @@ impl Pdr {
     pub fn new_frame(&mut self) {
         self.solvers.push(PdrSolver::new(self.share.clone()));
         self.frames.push(Vec::new());
-        self.statistic.num_frames = self.depth();
     }
 
     pub fn frame_add_cube(&mut self, frame: usize, cube: Cube) {
@@ -70,11 +70,9 @@ impl Pdr {
     }
 
     fn trivial_contained(&mut self, frame: usize, cube: &Cube) -> bool {
-        self.statistic.num_trivial_contained += 1;
         for i in frame..=self.depth() {
             for c in self.frames[i].iter() {
                 if cube_subsume(c, cube) {
-                    self.statistic.num_trivial_contained_success += 1;
                     return true;
                 }
             }
@@ -85,7 +83,7 @@ impl Pdr {
     pub fn blocked<'a>(&'a mut self, frame: usize, cube: &Cube) -> BlockResult<'a> {
         assert!(!cube_subsume_init(cube));
         assert!(frame > 0);
-        self.statistic.num_blocked += 1;
+        self.share.statistic.lock().unwrap().num_blocked += 1;
         if frame == 1 {
             self.solvers[frame - 1].pump_act_and_check_restart(&self.frames[0..1]);
         } else {
@@ -97,7 +95,6 @@ impl Pdr {
     fn generalize(&mut self, frame: usize, cube: Cube) -> (usize, Cube) {
         let cube = self.mic(frame, cube, false);
         for i in frame + 1..=self.depth() {
-            self.statistic.num_generalize_blocked += 1;
             if let BlockResult::No(_) = self.blocked(i, &cube) {
                 return (i, cube);
             }
@@ -124,7 +121,6 @@ impl Pdr {
                 continue;
             }
 
-            self.statistic.num_rec_block_blocked += 1;
             match self.blocked(frame, &cube) {
                 BlockResult::Yes(conflict) => {
                     let conflict = conflict.get_conflict();
@@ -152,7 +148,6 @@ impl Pdr {
         for frame_idx in self.min_frame_update..self.depth() {
             let frame = self.frames[frame_idx].clone();
             for cube in frame {
-                self.statistic.num_propagate_blocked += 1;
                 if self.trivial_contained(frame_idx + 1, &cube) {
                     continue;
                 }
@@ -189,7 +184,6 @@ impl Pdr {
             frames: vec![init_frame],
             solvers,
             activity,
-            statistic: Statistic::default(),
             share,
             min_frame_update: 1,
         }
@@ -202,7 +196,7 @@ impl Pdr {
             while let SatResult::Sat(model) =
                 self.solvers[last_frame_index].solve(&[self.share.aig.bads[0].to_lit()])
             {
-                self.statistic.num_get_bad_state += 1;
+                self.share.statistic.lock().unwrap().num_get_bad_state += 1;
                 let cex = generalize_by_ternary_simulation(
                     &self.share.aig,
                     model,
@@ -233,6 +227,7 @@ pub fn solve(aig: Aig) -> bool {
         aig,
         transition_cnf,
         state_transform,
+        statistic: Mutex::new(Statistic::default()),
     });
     let mut pdr = Pdr::new(share);
     pdr.check()

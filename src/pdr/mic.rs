@@ -2,14 +2,14 @@ use super::{solver::BlockResult, Pdr};
 use crate::utils::relation::cube_subsume_init;
 use logic_form::{Cube, Lit};
 use sat_solver::SatSolver;
-use std::collections::HashSet;
+use std::{collections::HashSet, time::Instant};
 
 impl Pdr {
     fn down(&mut self, frame: usize, cube: Cube) -> Option<Cube> {
         if cube_subsume_init(&cube) {
             return None;
         }
-        self.statistic.num_down_blocked += 1;
+        self.share.statistic.lock().unwrap().num_down_blocked += 1;
         match self.blocked(frame, &cube) {
             BlockResult::Yes(conflict) => Some(conflict.get_conflict()),
             BlockResult::No(_) => None,
@@ -17,13 +17,12 @@ impl Pdr {
     }
 
     fn ctg_down(&mut self, frame: usize, mut cube: Cube, keep: &HashSet<Lit>) -> Option<Cube> {
-        self.statistic.num_ctg_down += 1;
+        self.share.statistic.lock().unwrap().num_ctg_down += 1;
         let mut ctgs = 0;
         loop {
             if cube_subsume_init(&cube) {
                 return None;
             }
-            self.statistic.num_ctg_down_blocked += 1;
             match self.blocked(frame, &cube) {
                 BlockResult::Yes(conflict) => return Some(conflict.get_conflict()),
                 BlockResult::No(model) => {
@@ -61,13 +60,13 @@ impl Pdr {
     }
 
     pub fn mic(&mut self, frame: usize, mut cube: Cube, simple: bool) -> Cube {
+        let start = Instant::now();
         if simple {
-            self.statistic.num_simple_mic += 1;
+            self.share.statistic.lock().unwrap().num_simple_mic += 1;
         } else {
-            self.statistic.num_normal_mic += 1;
+            self.share.statistic.lock().unwrap().num_normal_mic += 1;
         }
-        self.statistic.average_mic_cube_len += cube.len();
-        let origin_len = cube.len();
+        self.share.statistic.lock().unwrap().average_mic_cube_len += cube.len();
         let mut i = 0;
         assert!(cube.is_sorted_by_key(|x| *x.var()));
         cube = self.activity.sort_by_activity_ascending(cube);
@@ -88,10 +87,10 @@ impl Pdr {
                         self.solvers[i].add_clause(&clause);
                         self.solvers[i].solver.simplify();
                     }
-                    self.statistic.num_mic_drop_success += 1;
+                    self.share.statistic.lock().unwrap().num_mic_drop_success += 1;
                 }
                 None => {
-                    self.statistic.num_mic_drop_fail += 1;
+                    self.share.statistic.lock().unwrap().num_mic_drop_fail += 1;
                     keep.insert(cube[i]);
                     i += 1;
                 }
@@ -101,9 +100,11 @@ impl Pdr {
         for l in cube.iter() {
             self.activity.pump_activity(l);
         }
-        self.statistic.average_mic_droped_var += origin_len - cube.len();
-        self.statistic.average_mic_droped_var_percent +=
-            (origin_len - cube.len()) as f64 / origin_len as f64;
+        if simple {
+            self.share.statistic.lock().unwrap().simple_mic_time += start.elapsed()
+        } else {
+            self.share.statistic.lock().unwrap().mic_time += start.elapsed()
+        }
         cube
     }
 }

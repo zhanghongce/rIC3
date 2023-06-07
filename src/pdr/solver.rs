@@ -6,7 +6,7 @@ use sat_solver::{
     minisat::{Conflict, Model, Solver},
     SatModel, SatResult, SatSolver, UnsatConflict,
 };
-use std::{mem::take, sync::Arc};
+use std::{mem::take, sync::Arc, time::Instant};
 
 pub struct PdrSolver {
     pub solver: Solver,
@@ -40,13 +40,14 @@ impl PdrSolver {
     }
 
     pub fn blocked<'a>(&'a mut self, cube: &Cube) -> BlockResult<'a> {
+        let start = Instant::now();
         let mut assumption = self.share.state_transform.cube_next(cube);
         let act = self.solver.new_var();
         assumption.push(act);
         let mut tmp_cls = !cube.clone();
         tmp_cls.push(!act);
         self.solver.add_clause(&tmp_cls);
-        match self.solver.solve(&assumption) {
+        let res = match self.solver.solve(&assumption) {
             SatResult::Sat(_) => {
                 let last = assumption.len() - 1;
                 let act = !assumption.remove(last);
@@ -67,7 +68,9 @@ impl PdrSolver {
                     assumption,
                 })
             }
-        }
+        };
+        self.share.statistic.lock().unwrap().blocked_check_time += start.elapsed();
+        res
     }
 
     pub fn add_clause(&mut self, clause: &Clause) {
