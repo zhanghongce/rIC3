@@ -9,13 +9,6 @@ pub struct Frames {
 }
 
 impl Frames {
-    // pub fn new(init: Vec<Cube>, broadcast: PdrSolverBroadcastSender) -> Self {
-    //     Self {
-    //         frames: vec![init],
-    //         broadcast: vec![broadcast],
-    //     }
-    // }
-
     pub fn new() -> Self {
         Self {
             frames: Vec::new(),
