@@ -20,8 +20,4 @@ impl Activity {
         cube.sort_by_key(|l| self.activity[Into::<usize>::into(l.var())]);
         cube
     }
-
-    pub fn var_activity(&self, var: &Lit) -> u32 {
-        self.activity[Into::<usize>::into(var.var())]
-    }
 }

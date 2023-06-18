@@ -1,6 +1,5 @@
+use crate::{worker::PdrWorker, Pdr};
 use std::{fmt::Debug, ops::AddAssign, time::Duration};
-
-use super::{worker::PdrWorker, Pdr};
 
 #[derive(Debug, Default)]
 pub struct Statistic {

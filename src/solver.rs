@@ -4,7 +4,7 @@ use aig::AigCube;
 use logic_form::{Clause, Cube, Lit};
 use sat_solver::{
     minisat::{Conflict, Model, Solver},
-    SatModel, SatResult, SatSolver, UnsatConflict,
+    SatResult, SatSolver, UnsatConflict,
 };
 use std::{
     mem::take,
@@ -48,13 +48,13 @@ impl PdrSolver {
             };
             for dnf in frames.iter() {
                 for cube in dnf {
-                    self.solver.add_clause(&!cube.clone());
+                    self.add_clause(&!cube.clone());
                 }
             }
             while self.receiver.receive_clause().is_some() {}
         } else {
             while let Some(clause) = self.receiver.receive_clause() {
-                self.solver.add_clause(&clause);
+                self.add_clause(&clause);
             }
         }
     }
@@ -66,7 +66,7 @@ impl PdrSolver {
         assumption.push(act);
         let mut tmp_cls = !cube.clone();
         tmp_cls.push(!act);
-        self.solver.add_clause(&tmp_cls);
+        self.add_clause(&tmp_cls);
         let res = match self.solver.solve(&assumption) {
             SatResult::Sat(_) => {
                 let last = assumption.len() - 1;
@@ -157,10 +157,5 @@ impl BlockResultNo<'_> {
         )
         .to_cube();
         res
-    }
-
-    fn lit_value(&mut self, lit: Lit) -> bool {
-        let model = unsafe { self.solver.get_model() };
-        model.lit_value(lit)
     }
 }
