@@ -1,10 +1,9 @@
-use super::{solver::BlockResult, Pdr};
+use super::{solver::BlockResult, worker::PdrWorker};
 use crate::utils::relation::cube_subsume_init;
 use logic_form::{Cube, Lit};
-use sat_solver::SatSolver;
 use std::{collections::HashSet, time::Instant};
 
-impl Pdr {
+impl PdrWorker {
     fn down(&mut self, frame: usize, cube: Cube) -> Option<Cube> {
         if cube_subsume_init(&cube) {
             return None;
@@ -39,7 +38,7 @@ impl Pdr {
                                 i += 1;
                             }
                             let conflict = self.mic(i - 1, conflict, true);
-                            self.frame_add_cube(i - 1, conflict);
+                            self.frames.write().unwrap().add_cube(i - 1, conflict);
                             continue;
                         }
                     }
@@ -82,11 +81,12 @@ impl Pdr {
             match res {
                 Some(new_cube) => {
                     cube = new_cube;
-                    let clause = !cube.clone();
-                    for i in 1..=frame {
-                        self.solvers[i].add_clause(&clause);
-                        self.solvers[i].solver.simplify();
-                    }
+                    // let clause = !cube.clone();
+                    // TODO:
+                    // for i in 1..=frame {
+                    //     self.solvers[i].add_clause(&clause);
+                    //     self.solvers[i].solver.simplify();
+                    // }
                     self.share.statistic.lock().unwrap().num_mic_drop_success += 1;
                 }
                 None => {

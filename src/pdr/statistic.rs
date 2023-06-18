@@ -1,6 +1,6 @@
 use std::{fmt::Debug, ops::AddAssign, time::Duration};
 
-use super::Pdr;
+use super::{worker::PdrWorker, Pdr};
 
 #[derive(Debug, Default)]
 pub struct Statistic {
@@ -51,10 +51,14 @@ impl AddAssign<f64> for StatisticAverage {
 
 impl Pdr {
     pub fn statistic(&self) {
-        for frame in self.frames.iter() {
-            print!("{} ", frame.len())
-        }
-        println!();
+        self.frames.read().unwrap().statistic();
+        println!("{:?}", self.share.statistic.lock().unwrap());
+    }
+}
+
+impl PdrWorker {
+    pub fn statistic(&self) {
+        self.frames.read().unwrap().statistic();
         println!("{:?}", self.share.statistic.lock().unwrap());
     }
 }

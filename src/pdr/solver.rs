@@ -1,4 +1,4 @@
-use super::basic::BasicShare;
+use super::{basic::BasicShare, broadcast::PdrSolverBroadcastReceiver, frames::Frames};
 use crate::utils::{generalize::generalize_by_ternary_simulation, relation::cube_subsume_init};
 use aig::AigCube;
 use logic_form::{Clause, Cube, Lit};
@@ -6,34 +6,55 @@ use sat_solver::{
     minisat::{Conflict, Model, Solver},
     SatModel, SatResult, SatSolver, UnsatConflict,
 };
-use std::{mem::take, sync::Arc, time::Instant};
+use std::{
+    mem::take,
+    sync::{Arc, RwLock},
+    time::Instant,
+};
 
 pub struct PdrSolver {
-    pub solver: Solver,
+    solver: Solver,
+    receiver: PdrSolverBroadcastReceiver,
     num_act: usize,
     share: Arc<BasicShare>,
+    frame: usize,
 }
 
 impl PdrSolver {
-    pub fn new(share: Arc<BasicShare>) -> Self {
+    pub fn new(share: Arc<BasicShare>, frame: usize, receiver: PdrSolverBroadcastReceiver) -> Self {
         let mut solver = Solver::new();
         solver.set_random_seed(91648253_f64);
         solver.add_cnf(&share.as_ref().transition_cnf);
         Self {
             solver,
+            receiver,
+            frame,
             num_act: 0,
             share,
         }
     }
 
-    pub fn pump_act_and_check_restart(&mut self, frames: &[Vec<Cube>]) {
+    pub fn fetch(&mut self, frames: &RwLock<Frames>) {
         self.num_act += 1;
         if self.num_act > 300 {
-            *self = Self::new(self.share.clone());
+            self.num_act = 0;
+            self.solver = Solver::new();
+            self.solver.add_cnf(&self.share.transition_cnf);
+            let frames = frames.read().unwrap();
+            let frames = if self.frame == 0 {
+                &frames.frames[0..1]
+            } else {
+                &frames.frames[self.frame..]
+            };
             for dnf in frames.iter() {
                 for cube in dnf {
                     self.solver.add_clause(&!cube.clone());
                 }
+            }
+            while self.receiver.receive_clause().is_some() {}
+        } else {
+            while let Some(clause) = self.receiver.receive_clause() {
+                self.solver.add_clause(&clause);
             }
         }
     }
