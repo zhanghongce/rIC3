@@ -5,12 +5,11 @@ use super::{
     frames::Frames,
     solver::{BlockResult, PdrSolver},
 };
-use crate::utils::{generalize::generalize_by_ternary_simulation, relation::cube_subsume_init};
+use crate::{cex::Cex, utils::relation::cube_subsume_init};
 use logic_form::Cube;
-use sat_solver::SatResult;
 use std::{
     collections::BinaryHeap,
-    sync::{Arc, RwLock},
+    sync::{Arc, Mutex, RwLock},
 };
 
 pub struct PdrWorker {
@@ -18,15 +17,17 @@ pub struct PdrWorker {
     pub frames: Arc<RwLock<Frames>>,
     pub share: Arc<BasicShare>,
     pub activity: Activity,
+    cex: Arc<Mutex<Cex>>,
 }
 
 impl PdrWorker {
-    pub fn new(share: Arc<BasicShare>, frames: Arc<RwLock<Frames>>) -> Self {
+    pub fn new(share: Arc<BasicShare>, frames: Arc<RwLock<Frames>>, cex: Arc<Mutex<Cex>>) -> Self {
         Self {
             solvers: Vec::new(),
             frames,
             activity: Activity::new(&share.aig),
             share,
+            cex,
         }
     }
 
@@ -34,18 +35,19 @@ impl PdrWorker {
         self.solvers.len() - 1
     }
 
-    pub fn new_frame(&mut self, receiver: PdrSolverBroadcastReceiver) {
+    pub fn new_frame(&mut self, receiver: PdrSolverBroadcastReceiver, cex: Arc<Mutex<Cex>>) {
         self.solvers.push(PdrSolver::new(
             self.share.clone(),
             self.solvers.len(),
             receiver,
         ));
+        self.cex = cex
     }
 
     pub fn blocked<'a>(&'a mut self, frame: usize, cube: &Cube) -> BlockResult<'a> {
         assert!(!cube_subsume_init(cube));
         assert!(frame > 0);
-        self.solvers[frame - 1].fetch(&self.frames);
+        self.solvers[frame - 1].block_fetch(&self.frames);
         self.solvers[frame - 1].blocked(cube)
     }
 
@@ -107,6 +109,20 @@ impl PdrWorker {
         true
     }
 
+    pub fn start(&mut self) -> bool {
+        loop {
+            let cex = self.cex.lock().unwrap().get();
+            if let Some(cex) = cex {
+                self.statistic();
+                if !self.block(cex) {
+                    return false;
+                }
+            } else {
+                return true;
+            }
+        }
+    }
+
     pub fn propagate(&mut self) -> bool {
         for frame_idx in 1..self.depth() {
             let frame = self.frames.read().unwrap().frames[frame_idx].clone();
@@ -137,20 +153,5 @@ impl PdrWorker {
             }
         }
         false
-    }
-
-    pub fn get_cex(&mut self) -> Option<Cube> {
-        let last_frame_index = self.depth();
-        self.solvers[last_frame_index].fetch(&self.frames);
-        if let SatResult::Sat(model) =
-            self.solvers[last_frame_index].solve(&[self.share.aig.bads[0].to_lit()])
-        {
-            self.share.statistic.lock().unwrap().num_get_bad_state += 1;
-            let cex =
-                generalize_by_ternary_simulation(&self.share.aig, model, &[self.share.aig.bads[0]])
-                    .to_cube();
-            return Some(cex);
-        }
-        None
     }
 }

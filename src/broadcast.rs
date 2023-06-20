@@ -5,7 +5,7 @@ use std::sync::{
 };
 
 pub struct PdrSolverBroadcastSender {
-    senders: Vec<Sender<Arc<Clause>>>,
+    pub senders: Vec<Sender<Arc<Clause>>>,
 }
 
 impl PdrSolverBroadcastSender {

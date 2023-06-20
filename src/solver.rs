@@ -1,11 +1,8 @@
 use super::{basic::BasicShare, broadcast::PdrSolverBroadcastReceiver, frames::Frames};
 use crate::utils::{generalize::generalize_by_ternary_simulation, relation::cube_subsume_init};
 use aig::AigCube;
-use logic_form::{Clause, Cube, Lit};
-use sat_solver::{
-    minisat::{Conflict, Model, Solver},
-    SatResult, SatSolver, UnsatConflict,
-};
+use logic_form::{Clause, Cube};
+use sat_solver::{minisat::Solver, SatResult, SatSolver, UnsatConflict};
 use std::{
     mem::take,
     sync::{Arc, RwLock},
@@ -34,7 +31,7 @@ impl PdrSolver {
         }
     }
 
-    pub fn fetch(&mut self, frames: &RwLock<Frames>) {
+    pub fn block_fetch(&mut self, frames: &RwLock<Frames>) {
         self.num_act += 1;
         if self.num_act > 300 {
             self.num_act = 0;
@@ -97,15 +94,7 @@ impl PdrSolver {
         self.solver.add_clause(clause);
         self.solver.simplify();
     }
-
-    pub fn solve<'a>(&'a mut self, assumptions: &[Lit]) -> SatResult<Model<'a>, Conflict<'a>> {
-        self.solver.solve(assumptions)
-    }
 }
-
-unsafe impl Sync for PdrSolver {}
-
-unsafe impl Send for PdrSolver {}
 
 pub enum BlockResult<'a> {
     Yes(BlockResultYes<'a>),

@@ -3,6 +3,7 @@
 mod activity;
 mod basic;
 mod broadcast;
+mod cex;
 mod command;
 mod frames;
 mod mic;
@@ -11,7 +12,10 @@ mod statistic;
 mod utils;
 mod worker;
 
+use cex::Cex;
 use clap::Parser;
+use std::mem::take;
+use std::thread::spawn;
 use std::time::Instant;
 
 use crate::{basic::BasicShare, frames::Frames, statistic::Statistic, worker::PdrWorker};
@@ -28,44 +32,59 @@ pub struct Pdr {
 
 impl Pdr {
     pub fn new_frame(&mut self) {
-        let (broadcast, receivers) = create_broadcast(self.workers.len());
+        let (broadcast, mut receivers) = create_broadcast(self.workers.len() + 1);
+        let cex_receiver = receivers.pop().unwrap();
+        let cex = Arc::new(Mutex::new(Cex::new(self.share.clone(), cex_receiver)));
         for (receiver, worker) in receivers.into_iter().zip(self.workers.iter_mut()) {
-            worker.new_frame(receiver)
+            worker.new_frame(receiver, cex.clone())
         }
         self.frames.write().unwrap().new_frame(broadcast);
-        if self.frames.read().unwrap().frames.len() == 1 {
-            for l in self.share.aig.latchs.iter() {
-                let cube = Cube::from([Lit::new(l.input.into(), l.init)]);
-                self.frames.write().unwrap().add_cube(0, cube)
-            }
-        }
     }
 }
 
 impl Pdr {
-    pub fn new(share: Arc<BasicShare>) -> Self {
+    pub fn new(share: Arc<BasicShare>, num_worker: usize) -> Self {
         let frames = Arc::new(RwLock::new(Frames::new()));
+        let (broadcast, mut receivers) = create_broadcast(num_worker + 1);
+        let cex_receiver = receivers.pop().unwrap();
+        let cex = Arc::new(Mutex::new(Cex::new(share.clone(), cex_receiver)));
         let mut workers = Vec::new();
-        for _ in 0..1 {
-            workers.push(PdrWorker::new(share.clone(), frames.clone()))
+        for _ in 0..num_worker {
+            workers.push(PdrWorker::new(share.clone(), frames.clone(), cex.clone()))
         }
-        let mut ret = Self {
+        for (receiver, worker) in receivers.into_iter().zip(workers.iter_mut()) {
+            worker.new_frame(receiver, cex.clone())
+        }
+        frames.write().unwrap().new_frame(broadcast);
+        for l in share.aig.latchs.iter() {
+            let cube = Cube::from([Lit::new(l.input.into(), l.init)]);
+            frames.write().unwrap().add_cube(0, cube)
+        }
+        Self {
             frames,
             workers,
             share,
-        };
-        ret.new_frame();
-        ret
+        }
     }
 
     pub fn check(&mut self) -> bool {
         self.new_frame();
         loop {
-            while let Some(cex) = self.workers[0].get_cex() {
-                if !self.workers[0].block(cex) {
+            let mut joins = Vec::new();
+            let workers = take(&mut self.workers);
+            for mut worker in workers.into_iter() {
+                joins.push(spawn(move || {
+                    let res = worker.start();
+                    (worker, res)
+                }));
+            }
+            for join in joins {
+                let (worker, res) = join.join().unwrap();
+                if !res {
                     self.statistic();
                     return false;
                 }
+                self.workers.push(worker)
             }
             self.statistic();
             self.new_frame();
@@ -88,7 +107,7 @@ pub fn solve(aig: Aig, args: Args) -> bool {
         args,
         statistic: Mutex::new(Statistic::default()),
     });
-    let mut pdr = Pdr::new(share);
+    let mut pdr = Pdr::new(share, 1);
     pdr.check()
 }
 
@@ -119,9 +138,9 @@ fn main() {
     //     aig::Aig::from_file("../MC-Benchmark/hwmcc20/aig/2019/goel/industry/cal143/cal143.aag")
     //         .unwrap(); // 26s vs 10s
 
-    let aig =
-        aig::Aig::from_file("../MC-Benchmark/hwmcc20/aig/2019/goel/industry/cal118/cal118.aag")
-            .unwrap(); // 37s vs 13s
+    // let aig =
+    //     aig::Aig::from_file("../MC-Benchmark/hwmcc20/aig/2019/goel/industry/cal118/cal118.aag")
+    //         .unwrap(); // 37s vs 13s
 
     // let aig =
     //     aig::Aig::from_file("../MC-Benchmark/hwmcc20/aig/2019/goel/industry/cal102/cal102.aag")
@@ -137,7 +156,9 @@ fn main() {
 
     // let aig = aig::Aig::from_file("../MC-Benchmark/hwmcc17/single/intel007.aag").unwrap(); // 21s
 
-    // let aig = aig::Aig::from_file("../MC-Benchmark/hwmcc20/aig/2019/beem/at.6.prop1-back-serstep.aag").unwrap(); // 21s
+    let aig =
+        aig::Aig::from_file("../MC-Benchmark/hwmcc20/aig/2019/beem/at.6.prop1-back-serstep.aag")
+            .unwrap(); // 21s
 
     let start = Instant::now();
     dbg!(solve(aig, args));

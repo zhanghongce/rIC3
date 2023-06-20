@@ -18,6 +18,9 @@ impl Frames {
 
     pub fn new_frame(&mut self, broadcast: PdrSolverBroadcastSender) {
         self.frames.push(Vec::new());
+        if !self.broadcast.is_empty() {
+            self.broadcast.last_mut().unwrap().senders.pop();
+        }
         self.broadcast.push(broadcast);
     }
 
