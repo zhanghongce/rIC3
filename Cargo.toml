@@ -9,5 +9,4 @@ edition = "2021"
 aig = { path = "../aig-rs" }
 sat-solver = { path = "../sat-solver" }
 logic-form = { path = "../logic-form" }
-cudd = { path = "../cudd-rs" }
 clap = { version = "4.3.0" , features = ["derive"] }

@@ -18,7 +18,7 @@ pub fn cube_subsume(x: &Cube, y: &Cube) -> bool {
 
 pub fn cube_subsume_init(x: &Cube) -> bool {
     for i in 0..x.len() {
-        if !x[i].compl() {
+        if x[i].polarity() {
             return false;
         }
     }

@@ -59,7 +59,7 @@ impl PdrSolver {
     pub fn blocked<'a>(&'a mut self, cube: &Cube) -> BlockResult<'a> {
         let start = Instant::now();
         let mut assumption = self.share.state_transform.cube_next(cube);
-        let act = self.solver.new_var();
+        let act = self.solver.new_var().into();
         assumption.push(act);
         let mut tmp_cls = !cube.clone();
         tmp_cls.push(!act);
@@ -114,7 +114,7 @@ impl BlockResultYes<'_> {
         let conflict: Cube = self
             .assumption
             .iter()
-            .filter_map(|l| conflict.has_lit(!*l).then_some(*l))
+            .filter_map(|l| conflict.has(!*l).then_some(*l))
             .collect();
         let mut ans = self
             .share
@@ -123,7 +123,7 @@ impl BlockResultYes<'_> {
             .previous(conflict.into_iter())
             .collect();
         if cube_subsume_init(&ans) {
-            let pos_lit = self.assumption.iter().find(|l| !l.compl()).unwrap();
+            let pos_lit = self.assumption.iter().find(|l| l.polarity()).unwrap();
             ans.push(*pos_lit);
         }
         ans

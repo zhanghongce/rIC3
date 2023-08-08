@@ -69,10 +69,10 @@ impl PdrWorker {
         heap_num[frame] += 1;
         while let Some(HeapFrameCube { frame, cube }) = heap.pop() {
             assert!(cube.is_sorted_by_key(|x| x.var()));
-            assert!(!cube_subsume_init(&cube));
             if frame == 0 {
                 return false;
             }
+            assert!(!cube_subsume_init(&cube));
             if self.share.args.verbose {
                 println!("{:?}", heap_num);
                 self.statistic();

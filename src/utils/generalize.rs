@@ -1,4 +1,5 @@
 use aig::{Aig, AigCube, AigEdge, TernaryValue};
+use logic_form::Var;
 use sat_solver::SatModel;
 use std::assert_matches::assert_matches;
 
@@ -10,10 +11,10 @@ pub fn generalize_by_ternary_simulation<'a, M: SatModel<'a>>(
     let mut primary_inputs = Vec::new();
     let mut latch_inputs = Vec::new();
     for input in &aig.inputs {
-        primary_inputs.push(model.var_value((*input).into()).into());
+        primary_inputs.push(model.lit_value(Var::from(*input).into()).into());
     }
     for latch in &aig.latchs {
-        latch_inputs.push(model.var_value(latch.input.into()).into());
+        latch_inputs.push(model.lit_value(Var::from(latch.input).into()).into());
     }
     let mut simulation = aig.ternary_simulate(&primary_inputs, &latch_inputs);
     for logic in assumptions {

@@ -57,7 +57,7 @@ impl Pdr {
         }
         frames.write().unwrap().new_frame(broadcast);
         for l in share.aig.latchs.iter() {
-            let cube = Cube::from([Lit::new(l.input.into(), l.init)]);
+            let cube = Cube::from([Lit::new(l.input.into(), !l.init)]);
             frames.write().unwrap().add_cube(0, cube)
         }
         Self {
@@ -98,7 +98,11 @@ impl Pdr {
 
 pub fn solve(aig: Aig, args: Args) -> bool {
     let transition_cnf = aig.get_cnf();
-    assert!(aig.latch_init_cube().to_cube().iter().all(|l| l.compl()));
+    assert!(aig
+        .latch_init_cube()
+        .to_cube()
+        .iter()
+        .all(|l| !l.polarity()));
     let state_transform = StateTransform::new(&aig);
     let share = Arc::new(BasicShare {
         aig,
@@ -138,9 +142,9 @@ fn main() {
     //     aig::Aig::from_file("../MC-Benchmark/hwmcc20/aig/2019/goel/industry/cal143/cal143.aag")
     //         .unwrap(); // 26s vs 10s
 
-    // let aig =
-    //     aig::Aig::from_file("../MC-Benchmark/hwmcc20/aig/2019/goel/industry/cal118/cal118.aag")
-    //         .unwrap(); // 37s vs 13s
+    let aig =
+        aig::Aig::from_file("../MC-Benchmark/hwmcc20/aig/2019/goel/industry/cal118/cal118.aag")
+            .unwrap(); // 37s vs 13s
 
     // let aig =
     //     aig::Aig::from_file("../MC-Benchmark/hwmcc20/aig/2019/goel/industry/cal102/cal102.aag")
@@ -156,9 +160,9 @@ fn main() {
 
     // let aig = aig::Aig::from_file("../MC-Benchmark/hwmcc17/single/intel007.aag").unwrap(); // 21s
 
-    let aig =
-        aig::Aig::from_file("../MC-Benchmark/hwmcc20/aig/2019/beem/at.6.prop1-back-serstep.aag")
-            .unwrap(); // 21s
+    // let aig =
+    //     aig::Aig::from_file("../MC-Benchmark/hwmcc20/aig/2019/beem/at.6.prop1-back-serstep.aag")
+    //         .unwrap(); // 21s
 
     let start = Instant::now();
     dbg!(solve(aig, args));

@@ -43,7 +43,7 @@ impl Cex {
             generalize_cex = cex.intersection(c);
         }
         self.cexs.push(cex.clone());
-        let act = self.solver.new_var();
+        let act = self.solver.new_var().into();
         self.acts.push(act);
         let mut tmp_cls = !generalize_cex;
         tmp_cls.push(!act);

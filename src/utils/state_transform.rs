@@ -12,7 +12,7 @@ impl StateTransform {
         let mut next_map = HashMap::new();
         let mut previous_map = HashMap::new();
         for l in &aig.latchs {
-            let origin = Lit::new(l.input.into(), false);
+            let origin = Lit::new(l.input.into(), true);
             let next = l.next.to_lit();
             next_map.insert(origin, next);
             next_map.insert(!origin, !next);

@@ -26,14 +26,14 @@ impl Frames {
 
     pub fn add_cube(&mut self, frame: usize, cube: Cube) {
         assert!(cube.is_sorted_by_key(|x| x.var()));
-        assert!(!cube_subsume_init(&cube));
-        if self.trivial_contained(frame, &cube) {
-            return;
-        }
         let begin = if frame == 0 {
             assert!(self.frames.len() == 1);
             0
         } else {
+            if self.trivial_contained(frame, &cube) {
+                return;
+            }
+            assert!(!cube_subsume_init(&cube));
             let mut begin = 1;
             for i in 1..=frame {
                 let cubes = take(&mut self.frames[i]);
