@@ -9,8 +9,8 @@ pub struct PdrSolverBroadcastSender {
 }
 
 impl PdrSolverBroadcastSender {
-    pub fn send_clause(&mut self, clause: Arc<Clause>) {
-        for sender in self.senders.iter_mut() {
+    pub fn send_clause(&self, clause: Arc<Clause>) {
+        for sender in self.senders.iter() {
             sender.send(clause.clone()).unwrap();
         }
     }

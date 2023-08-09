@@ -52,14 +52,14 @@ impl AddAssign<f64> for StatisticAverage {
 
 impl Pdr {
     pub fn statistic(&self) {
-        self.frames.read().unwrap().statistic();
+        self.frames.statistic();
         println!("{:?}", self.share.statistic.lock().unwrap());
     }
 }
 
 impl PdrWorker {
     pub fn statistic(&self) {
-        self.frames.read().unwrap().statistic();
+        self.frames.statistic();
         println!("{:?}", self.share.statistic.lock().unwrap());
     }
 }

@@ -1,4 +1,4 @@
-#![feature(assert_matches, is_sorted)]
+#![feature(assert_matches, is_sorted, get_mut_unchecked)]
 
 mod activity;
 mod basic;
@@ -22,10 +22,10 @@ use crate::{basic::BasicShare, frames::Frames, statistic::Statistic, worker::Pdr
 use crate::{broadcast::create_broadcast, command::Args, utils::state_transform::StateTransform};
 use aig::Aig;
 use logic_form::{Cube, Lit};
-use std::sync::{Arc, Mutex, RwLock};
+use std::sync::{Arc, Mutex};
 
 pub struct Pdr {
-    pub frames: Arc<RwLock<Frames>>,
+    pub frames: Arc<Frames>,
     workers: Vec<PdrWorker>,
     pub share: Arc<BasicShare>,
 }
@@ -38,13 +38,13 @@ impl Pdr {
             worker.new_frame(receiver)
         }
         self.workers[0].cex.lock().unwrap().new_frame(cex_receiver);
-        self.frames.write().unwrap().new_frame(broadcast);
+        unsafe { Arc::get_mut_unchecked(&mut self.frames) }.new_frame(broadcast);
     }
 }
 
 impl Pdr {
     pub fn new(share: Arc<BasicShare>, num_worker: usize) -> Self {
-        let frames = Arc::new(RwLock::new(Frames::new()));
+        let mut frames = Arc::new(Frames::new());
         let (broadcast, mut receivers) = create_broadcast(num_worker + 1);
         let cex_receiver = receivers.pop().unwrap();
         let cex = Arc::new(Mutex::new(Cex::new(share.clone(), cex_receiver)));
@@ -55,10 +55,10 @@ impl Pdr {
         for (receiver, worker) in receivers.into_iter().zip(workers.iter_mut()) {
             worker.new_frame(receiver)
         }
-        frames.write().unwrap().new_frame(broadcast);
+        unsafe { Arc::get_mut_unchecked(&mut frames) }.new_frame(broadcast);
         for l in share.aig.latchs.iter() {
             let cube = Cube::from([Lit::new(l.input.into(), !l.init)]);
-            frames.write().unwrap().add_cube(0, cube)
+            frames.add_cube(0, cube)
         }
         Self {
             frames,
@@ -96,13 +96,12 @@ impl Pdr {
                 blocked_time,
             );
             self.share.statistic.lock().unwrap().overall_block_time += blocked_time;
-            let start = Instant::now();
             self.statistic();
             self.new_frame();
-            dbg!(start.elapsed());
             let start = Instant::now();
-            if self.workers[0].propagate() {
-                self.share.statistic.lock().unwrap().overall_propagate_time += start.elapsed();
+            let propagate = self.workers[0].propagate();
+            self.share.statistic.lock().unwrap().overall_propagate_time += start.elapsed();
+            if propagate {
                 self.statistic();
                 if self.share.args.parallel == 1 {
                     self.workers[0].cex.lock().unwrap().store_cex();

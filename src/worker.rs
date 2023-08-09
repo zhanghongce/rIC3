@@ -8,22 +8,20 @@ use super::{
 use crate::{cex::Cex, utils::relation::cube_subsume_init};
 use logic_form::Cube;
 use std::{
-    collections::{hash_map::DefaultHasher, BinaryHeap},
-    hash::{Hash, Hasher},
-    sync::{Arc, Mutex, RwLock},
-    time::Instant,
+    collections::BinaryHeap,
+    sync::{Arc, Mutex},
 };
 
 pub struct PdrWorker {
     solvers: Vec<PdrSolver>,
-    pub frames: Arc<RwLock<Frames>>,
+    pub frames: Arc<Frames>,
     pub share: Arc<BasicShare>,
     pub activity: Activity,
     pub cex: Arc<Mutex<Cex>>,
 }
 
 impl PdrWorker {
-    pub fn new(share: Arc<BasicShare>, frames: Arc<RwLock<Frames>>, cex: Arc<Mutex<Cex>>) -> Self {
+    pub fn new(share: Arc<BasicShare>, frames: Arc<Frames>, cex: Arc<Mutex<Cex>>) -> Self {
         Self {
             solvers: Vec::new(),
             frames,
@@ -79,7 +77,7 @@ impl PdrWorker {
                 self.statistic();
             }
             heap_num[frame] -= 1;
-            if self.frames.read().unwrap().trivial_contained(frame, &cube) {
+            if self.frames.trivial_contained(frame, &cube) {
                 continue;
             }
             match self.blocked(frame, &cube) {
@@ -90,14 +88,8 @@ impl PdrWorker {
                         heap.push(HeapFrameCube::new(frame + 1, cube));
                         heap_num[frame + 1] += 1;
                     }
-                    if !self
-                        .frames
-                        .read()
-                        .unwrap()
-                        .trivial_contained(frame - 1, &core)
-                    {
-                        let mut frames = self.frames.write().unwrap();
-                        frames.add_cube(frame - 1, core);
+                    if !self.frames.trivial_contained(frame - 1, &core) {
+                        self.frames.add_cube(frame - 1, core);
                     }
                 }
                 BlockResult::No(model) => {
@@ -115,16 +107,16 @@ impl PdrWorker {
         loop {
             let cex = self.cex.lock().unwrap().get();
             if let Some(cex) = cex {
-                let start = Instant::now();
-                let mut hasher = DefaultHasher::new();
-                cex.hash(&mut hasher);
-                let hash = hasher.finish();
-                dbg!(hash);
+                // let start = Instant::now();
+                // let mut hasher = DefaultHasher::new();
+                // cex.hash(&mut hasher);
+                // let hash = hasher.finish();
+                // dbg!(hash);
                 assert!(cex.is_sorted_by_key(|x| x.var()));
                 if !self.block(cex) {
                     return false;
                 }
-                dbg!(start.elapsed());
+                // dbg!(start.elapsed());
             } else {
                 return true;
             }
@@ -133,30 +125,22 @@ impl PdrWorker {
 
     pub fn propagate(&mut self) -> bool {
         for frame_idx in 1..self.depth() {
-            let frame = self.frames.read().unwrap().frames[frame_idx].clone();
+            let frame = self.frames.frames.read().unwrap()[frame_idx].clone();
             for cube in frame {
-                if self
-                    .frames
-                    .read()
-                    .unwrap()
-                    .trivial_contained(frame_idx + 1, &cube)
-                {
+                if self.frames.trivial_contained(frame_idx + 1, &cube) {
                     continue;
                 }
                 match self.blocked(frame_idx + 1, &cube) {
                     BlockResult::Yes(conflict) => {
                         let conflict = conflict.get_conflict();
-                        self.frames
-                            .write()
-                            .unwrap()
-                            .add_cube(frame_idx + 1, conflict);
+                        self.frames.add_cube(frame_idx + 1, conflict);
                     }
                     BlockResult::No(_) => {
                         // 利用cex？x
                     }
                 };
             }
-            if self.frames.read().unwrap().frames[frame_idx].is_empty() {
+            if self.frames.frames.read().unwrap()[frame_idx].is_empty() {
                 return true;
             }
         }

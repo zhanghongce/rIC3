@@ -3,11 +3,7 @@ use crate::utils::{generalize::generalize_by_ternary_simulation, relation::cube_
 use aig::AigCube;
 use logic_form::{Clause, Cube};
 use sat_solver::{minisat::Solver, SatResult, SatSolver, UnsatConflict};
-use std::{
-    mem::take,
-    sync::{Arc, RwLock},
-    time::Instant,
-};
+use std::{mem::take, sync::Arc, time::Instant};
 
 pub struct PdrSolver {
     solver: Solver,
@@ -31,23 +27,24 @@ impl PdrSolver {
         }
     }
 
-    pub fn block_fetch(&mut self, frames: &RwLock<Frames>) {
+    pub fn block_fetch(&mut self, frames: &Frames) {
         self.num_act += 1;
         if self.num_act > 300 {
             self.num_act = 0;
             self.solver = Solver::new();
             self.solver.add_cnf(&self.share.transition_cnf);
-            let frames = frames.read().unwrap();
-            let frames = if self.frame == 0 {
-                &frames.frames[0..1]
+            let frames = frames.frames.read().unwrap();
+            let frames_slice = if self.frame == 0 {
+                &frames[0..1]
             } else {
-                &frames.frames[self.frame..]
+                &frames[self.frame..]
             };
-            for dnf in frames.iter() {
+            for dnf in frames_slice.iter() {
                 for cube in dnf {
                     self.add_clause(&!cube.clone());
                 }
             }
+            drop(frames);
             while self.receiver.receive_clause().is_some() {}
         } else {
             while let Some(clause) = self.receiver.receive_clause() {

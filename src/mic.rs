@@ -38,7 +38,7 @@ impl PdrWorker {
                                 i += 1;
                             }
                             let conflict = self.mic(i - 1, conflict, true);
-                            self.frames.write().unwrap().add_cube(i - 1, conflict);
+                            self.frames.add_cube(i - 1, conflict);
                             continue;
                         }
                     }

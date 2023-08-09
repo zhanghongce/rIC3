@@ -77,7 +77,6 @@ impl Cex {
             }
             return Some(cached_cex[0].remove(0));
         };
-        // todo!();
         if let Some(cex) = self.find_cex() {
             self.cexs.last_mut().unwrap().push(cex.clone());
             return Some(cex);
@@ -89,7 +88,7 @@ impl Cex {
         if self.cached_cex.is_none() {
             let json = serde_json::to_string(&self.cexs).unwrap();
             let file_path = Path::new("cexs.json");
-            let mut file = File::create(&file_path).unwrap();
+            let mut file = File::create(file_path).unwrap();
             file.write_all(json.as_bytes()).unwrap();
         }
     }
