@@ -12,17 +12,18 @@ mod statistic;
 mod utils;
 mod worker;
 
-use cex::Cex;
-use clap::Parser;
-use std::mem::take;
-use std::thread::spawn;
-use std::time::{Duration, Instant};
-
 use crate::{basic::BasicShare, frames::Frames, statistic::Statistic, worker::PdrWorker};
 use crate::{broadcast::create_broadcast, command::Args, utils::state_transform::StateTransform};
 use aig::Aig;
+use cex::Cex;
+use clap::Parser;
 use logic_form::{Cube, Lit};
-use std::sync::{Arc, Mutex};
+use std::{
+    mem::take,
+    sync::{Arc, Mutex},
+    thread::spawn,
+    time::{Duration, Instant},
+};
 
 pub struct Pdr {
     pub frames: Arc<Frames>,

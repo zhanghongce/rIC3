@@ -1,7 +1,7 @@
 use clap::Parser;
 
 #[derive(Parser, Debug, Clone, Copy)]
-/// Hardware Model Checking
+/// Parallel IC3
 pub struct Args {
     /// verbose
     #[arg(short, long, default_value_t = false)]
