@@ -16,7 +16,7 @@ use cex::Cex;
 use clap::Parser;
 use std::mem::take;
 use std::thread::spawn;
-use std::time::Instant;
+use std::time::{Duration, Instant};
 
 use crate::{basic::BasicShare, frames::Frames, statistic::Statistic, worker::PdrWorker};
 use crate::{broadcast::create_broadcast, command::Args, utils::state_transform::StateTransform};
@@ -34,10 +34,10 @@ impl Pdr {
     pub fn new_frame(&mut self) {
         let (broadcast, mut receivers) = create_broadcast(self.workers.len() + 1);
         let cex_receiver = receivers.pop().unwrap();
-        let cex = Arc::new(Mutex::new(Cex::new(self.share.clone(), cex_receiver)));
         for (receiver, worker) in receivers.into_iter().zip(self.workers.iter_mut()) {
-            worker.new_frame(receiver, cex.clone())
+            worker.new_frame(receiver)
         }
+        self.workers[0].cex.lock().unwrap().new_frame(cex_receiver);
         self.frames.write().unwrap().new_frame(broadcast);
     }
 }
@@ -53,7 +53,7 @@ impl Pdr {
             workers.push(PdrWorker::new(share.clone(), frames.clone(), cex.clone()))
         }
         for (receiver, worker) in receivers.into_iter().zip(workers.iter_mut()) {
-            worker.new_frame(receiver, cex.clone())
+            worker.new_frame(receiver)
         }
         frames.write().unwrap().new_frame(broadcast);
         for l in share.aig.latchs.iter() {
@@ -72,6 +72,7 @@ impl Pdr {
         loop {
             let mut joins = Vec::new();
             let workers = take(&mut self.workers);
+            let start = Instant::now();
             for mut worker in workers.into_iter() {
                 joins.push(spawn(move || {
                     let res = worker.start();
@@ -86,17 +87,33 @@ impl Pdr {
                 }
                 self.workers.push(worker)
             }
+            let blocked_time = start.elapsed();
+            println!(
+                "[{}:{}] frame: {}, time: {:?}",
+                file!(),
+                line!(),
+                self.workers[0].depth(),
+                blocked_time,
+            );
+            self.share.statistic.lock().unwrap().overall_block_time += blocked_time;
+            let start = Instant::now();
             self.statistic();
             self.new_frame();
+            dbg!(start.elapsed());
+            let start = Instant::now();
             if self.workers[0].propagate() {
+                self.share.statistic.lock().unwrap().overall_propagate_time += start.elapsed();
                 self.statistic();
+                if self.share.args.parallel == 1 {
+                    self.workers[0].cex.lock().unwrap().store_cex();
+                }
                 return true;
             }
         }
     }
 }
 
-pub fn solve(aig: Aig, args: Args) -> bool {
+pub fn solve(aig: Aig, args: Args) -> (bool, Duration) {
     let transition_cnf = aig.get_cnf();
     assert!(aig
         .latch_init_cube()
@@ -111,8 +128,9 @@ pub fn solve(aig: Aig, args: Args) -> bool {
         args,
         statistic: Mutex::new(Statistic::default()),
     });
-    let mut pdr = Pdr::new(share, 1);
-    pdr.check()
+    let mut pdr = Pdr::new(share, args.parallel);
+    let start = Instant::now();
+    (pdr.check(), start.elapsed())
 }
 
 fn main() {
@@ -164,7 +182,5 @@ fn main() {
     //     aig::Aig::from_file("../MC-Benchmark/hwmcc20/aig/2019/beem/at.6.prop1-back-serstep.aag")
     //         .unwrap(); // 21s
 
-    let start = Instant::now();
     dbg!(solve(aig, args));
-    println!("{:?}", start.elapsed());
 }

@@ -20,6 +20,8 @@ pub struct Statistic {
     pub simple_mic_time: Duration,
     pub mic_time: Duration,
     pub blocked_check_time: Duration,
+    pub overall_block_time: Duration,
+    pub overall_propagate_time: Duration,
 }
 
 #[derive(Default)]

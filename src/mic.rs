@@ -43,7 +43,7 @@ impl PdrWorker {
                         }
                     }
                     ctgs = 0;
-                    let cex_set: HashSet<Lit> = HashSet::from_iter(model.into_iter());
+                    let cex_set: HashSet<Lit> = HashSet::from_iter(model);
                     let mut cube_new = Cube::new();
                     for lit in cube {
                         if cex_set.contains(&lit) {

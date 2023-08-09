@@ -8,8 +8,10 @@ use super::{
 use crate::{cex::Cex, utils::relation::cube_subsume_init};
 use logic_form::Cube;
 use std::{
-    collections::BinaryHeap,
+    collections::{hash_map::DefaultHasher, BinaryHeap},
+    hash::{Hash, Hasher},
     sync::{Arc, Mutex, RwLock},
+    time::Instant,
 };
 
 pub struct PdrWorker {
@@ -17,7 +19,7 @@ pub struct PdrWorker {
     pub frames: Arc<RwLock<Frames>>,
     pub share: Arc<BasicShare>,
     pub activity: Activity,
-    cex: Arc<Mutex<Cex>>,
+    pub cex: Arc<Mutex<Cex>>,
 }
 
 impl PdrWorker {
@@ -35,13 +37,12 @@ impl PdrWorker {
         self.solvers.len() - 1
     }
 
-    pub fn new_frame(&mut self, receiver: PdrSolverBroadcastReceiver, cex: Arc<Mutex<Cex>>) {
+    pub fn new_frame(&mut self, receiver: PdrSolverBroadcastReceiver) {
         self.solvers.push(PdrSolver::new(
             self.share.clone(),
             self.solvers.len(),
             receiver,
         ));
-        self.cex = cex
     }
 
     pub fn blocked<'a>(&'a mut self, frame: usize, cube: &Cube) -> BlockResult<'a> {
@@ -95,7 +96,8 @@ impl PdrWorker {
                         .unwrap()
                         .trivial_contained(frame - 1, &core)
                     {
-                        self.frames.write().unwrap().add_cube(frame - 1, core);
+                        let mut frames = self.frames.write().unwrap();
+                        frames.add_cube(frame - 1, core);
                     }
                 }
                 BlockResult::No(model) => {
@@ -113,10 +115,16 @@ impl PdrWorker {
         loop {
             let cex = self.cex.lock().unwrap().get();
             if let Some(cex) = cex {
-                self.statistic();
+                let start = Instant::now();
+                let mut hasher = DefaultHasher::new();
+                cex.hash(&mut hasher);
+                let hash = hasher.finish();
+                dbg!(hash);
+                assert!(cex.is_sorted_by_key(|x| x.var()));
                 if !self.block(cex) {
                     return false;
                 }
+                dbg!(start.elapsed());
             } else {
                 return true;
             }

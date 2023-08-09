@@ -4,15 +4,19 @@ use crate::{
 };
 use logic_form::Cube;
 use sat_solver::{minisat::Solver, SatResult, SatSolver};
-use std::sync::Arc;
+use std::{
+    fs::File,
+    io::{Read, Write},
+    path::Path,
+    sync::Arc,
+};
 
 pub struct Cex {
     solver: Solver,
     receiver: PdrSolverBroadcastReceiver,
     share: Arc<BasicShare>,
-    cexs: Vec<Cube>,
-    acts: Cube,
-    begin_drop: bool,
+    cexs: Vec<Vec<Cube>>,
+    cached_cex: Option<Vec<Vec<Cube>>>,
 }
 
 impl Cex {
@@ -20,14 +24,31 @@ impl Cex {
         let mut solver = Solver::new();
         solver.set_random_seed(91648253_f64);
         solver.add_cnf(&share.as_ref().transition_cnf);
+        let cached_cex = File::open("cexs.json").ok().map(|mut file| {
+            let mut buffer = Vec::new();
+            file.read_to_end(&mut buffer).unwrap();
+            serde_json::from_slice(&buffer).unwrap()
+        });
+
         Self {
             solver,
             receiver,
             share,
-            cexs: Vec::new(),
-            acts: Cube::new(),
-            begin_drop: false,
+            cached_cex,
+            cexs: vec![vec![]],
         }
+    }
+
+    pub fn new_frame(&mut self, receiver: PdrSolverBroadcastReceiver) {
+        let mut solver = Solver::new();
+        solver.set_random_seed(91648253_f64);
+        solver.add_cnf(&self.share.as_ref().transition_cnf);
+        self.solver = solver;
+        self.receiver = receiver;
+        self.cexs.push(vec![]);
+        self.cached_cex
+            .as_mut()
+            .map(|cached_cex| cached_cex.remove(0));
     }
 
     fn fetch_clauses(&mut self) {
@@ -37,35 +58,9 @@ impl Cex {
         self.solver.simplify()
     }
 
-    fn block_cex(&mut self, cex: &Cube) {
-        let mut generalize_cex = cex.clone();
-        for c in self.cexs.iter() {
-            generalize_cex = cex.intersection(c);
-        }
-        self.cexs.push(cex.clone());
-        let act = self.solver.new_var().into();
-        self.acts.push(act);
-        let mut tmp_cls = !generalize_cex;
-        tmp_cls.push(!act);
-        self.solver.add_clause(&tmp_cls);
-    }
-
-    fn drop_act(&mut self) -> bool {
-        assert!(self.acts.len() == self.cexs.len());
-        if self.acts.is_empty() {
-            return false;
-        }
-        let act = !self.acts.remove(0);
-        self.solver.release_var(act);
-        self.cexs.remove(0);
-        true
-    }
-
     fn find_cex(&mut self) -> Option<Cube> {
         self.fetch_clauses();
-        let mut assumption = self.acts.clone();
-        assumption.push(self.share.aig.bads[0].to_lit());
-        if let SatResult::Sat(model) = self.solver.solve(&assumption) {
+        if let SatResult::Sat(model) = self.solver.solve(&[self.share.aig.bads[0].to_lit()]) {
             self.share.statistic.lock().unwrap().num_get_bad_state += 1;
             let cex =
                 generalize_by_ternary_simulation(&self.share.aig, model, &[self.share.aig.bads[0]])
@@ -76,28 +71,26 @@ impl Cex {
     }
 
     pub fn get(&mut self) -> Option<Cube> {
-        if !self.begin_drop {
-            if let Some(cex) = self.find_cex() {
-                self.block_cex(&cex);
-                // for l in cex.iter() {
-                //     SatSolver::set_polarity(&mut self.solver, !l.clone());
-                // }
-                return Some(cex);
+        if let Some(cached_cex) = &mut self.cached_cex {
+            if cached_cex[0].is_empty() {
+                return None;
             }
-        }
-        // dbg!("xxx");
-        self.begin_drop = true;
-        while self.drop_act() {}
-        // while self.drop_act() {
-        //     if let Some(cex) = self.find_cex() {
-        //         self.block_cex(&cex);
-        //         return Some(cex);
-        //     }
-        // }
+            return Some(cached_cex[0].remove(0));
+        };
+        // todo!();
         if let Some(cex) = self.find_cex() {
-            // self.block_cex(&cex);
+            self.cexs.last_mut().unwrap().push(cex.clone());
             return Some(cex);
         }
         None
+    }
+
+    pub fn store_cex(&mut self) {
+        if self.cached_cex.is_none() {
+            let json = serde_json::to_string(&self.cexs).unwrap();
+            let file_path = Path::new("cexs.json");
+            let mut file = File::create(&file_path).unwrap();
+            file.write_all(json.as_bytes()).unwrap();
+        }
     }
 }

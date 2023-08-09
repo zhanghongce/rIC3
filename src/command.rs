@@ -1,9 +1,13 @@
 use clap::Parser;
 
-#[derive(Parser, Debug)]
+#[derive(Parser, Debug, Clone, Copy)]
 /// Hardware Model Checking
 pub struct Args {
     /// verbose
-    #[arg(short = 'v', long, default_value_t = false)]
+    #[arg(short, long, default_value_t = false)]
     pub verbose: bool,
+
+    /// parallel
+    #[arg(short, long, default_value_t = 1)]
+    pub parallel: usize,
 }
