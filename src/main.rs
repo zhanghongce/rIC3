@@ -136,24 +136,24 @@ fn main() {
     let args = command::Args::parse();
 
     let aig = // Safe
-    // 911s vs 600s
+    // 1000s vs 1s vs 500s
     // "../MC-Benchmark/hwmcc20/aig/2019/beem/pgm_protocol.7.prop1-back-serstep.aag";
-    // 26s vs 10s
-    "../MC-Benchmark/hwmcc20/aig/2019/goel/industry/cal143/cal143.aag";
-    // 44s vs 40s
+    // 35s vs 20s vs 10s
+    // "../MC-Benchmark/hwmcc20/aig/2019/goel/industry/cal143/cal143.aag";
+    // 44s vs 26s vs 13s
     // "../MC-Benchmark/hwmcc20/aig/2019/goel/industry/cal118/cal118.aag";
-    // 100s vs 95s
+    // 131s vs 79s vs 95s
     // "../MC-Benchmark/hwmcc20/aig/2019/goel/industry/cal102/cal102.aag";
-    // 167s vs 158s
+    // 216s vs 91s vs 171s
     // "../MC-Benchmark/hwmcc20/aig/2019/goel/industry/cal112/cal112.aag";
-    // 23s vs 10s
+    // 34s vs 18s vs 10s
     // "../MC-Benchmark/hwmcc20/aig/2019/goel/industry/cal140/cal140.aag";
+    // 21s vs 54s vs 12s
+    "../MC-Benchmark/hwmcc17/single/intel007.aag";
     // ?
     // "../MC-Benchmark/hwmcc20/aig/2019/goel/industry/cal227/cal227.aag";
     // ?
     // "../MC-Benchmark/hwmcc20/aig/2019/beem/brp2.6.prop3-back-serstep.aag";
-    // 54s vs 12s
-    // "../MC-Benchmark/hwmcc17/single/intel007.aag";
     //
     // "../MC-Benchmark/hwmcc20/aig/2019/beem/at.6.prop1-back-serstep.aag";
 

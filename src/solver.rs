@@ -63,8 +63,7 @@ impl PdrSolver {
         self.add_clause(&tmp_cls);
         let res = match self.solver.solve(&assumption) {
             SatResult::Sat(_) => {
-                let last = assumption.len() - 1;
-                let act = !assumption.remove(last);
+                let act = !assumption.pop().unwrap();
                 self.solver.release_var(act);
                 BlockResult::No(BlockResultNo {
                     solver: &mut self.solver,
@@ -73,8 +72,7 @@ impl PdrSolver {
                 })
             }
             SatResult::Unsat(_) => {
-                let last = assumption.len() - 1;
-                let act = !assumption.remove(last);
+                let act = !assumption.pop().unwrap();
                 self.solver.release_var(act);
                 BlockResult::Yes(BlockResultYes {
                     solver: &mut self.solver,
@@ -123,7 +121,6 @@ impl BlockResultYes<'_> {
             let pos_lit = self.assumption.iter().find(|l| l.polarity()).unwrap();
             ans.push(*pos_lit);
         }
-        ans.sort_by_key(|x| x.var());
         ans
     }
 }

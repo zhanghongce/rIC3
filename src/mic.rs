@@ -67,7 +67,7 @@ impl PdrWorker {
         }
         self.share.statistic.lock().unwrap().average_mic_cube_len += cube.len();
         let mut i = 0;
-        assert!(cube.is_sorted_by_key(|x| *x.var()));
+        assert!(cube.is_sorted_by_key(|x| x.var()));
         cube = self.activity.sort_by_activity_ascending(cube);
         let mut keep = HashSet::new();
         while i < cube.len() {
