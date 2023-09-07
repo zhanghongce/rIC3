@@ -1,6 +1,6 @@
 use clap::Parser;
 
-#[derive(Parser, Debug, Clone, Copy)]
+#[derive(Parser, Debug, Clone)]
 /// Parallel IC3
 pub struct Args {
     /// verbose
@@ -10,4 +10,8 @@ pub struct Args {
     /// parallel
     #[arg(short, long, default_value_t = 1)]
     pub parallel: usize,
+
+    /// disable ctp
+    #[arg(long, default_value_t = false)]
+    pub dctp: bool,
 }

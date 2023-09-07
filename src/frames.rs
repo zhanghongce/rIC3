@@ -4,10 +4,12 @@ use logic_form::Cube;
 use std::{
     fmt::Debug,
     mem::take,
-    sync::{Arc, RwLock},
+    sync::{Arc, Mutex, RwLock},
+    time::{Duration, Instant},
 };
 
 pub struct Frames {
+    time: Mutex<Duration>,
     pub frames: RwLock<Vec<Vec<Cube>>>,
     broadcast: Vec<PdrSolverBroadcastSender>,
 }
@@ -17,6 +19,7 @@ impl Frames {
         Self {
             frames: RwLock::new(Vec::new()),
             broadcast: Vec::new(),
+            time: Mutex::new(Duration::default()),
         }
     }
 
@@ -29,6 +32,7 @@ impl Frames {
     }
 
     pub fn add_cube(&self, frame: usize, cube: Cube) {
+        let start = Instant::now();
         assert!(cube.is_sorted_by_key(|x| x.var()));
         let mut frames = self.frames.write().unwrap();
         let begin = if frame == 0 {
@@ -36,6 +40,7 @@ impl Frames {
             0
         } else {
             if Self::trivial_contained_inner(&frames, frame, &cube) {
+                *self.time.lock().unwrap() += start.elapsed();
                 return;
             }
             assert!(!cube_subsume_init(&cube));
@@ -59,6 +64,7 @@ impl Frames {
         for i in begin..=frame {
             self.broadcast[i].send_clause(clause.clone());
         }
+        *self.time.lock().unwrap() += start.elapsed();
     }
 
     fn trivial_contained_inner(frames: &[Vec<Cube>], frame: usize, cube: &Cube) -> bool {

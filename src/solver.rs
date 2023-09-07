@@ -44,8 +44,8 @@ impl PdrSolver {
                     self.add_clause(&!cube.clone());
                 }
             }
-            drop(frames);
             while self.receiver.receive_clause().is_some() {}
+            drop(frames);
         } else {
             while let Some(clause) = self.receiver.receive_clause() {
                 self.add_clause(&clause);
@@ -123,6 +123,7 @@ impl BlockResultYes<'_> {
             let pos_lit = self.assumption.iter().find(|l| l.polarity()).unwrap();
             ans.push(*pos_lit);
         }
+        ans.sort_by_key(|x| x.var());
         ans
     }
 }

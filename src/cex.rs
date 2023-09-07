@@ -4,19 +4,13 @@ use crate::{
 };
 use logic_form::Cube;
 use sat_solver::{minisat::Solver, SatResult, SatSolver};
-use std::{
-    fs::File,
-    io::{Read, Write},
-    path::Path,
-    sync::Arc,
-};
+use std::sync::Arc;
 
 pub struct Cex {
     solver: Solver,
     receiver: PdrSolverBroadcastReceiver,
     share: Arc<BasicShare>,
     cexs: Vec<Vec<Cube>>,
-    cached_cex: Option<Vec<Vec<Cube>>>,
 }
 
 impl Cex {
@@ -24,17 +18,11 @@ impl Cex {
         let mut solver = Solver::new();
         solver.set_random_seed(91648253_f64);
         solver.add_cnf(&share.as_ref().transition_cnf);
-        let cached_cex = File::open("cexs.json").ok().map(|mut file| {
-            let mut buffer = Vec::new();
-            file.read_to_end(&mut buffer).unwrap();
-            serde_json::from_slice(&buffer).unwrap()
-        });
 
         Self {
             solver,
             receiver,
             share,
-            cached_cex,
             cexs: vec![vec![]],
         }
     }
@@ -46,9 +34,6 @@ impl Cex {
         self.solver = solver;
         self.receiver = receiver;
         self.cexs.push(vec![]);
-        self.cached_cex
-            .as_mut()
-            .map(|cached_cex| cached_cex.remove(0));
     }
 
     fn fetch_clauses(&mut self) {
@@ -71,25 +56,10 @@ impl Cex {
     }
 
     pub fn get(&mut self) -> Option<Cube> {
-        if let Some(cached_cex) = &mut self.cached_cex {
-            if cached_cex[0].is_empty() {
-                return None;
-            }
-            return Some(cached_cex[0].remove(0));
-        };
         if let Some(cex) = self.find_cex() {
             self.cexs.last_mut().unwrap().push(cex.clone());
             return Some(cex);
         }
         None
-    }
-
-    pub fn store_cex(&mut self) {
-        if self.cached_cex.is_none() {
-            let json = serde_json::to_string(&self.cexs).unwrap();
-            let file_path = Path::new("cexs.json");
-            let mut file = File::create(file_path).unwrap();
-            file.write_all(json.as_bytes()).unwrap();
-        }
     }
 }

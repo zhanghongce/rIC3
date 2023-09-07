@@ -10,6 +10,7 @@ mod mic;
 mod solver;
 mod statistic;
 mod utils;
+mod verify;
 mod worker;
 
 use crate::{basic::BasicShare, frames::Frames, statistic::Statistic, worker::PdrWorker};
@@ -44,13 +45,13 @@ impl Pdr {
 }
 
 impl Pdr {
-    pub fn new(share: Arc<BasicShare>, num_worker: usize) -> Self {
+    pub fn new(share: Arc<BasicShare>) -> Self {
         let mut frames = Arc::new(Frames::new());
-        let (broadcast, mut receivers) = create_broadcast(num_worker + 1);
+        let (broadcast, mut receivers) = create_broadcast(share.args.parallel + 1);
         let cex_receiver = receivers.pop().unwrap();
         let cex = Arc::new(Mutex::new(Cex::new(share.clone(), cex_receiver)));
         let mut workers = Vec::new();
-        for _ in 0..num_worker {
+        for _ in 0..share.args.parallel {
             workers.push(PdrWorker::new(share.clone(), frames.clone(), cex.clone()))
         }
         for (receiver, worker) in receivers.into_iter().zip(workers.iter_mut()) {
@@ -104,9 +105,7 @@ impl Pdr {
             self.share.statistic.lock().unwrap().overall_propagate_time += start.elapsed();
             if propagate {
                 self.statistic();
-                if self.share.args.parallel == 1 {
-                    self.workers[0].cex.lock().unwrap().store_cex();
-                }
+                assert!(self.verify());
                 return true;
             }
         }
@@ -128,59 +127,37 @@ pub fn solve(aig: Aig, args: Args) -> (bool, Duration) {
         args,
         statistic: Mutex::new(Statistic::default()),
     });
-    let mut pdr = Pdr::new(share, args.parallel);
+    let mut pdr = Pdr::new(share);
     let start = Instant::now();
     (pdr.check(), start.elapsed())
 }
 
 fn main() {
     let args = command::Args::parse();
-    // let aig = aig::Aig::from_file("../MC-Benchmark/examples/counter/10bit/counter.aag").unwrap();
-    // let aig = aig::Aig::from_file("../MC-Benchmark/hwmcc20/aig/2019/goel/crafted/paper_v3/paper_v3.aag").unwrap();
-    // let aig = aig::Aig::from_file("../MC-Benchmark/hwmcc19/single/aig/goel/opensource/vis_arrays_buf_bug/vis_arrays_buf_bug.aag").unwrap();
-    // let aig = aig::Aig::from_file("../MC-Benchmark/hwmcc08/visbakery.aag").unwrap();
-    // let aig = aig::Aig::from_file("../MC-Benchmark/hwmcc08/pdtvishuffman7.aag").unwrap();
 
-    // Safe
+    let aig = // Safe
+    // 911s vs 600s
+    // "../MC-Benchmark/hwmcc20/aig/2019/beem/pgm_protocol.7.prop1-back-serstep.aag"; 
+    // 26s vs 10s
+    // "../MC-Benchmark/hwmcc20/aig/2019/goel/industry/cal143/cal143.aag";
+    // 44s vs 40s
+    // "../MC-Benchmark/hwmcc20/aig/2019/goel/industry/cal118/cal118.aag";
+    // 100s vs 95s
+    // "../MC-Benchmark/hwmcc20/aig/2019/goel/industry/cal102/cal102.aag";
+    // 167s vs 158s
+    // "../MC-Benchmark/hwmcc20/aig/2019/goel/industry/cal112/cal112.aag";
+    // 23s vs 10s
+    // "../MC-Benchmark/hwmcc20/aig/2019/goel/industry/cal140/cal140.aag";
+    // ?
+    // "../MC-Benchmark/hwmcc20/aig/2019/goel/industry/cal227/cal227.aag";
+    // ?
+    // "../MC-Benchmark/hwmcc20/aig/2019/beem/brp2.6.prop3-back-serstep.aag";
+    // 54s vs 12s
+    // "../MC-Benchmark/hwmcc17/single/intel007.aag";
+    // 
+    "../MC-Benchmark/hwmcc20/aig/2019/beem/at.6.prop1-back-serstep.aag";
 
-    // let aig =
-    // aig::Aig::from_file("../MC-Benchmark/hwmcc20/aig/2019/goel/industry/cal227/cal227.aag")
-    //     .unwrap(); //
-
-    // let aig =
-    //     aig::Aig::from_file("../MC-Benchmark/hwmcc20/aig/2019/beem/brp2.6.prop3-back-serstep.aag")
-    //         .unwrap(); //
-
-    // let aig = aig::Aig::from_file(
-    //     "../MC-Benchmark/hwmcc20/aig/2019/beem/pgm_protocol.7.prop1-back-serstep.aag",
-    // )
-    // .unwrap(); // 911s vs 600s
-
-    // let aig =
-    //     aig::Aig::from_file("../MC-Benchmark/hwmcc20/aig/2019/goel/industry/cal143/cal143.aag")
-    //         .unwrap(); // 26s vs 10s
-
-    let aig =
-        aig::Aig::from_file("../MC-Benchmark/hwmcc20/aig/2019/goel/industry/cal118/cal118.aag")
-            .unwrap(); // 37s vs 13s
-
-    // let aig =
-    //     aig::Aig::from_file("../MC-Benchmark/hwmcc20/aig/2019/goel/industry/cal102/cal102.aag")
-    //         .unwrap(); // 100s vs 88s
-
-    // let aig =
-    //     aig::Aig::from_file("../MC-Benchmark/hwmcc20/aig/2019/goel/industry/cal140/cal140.aag")
-    //         .unwrap(); // 23s vs 10s
-
-    // let aig =
-    //     aig::Aig::from_file("../MC-Benchmark/hwmcc20/aig/2019/goel/industry/cal112/cal112.aag")
-    //         .unwrap(); // 167s vs 158s
-
-    // let aig = aig::Aig::from_file("../MC-Benchmark/hwmcc17/single/intel007.aag").unwrap(); // 21s
-
-    // let aig =
-    //     aig::Aig::from_file("../MC-Benchmark/hwmcc20/aig/2019/beem/at.6.prop1-back-serstep.aag")
-    //         .unwrap(); // 21s
+    let aig = aig::Aig::from_file(aig).unwrap();
 
     dbg!(solve(aig, args));
 }

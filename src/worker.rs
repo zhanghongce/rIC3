@@ -60,10 +60,9 @@ impl PdrWorker {
         (self.depth() + 1, cube)
     }
 
-    pub fn block(&mut self, cube: Cube) -> bool {
+    pub fn block(&mut self, frame: usize, cube: Cube) -> bool {
         let mut heap = BinaryHeap::new();
-        let frame = self.depth();
-        let mut heap_num = vec![0; frame + 1];
+        let mut heap_num = vec![0; self.depth() + 1];
         heap.push(HeapFrameCube::new(frame, cube));
         heap_num[frame] += 1;
         while let Some(HeapFrameCube { frame, cube }) = heap.pop() {
@@ -88,9 +87,7 @@ impl PdrWorker {
                         heap.push(HeapFrameCube::new(frame + 1, cube));
                         heap_num[frame + 1] += 1;
                     }
-                    if !self.frames.trivial_contained(frame - 1, &core) {
-                        self.frames.add_cube(frame - 1, core);
-                    }
+                    self.frames.add_cube(frame - 1, core);
                 }
                 BlockResult::No(model) => {
                     heap.push(HeapFrameCube::new(frame - 1, model.get_model()));
@@ -107,16 +104,10 @@ impl PdrWorker {
         loop {
             let cex = self.cex.lock().unwrap().get();
             if let Some(cex) = cex {
-                // let start = Instant::now();
-                // let mut hasher = DefaultHasher::new();
-                // cex.hash(&mut hasher);
-                // let hash = hasher.finish();
-                // dbg!(hash);
                 assert!(cex.is_sorted_by_key(|x| x.var()));
-                if !self.block(cex) {
+                if !self.block(self.depth(), cex) {
                     return false;
                 }
-                // dbg!(start.elapsed());
             } else {
                 return true;
             }
@@ -130,15 +121,41 @@ impl PdrWorker {
                 if self.frames.trivial_contained(frame_idx + 1, &cube) {
                     continue;
                 }
-                match self.blocked(frame_idx + 1, &cube) {
-                    BlockResult::Yes(conflict) => {
-                        let conflict = conflict.get_conflict();
-                        self.frames.add_cube(frame_idx + 1, conflict);
+                if !self.share.args.dctp {
+                    let mut ctp = 0;
+                    loop {
+                        dbg!(ctp);
+                        if ctp > 10 {
+                            break;
+                        }
+                        match self.blocked(frame_idx + 1, &cube) {
+                            BlockResult::Yes(conflict) => {
+                                dbg!(ctp);
+                                let conflict = conflict.get_conflict();
+                                self.frames.add_cube(frame_idx + 1, conflict);
+                                break;
+                            }
+                            BlockResult::No(cex) => {
+                                // 利用cex？x
+                                let cex = cex.get_model();
+                                ctp += 1;
+                                if !self.block(frame_idx, cex) {
+                                    break;
+                                }
+                            }
+                        }
                     }
-                    BlockResult::No(_) => {
-                        // 利用cex？x
-                    }
-                };
+                } else {
+                    match self.blocked(frame_idx + 1, &cube) {
+                        BlockResult::Yes(conflict) => {
+                            let conflict = conflict.get_conflict();
+                            self.frames.add_cube(frame_idx + 1, conflict);
+                        }
+                        BlockResult::No(_) => {
+                            // 利用cex？x
+                        }
+                    };
+                }
             }
             if self.frames.frames.read().unwrap()[frame_idx].is_empty() {
                 return true;
