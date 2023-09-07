@@ -137,9 +137,9 @@ fn main() {
 
     let aig = // Safe
     // 911s vs 600s
-    // "../MC-Benchmark/hwmcc20/aig/2019/beem/pgm_protocol.7.prop1-back-serstep.aag"; 
+    // "../MC-Benchmark/hwmcc20/aig/2019/beem/pgm_protocol.7.prop1-back-serstep.aag";
     // 26s vs 10s
-    // "../MC-Benchmark/hwmcc20/aig/2019/goel/industry/cal143/cal143.aag";
+    "../MC-Benchmark/hwmcc20/aig/2019/goel/industry/cal143/cal143.aag";
     // 44s vs 40s
     // "../MC-Benchmark/hwmcc20/aig/2019/goel/industry/cal118/cal118.aag";
     // 100s vs 95s
@@ -154,8 +154,8 @@ fn main() {
     // "../MC-Benchmark/hwmcc20/aig/2019/beem/brp2.6.prop3-back-serstep.aag";
     // 54s vs 12s
     // "../MC-Benchmark/hwmcc17/single/intel007.aag";
-    // 
-    "../MC-Benchmark/hwmcc20/aig/2019/beem/at.6.prop1-back-serstep.aag";
+    //
+    // "../MC-Benchmark/hwmcc20/aig/2019/beem/at.6.prop1-back-serstep.aag";
 
     let aig = aig::Aig::from_file(aig).unwrap();
 
