@@ -55,6 +55,7 @@ impl PdrSolver {
 
     pub fn blocked<'a>(&'a mut self, cube: &Cube) -> BlockResult<'a> {
         let start = Instant::now();
+        assert!(!cube_subsume_init(&cube));
         let mut assumption = self.share.state_transform.cube_next(cube);
         let act = self.solver.new_var().into();
         assumption.push(act);
@@ -104,7 +105,6 @@ pub struct BlockResultYes<'a> {
 
 impl BlockResultYes<'_> {
     pub fn get_conflict(self) -> Cube {
-        assert!(!cube_subsume_init(&self.assumption));
         let conflict = unsafe { self.solver.get_conflict() };
         let conflict: Cube = self
             .assumption
