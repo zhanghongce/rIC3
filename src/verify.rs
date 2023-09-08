@@ -1,10 +1,9 @@
-use std::sync::Arc;
-
 use crate::{
     broadcast::create_broadcast,
     solver::{BlockResult, PdrSolver},
     Pdr,
 };
+use std::sync::Arc;
 
 impl Pdr {
     pub fn verify(&self) -> bool {
