@@ -16,8 +16,10 @@ impl StateTransform {
             let next = l.next.to_lit();
             next_map.insert(origin, next);
             next_map.insert(!origin, !next);
-            previous_map.insert(next, origin);
-            previous_map.insert(!next, !origin);
+            if !next.is_constant(true) && !next.is_constant(false) {
+                previous_map.insert(next, origin);
+                previous_map.insert(!next, !origin);
+            }
         }
         Self {
             next_map,

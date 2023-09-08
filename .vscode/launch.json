@@ -8,7 +8,7 @@
             "cargo": {
                 "args": [
                     "build",
-                    // "--release",
+                    "--release",
                     "--bin=hwmc",
                     "--package=hwmc"
                 ],

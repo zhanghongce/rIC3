@@ -27,6 +27,7 @@ impl PdrWorker {
                 BlockResult::No(model) => {
                     let model = model.get_model();
                     if ctgs < 3 && frame > 1 && !cube_subsume_init(&model) {
+                        assert!(!cube_subsume_init(&model));
                         if let BlockResult::Yes(conflict) = self.blocked(frame - 1, &model) {
                             ctgs += 1;
                             let conflict = conflict.get_conflict();

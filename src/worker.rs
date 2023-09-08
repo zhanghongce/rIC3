@@ -8,7 +8,7 @@ use super::{
 use crate::{cex::Cex, utils::relation::cube_subsume_init};
 use logic_form::Cube;
 use std::{
-    collections::BinaryHeap,
+    collections::{BinaryHeap, VecDeque},
     sync::{Arc, Mutex},
 };
 
@@ -116,16 +116,19 @@ impl PdrWorker {
 
     pub fn propagate(&mut self) -> bool {
         for frame_idx in 1..self.depth() {
-            let frame = self.frames.frames.read().unwrap()[frame_idx].clone();
-            for cube in frame {
+            let mut frame = VecDeque::from_iter(
+                self.frames.frames.read().unwrap()[frame_idx]
+                    .iter()
+                    .cloned(),
+            );
+            while let Some(cube) = frame.pop_front() {
                 if self.frames.trivial_contained(frame_idx + 1, &cube) {
                     continue;
                 }
                 if !self.share.args.dctp {
                     let mut ctp = 0;
                     loop {
-                        dbg!(ctp);
-                        if ctp > 10 {
+                        if ctp > 5 {
                             break;
                         }
                         match self.blocked(frame_idx + 1, &cube) {
@@ -136,25 +139,24 @@ impl PdrWorker {
                                 break;
                             }
                             BlockResult::No(cex) => {
-                                // 利用cex？x
                                 let cex = cex.get_model();
                                 ctp += 1;
-                                if !self.block(frame_idx, cex) {
+                                if let BlockResult::Yes(conflict) = self.blocked(frame_idx, &cex) {
+                                    let conflict = conflict.get_conflict();
+                                    let cex = self.mic(frame_idx, conflict, true);
+                                    frame.push_back(cex.clone());
+                                    self.frames.add_cube(frame_idx, cex);
+                                } else {
                                     break;
                                 }
                             }
                         }
                     }
                 } else {
-                    match self.blocked(frame_idx + 1, &cube) {
-                        BlockResult::Yes(conflict) => {
-                            let conflict = conflict.get_conflict();
-                            self.frames.add_cube(frame_idx + 1, conflict);
-                        }
-                        BlockResult::No(_) => {
-                            // 利用cex？x
-                        }
-                    };
+                    if let BlockResult::Yes(conflict) = self.blocked(frame_idx + 1, &cube) {
+                        let conflict = conflict.get_conflict();
+                        self.frames.add_cube(frame_idx + 1, conflict);
+                    }
                 }
             }
             if self.frames.frames.read().unwrap()[frame_idx].is_empty() {

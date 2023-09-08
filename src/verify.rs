@@ -25,6 +25,7 @@ impl Pdr {
                 }
             }
         }
+        println!("inductive invariant verified!");
         true
     }
 }
