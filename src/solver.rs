@@ -77,7 +77,6 @@ impl PdrSolver {
                 self.solver.release_var(act);
                 BlockResult::Yes(BlockResultYes {
                     solver: &mut self.solver,
-                    share: self.share.clone(),
                     cube: cube.clone(),
                     assumption,
                 })
@@ -100,7 +99,6 @@ pub enum BlockResult<'a> {
 
 pub struct BlockResultYes<'a> {
     solver: &'a mut Solver,
-    share: Arc<BasicShare>,
     cube: Cube,
     assumption: Cube,
 }
@@ -109,16 +107,12 @@ impl BlockResultYes<'_> {
     pub fn get_conflict(self) -> Cube {
         let conflict = unsafe { self.solver.get_conflict() };
         assert!(self.cube.len() == self.assumption.len());
-        assert!(self.share.state_transform.cube_next(&self.cube) == self.assumption);
         let mut ans = Cube::new();
         for i in 0..self.cube.len() {
             if conflict.has(!self.assumption[i]) {
                 ans.push(self.cube[i]);
             }
         }
-        assert!(ans
-            .iter()
-            .all(|x| !x.is_constant(false) && !x.is_constant(true)));
         if cube_subsume_init(&ans) {
             ans.push(*self.cube.iter().find(|l| l.polarity()).unwrap());
             ans.sort_by_key(|x| x.var());

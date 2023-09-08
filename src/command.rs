@@ -11,7 +11,7 @@ pub struct Args {
     #[arg(short, long, default_value_t = 1)]
     pub parallel: usize,
 
-    /// disable ctp
+    /// counter example to propagate
     #[arg(long, default_value_t = false)]
-    pub dctp: bool,
+    pub ctp: bool,
 }

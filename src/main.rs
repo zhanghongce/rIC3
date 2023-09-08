@@ -156,7 +156,7 @@ fn main() {
     // "../MC-Benchmark/hwmcc17/single/6s0.aag";
     // ? vs 216s
     // "../MC-Benchmark/hwmcc17/single/6s269r.aag";
-    // ? vs 
+    // ? vs
     // "../MC-Benchmark/hwmcc17/single/6s281b35.aag";
     // 110s vs 170s
     // "../MC-Benchmark/hwmcc17/single/6s404rb4.aag";
@@ -166,9 +166,9 @@ fn main() {
     // "../MC-Benchmark/hwmcc17/single/bob05.aag";
     // 3s vs 26s
     // "../MC-Benchmark/hwmcc17/single/neclaftp4002.aag";
-    // 
+    //
     // "../MC-Benchmark/hwmcc17/single/nusmvreactorp5.aag";
-    // 
+    //
     // "../MC-Benchmark/hwmcc17/single/bj08amba5g62.aag";
     // ?
     // "../MC-Benchmark/hwmcc17/single/6s343b08.aag";

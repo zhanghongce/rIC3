@@ -125,7 +125,7 @@ impl PdrWorker {
                 if self.frames.trivial_contained(frame_idx + 1, &cube) {
                     continue;
                 }
-                if !self.share.args.dctp {
+                if self.share.args.ctp {
                     let mut ctp = 0;
                     loop {
                         if ctp > 5 {
