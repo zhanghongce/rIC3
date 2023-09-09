@@ -84,7 +84,6 @@ impl PdrWorker {
                     let conflict = conflict.get_conflict();
                     // if self.share.args.ctp {
                     // let similars = self.frames.similar(&conflict, frame);
-                    // dbg!(similars.len());
                     // let mut ans = false;
                     // for similar in similars.iter() {
                     //     self.share.statistic.lock().unwrap().test_a += 1;
@@ -179,7 +178,6 @@ impl PdrWorker {
                         }
                         match self.blocked(frame_idx + 1, &cube) {
                             BlockResult::Yes(conflict) => {
-                                dbg!(ctp);
                                 let conflict = conflict.get_conflict();
                                 self.frames.add_cube(frame_idx + 1, conflict);
                                 break;
