@@ -4,20 +4,20 @@
         {
             "type": "lldb",
             "request": "launch",
-            "name": "Debug executable 'hwmc'",
+            "name": "Debug executable 'ic3'",
             "cargo": {
                 "args": [
                     "build",
                     "--release",
-                    "--bin=hwmc",
-                    "--package=hwmc"
+                    "--bin=ic3",
+                    "--package=ic3"
                 ],
                 "filter": {
-                    "name": "hwmc",
+                    "name": "ic3",
                     "kind": "bin"
                 }
             },
-            "args": [],
+            "args": ["/root/MC-Benchmark/hwmcc17/single/beemlmprt8f1.aag"],
             "cwd": "${workspaceFolder}"
         }
     ]
