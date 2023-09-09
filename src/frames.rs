@@ -105,17 +105,21 @@ impl Frames {
         println!();
     }
 
-    pub fn similar(&self, cube: &Cube, frame: usize) -> Option<Cube> {
+    pub fn similar(&self, cube: &Cube, frame: usize) -> Vec<Cube> {
+        let mut res = Vec::new();
         if frame == 1 {
-            return None;
+            return res;
         }
         let frames = self.frames.read().unwrap();
-        for c in frames[frame - 1].iter() {
-            if cube_subsume(c, cube) {
-                return Some(c.clone());
+        for i in (1..frame).rev() {
+            for c in frames[i - 1].iter() {
+                if cube_subsume(c, cube) {
+                    res.push(c.clone());
+                }
             }
         }
-        None
+        res.sort_by(|a, b| b.len().cmp(&a.len()));
+        res
     }
 }
 

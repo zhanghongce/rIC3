@@ -50,8 +50,8 @@ impl PdrWorker {
         self.solvers[frame - 1].blocked(cube)
     }
 
-    fn generalize(&mut self, frame: usize, cube: Cube) -> (usize, Cube) {
-        let cube = self.mic(frame, cube, false);
+    fn generalize(&mut self, frame: usize, cube: Cube, simple: bool) -> (usize, Cube) {
+        let cube = self.mic(frame, cube, simple);
         for i in frame + 1..=self.depth() {
             if let BlockResult::No(_) = self.blocked(i, &cube) {
                 return (i, cube);
@@ -82,22 +82,23 @@ impl PdrWorker {
             match self.blocked(frame, &cube) {
                 BlockResult::Yes(conflict) => {
                     let conflict = conflict.get_conflict();
-                    if self.share.args.ctp {
-                        if let Some(similar_cube) = self.frames.similar(&conflict, frame) {
-                            self.share.statistic.lock().unwrap().test_a += 1;
-                            if let BlockResult::Yes(similar_conflict) =
-                                self.blocked(frame, &similar_cube)
-                            {
-                                let similar_conflict = similar_conflict.get_conflict();
-                                self.share.statistic.lock().unwrap().test_c += 1;
-                                self.frames.add_cube(frame, similar_conflict);
-                                continue;
-                            }
-                        } else {
-                            self.share.statistic.lock().unwrap().test_b += 1;
-                        }
-                    }
-                    let (frame, core) = self.generalize(frame, conflict);
+                    // if self.share.args.ctp {
+                    // let similars = self.frames.similar(&conflict, frame);
+                    // dbg!(similars.len());
+                    // let mut ans = false;
+                    // for similar in similars.iter() {
+                    //     self.share.statistic.lock().unwrap().test_a += 1;
+                    //     if self.try_block(frame, &similar, 5, false) {
+                    //         self.share.statistic.lock().unwrap().test_c += 1;
+                    //         ans = true;
+                    //     }
+                    // }
+                    // if ans {
+                    //     continue;
+                    // }
+                    // self.share.statistic.lock().unwrap().test_b += 1;
+                    // }
+                    let (frame, core) = self.generalize(frame, conflict, false);
                     if frame < self.depth() {
                         heap.push(HeapFrameCube::new(frame + 1, cube));
                         heap_num[frame + 1] += 1;
@@ -115,32 +116,35 @@ impl PdrWorker {
         true
     }
 
-    // pub fn try_block(&mut self, frame: usize, cube: &Cube, mut max_try: usize) -> bool {
-    //     loop {
-    //         if max_try > 5 {
-    //             return false;
-    //         }
-    //         max_try -= 1;
-    //         match self.blocked(frame, &cube) {
-    //             BlockResult::Yes(conflict) => {
-    //                 let conflict = conflict.get_conflict();
-    //                 self.frames.add_cube(frame + 1, conflict);
-    //                 return true;
-    //             }
-    //             BlockResult::No(cex) => {
-    //                 let cex = cex.get_model();
-    //                 if let BlockResult::Yes(conflict) = self.blocked(frame, &cex) {
-    //                     let conflict = conflict.get_conflict();
-    //                     let cex = self.mic(frame_idx, conflict, true);
-    //                     frame.push_back(cex.clone());
-    //                     self.frames.add_cube(frame_idx, cex);
-    //                 } else {
-    //                     break;
-    //                 }
-    //             }
-    //         }
-    //     }
-    // }
+    pub fn try_block(
+        &mut self,
+        frame: usize,
+        cube: &Cube,
+        mut max_try: usize,
+        simple: bool,
+    ) -> bool {
+        loop {
+            if max_try == 0 || frame == 0 || cube_subsume_init(cube) {
+                return false;
+            }
+            assert!(!cube_subsume_init(cube));
+            max_try -= 1;
+            match self.blocked(frame, &cube) {
+                BlockResult::Yes(conflict) => {
+                    let conflict = conflict.get_conflict();
+                    let (frame, core) = self.generalize(frame, conflict, simple);
+                    self.frames.add_cube(frame - 1, core);
+                    return true;
+                }
+                BlockResult::No(cex) => {
+                    let cex = cex.get_model();
+                    if !self.try_block(frame - 1, &cex, max_try, true) {
+                        return false;
+                    }
+                }
+            }
+        }
+    }
 
     pub fn start(&mut self) -> bool {
         loop {
