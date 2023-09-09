@@ -22,6 +22,10 @@ pub struct Statistic {
     pub blocked_check_time: Duration,
     pub overall_block_time: Duration,
     pub overall_propagate_time: Duration,
+
+    pub test_a: usize,
+    pub test_b: usize,
+    pub test_c: usize,
 }
 
 #[derive(Default)]

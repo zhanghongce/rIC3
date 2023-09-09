@@ -45,11 +45,14 @@ impl Cex {
 
     fn find_cex(&mut self) -> Option<Cube> {
         self.fetch_clauses();
-        if let SatResult::Sat(model) = self.solver.solve(&[self.share.aig.bads[0].to_lit()]) {
+        let bad = if self.share.aig.bads.is_empty() {
+            self.share.aig.outputs[0]
+        } else {
+            self.share.aig.bads[0]
+        };
+        if let SatResult::Sat(model) = self.solver.solve(&[bad.to_lit()]) {
             self.share.statistic.lock().unwrap().num_get_bad_state += 1;
-            let cex =
-                generalize_by_ternary_simulation(&self.share.aig, model, &[self.share.aig.bads[0]])
-                    .to_cube();
+            let cex = generalize_by_ternary_simulation(&self.share.aig, model, &[bad]).to_cube();
             return Some(cex);
         }
         None

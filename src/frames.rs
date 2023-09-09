@@ -11,6 +11,7 @@ use std::{
 pub struct Frames {
     time: Mutex<Duration>,
     pub frames: RwLock<Vec<Vec<Cube>>>,
+    early_update: Mutex<usize>,
     broadcast: Vec<PdrSolverBroadcastSender>,
 }
 
@@ -20,6 +21,7 @@ impl Frames {
             frames: RwLock::new(Vec::new()),
             broadcast: Vec::new(),
             time: Mutex::new(Duration::default()),
+            early_update: Mutex::new(1),
         }
     }
 
@@ -35,6 +37,7 @@ impl Frames {
         let start = Instant::now();
         assert!(cube.is_sorted_by_key(|x| x.var()));
         let mut frames = self.frames.write().unwrap();
+        let mut early_update = self.early_update.lock().unwrap();
         let begin = if frame == 0 {
             assert!(frames.len() == 1);
             0
@@ -53,12 +56,15 @@ impl Frames {
                     }
                     if !cube_subsume(&cube, &c) {
                         frames[i].push(c);
+                    } else {
+                        *early_update = early_update.min(frame);
                     }
                 }
             }
             begin
         };
         frames[frame].push(cube.clone());
+        *early_update = (early_update.min(frame)).max(1);
         drop(frames);
         let clause = Arc::new(!cube);
         for i in begin..=frame {
@@ -83,12 +89,33 @@ impl Frames {
         Self::trivial_contained_inner(&frames, frame, cube)
     }
 
+    pub fn early_update(&self) -> usize {
+        *self.early_update.lock().unwrap()
+    }
+
+    pub fn reset_early_update(&self) {
+        *self.early_update.lock().unwrap() = self.frames.read().unwrap().len();
+    }
+
     pub fn statistic(&self) {
         let frames = self.frames.read().unwrap();
         for frame in frames.iter() {
             print!("{} ", frame.len());
         }
         println!();
+    }
+
+    pub fn similar(&self, cube: &Cube, frame: usize) -> Option<Cube> {
+        if frame == 1 {
+            return None;
+        }
+        let frames = self.frames.read().unwrap();
+        for c in frames[frame - 1].iter() {
+            if cube_subsume(c, cube) {
+                return Some(c.clone());
+            }
+        }
+        None
     }
 }
 

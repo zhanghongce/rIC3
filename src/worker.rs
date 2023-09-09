@@ -82,6 +82,21 @@ impl PdrWorker {
             match self.blocked(frame, &cube) {
                 BlockResult::Yes(conflict) => {
                     let conflict = conflict.get_conflict();
+                    if self.share.args.ctp {
+                        if let Some(similar_cube) = self.frames.similar(&conflict, frame) {
+                            self.share.statistic.lock().unwrap().test_a += 1;
+                            if let BlockResult::Yes(similar_conflict) =
+                                self.blocked(frame, &similar_cube)
+                            {
+                                let similar_conflict = similar_conflict.get_conflict();
+                                self.share.statistic.lock().unwrap().test_c += 1;
+                                self.frames.add_cube(frame, similar_conflict);
+                                continue;
+                            }
+                        } else {
+                            self.share.statistic.lock().unwrap().test_b += 1;
+                        }
+                    }
                     let (frame, core) = self.generalize(frame, conflict);
                     if frame < self.depth() {
                         heap.push(HeapFrameCube::new(frame + 1, cube));
@@ -99,6 +114,33 @@ impl PdrWorker {
         }
         true
     }
+
+    // pub fn try_block(&mut self, frame: usize, cube: &Cube, mut max_try: usize) -> bool {
+    //     loop {
+    //         if max_try > 5 {
+    //             return false;
+    //         }
+    //         max_try -= 1;
+    //         match self.blocked(frame, &cube) {
+    //             BlockResult::Yes(conflict) => {
+    //                 let conflict = conflict.get_conflict();
+    //                 self.frames.add_cube(frame + 1, conflict);
+    //                 return true;
+    //             }
+    //             BlockResult::No(cex) => {
+    //                 let cex = cex.get_model();
+    //                 if let BlockResult::Yes(conflict) = self.blocked(frame, &cex) {
+    //                     let conflict = conflict.get_conflict();
+    //                     let cex = self.mic(frame_idx, conflict, true);
+    //                     frame.push_back(cex.clone());
+    //                     self.frames.add_cube(frame_idx, cex);
+    //                 } else {
+    //                     break;
+    //                 }
+    //             }
+    //         }
+    //     }
+    // }
 
     pub fn start(&mut self) -> bool {
         loop {
@@ -163,6 +205,7 @@ impl PdrWorker {
                 return true;
             }
         }
+        self.frames.reset_early_update();
         false
     }
 }
