@@ -17,7 +17,7 @@
                     "kind": "bin"
                 }
             },
-            "args": ["/root/MC-Benchmark/hwmcc17/single/beemlmprt8f1.aag"],
+            "args": [],
             "cwd": "${workspaceFolder}"
         }
     ]

@@ -70,6 +70,9 @@ impl Pdr {
     }
 
     pub fn check(&mut self) -> bool {
+        if self.workers[0].cex.lock().unwrap().get().is_some() {
+            return false;
+        }
         self.new_frame();
         loop {
             let mut joins = Vec::new();
