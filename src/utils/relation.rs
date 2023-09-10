@@ -1,4 +1,5 @@
-use logic_form::Cube;
+use logic_form::{Cube, Var};
+use std::collections::HashMap;
 
 pub fn cube_subsume(x: &Cube, y: &Cube) -> bool {
     if x.len() > y.len() {
@@ -16,9 +17,9 @@ pub fn cube_subsume(x: &Cube, y: &Cube) -> bool {
     true
 }
 
-pub fn cube_subsume_init(x: &Cube) -> bool {
+pub fn cube_subsume_init(init: &HashMap<Var, bool>, x: &Cube) -> bool {
     for i in 0..x.len() {
-        if x[i].polarity() {
+        if init[&x[i].var()] != x[i].polarity() {
             return false;
         }
     }

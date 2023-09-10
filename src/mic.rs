@@ -5,7 +5,7 @@ use std::{collections::HashSet, time::Instant};
 
 impl PdrWorker {
     fn down(&mut self, frame: usize, cube: Cube) -> Option<Cube> {
-        if cube_subsume_init(&cube) {
+        if cube_subsume_init(&self.share.init, &cube) {
             return None;
         }
         self.share.statistic.lock().unwrap().num_down_blocked += 1;
@@ -19,15 +19,15 @@ impl PdrWorker {
         self.share.statistic.lock().unwrap().num_ctg_down += 1;
         let mut ctgs = 0;
         loop {
-            if cube_subsume_init(&cube) {
+            if cube_subsume_init(&self.share.init, &cube) {
                 return None;
             }
             match self.blocked(frame, &cube) {
                 BlockResult::Yes(conflict) => return Some(conflict.get_conflict()),
                 BlockResult::No(model) => {
                     let model = model.get_model();
-                    if ctgs < 3 && frame > 1 && !cube_subsume_init(&model) {
-                        assert!(!cube_subsume_init(&model));
+                    if ctgs < 3 && frame > 1 && !cube_subsume_init(&self.share.init, &model) {
+                        assert!(!cube_subsume_init(&self.share.init, &model));
                         if let BlockResult::Yes(conflict) = self.blocked(frame - 1, &model) {
                             ctgs += 1;
                             let conflict = conflict.get_conflict();

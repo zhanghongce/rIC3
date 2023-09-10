@@ -44,7 +44,7 @@ impl PdrWorker {
     }
 
     pub fn blocked<'a>(&'a mut self, frame: usize, cube: &Cube) -> BlockResult<'a> {
-        assert!(!cube_subsume_init(cube));
+        assert!(!cube_subsume_init(&self.share.init, cube));
         assert!(frame > 0);
         self.solvers[frame - 1].block_fetch(&self.frames);
         self.solvers[frame - 1].blocked(cube)
@@ -70,7 +70,7 @@ impl PdrWorker {
             if frame == 0 {
                 return false;
             }
-            assert!(!cube_subsume_init(&cube));
+            assert!(!cube_subsume_init(&self.share.init, &cube));
             if self.share.args.verbose {
                 println!("{:?}", heap_num);
                 self.statistic();
@@ -123,10 +123,10 @@ impl PdrWorker {
         simple: bool,
     ) -> bool {
         loop {
-            if max_try == 0 || frame == 0 || cube_subsume_init(cube) {
+            if max_try == 0 || frame == 0 || cube_subsume_init(&self.share.init, cube) {
                 return false;
             }
-            assert!(!cube_subsume_init(cube));
+            assert!(!cube_subsume_init(&self.share.init, cube));
             max_try -= 1;
             match self.blocked(frame, &cube) {
                 BlockResult::Yes(conflict) => {

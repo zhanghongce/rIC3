@@ -19,6 +19,7 @@ use aig::Aig;
 use cex::Cex;
 use clap::Parser;
 use logic_form::{Cube, Lit};
+use std::collections::HashMap;
 use std::{
     mem::take,
     sync::{Arc, Mutex},
@@ -46,7 +47,7 @@ impl Pdr {
 
 impl Pdr {
     pub fn new(share: Arc<BasicShare>) -> Self {
-        let mut frames = Arc::new(Frames::new());
+        let mut frames = Arc::new(Frames::new(share.clone()));
         let (broadcast, mut receivers) = create_broadcast(share.args.parallel + 1);
         let cex_receiver = receivers.pop().unwrap();
         let cex = Arc::new(Mutex::new(Cex::new(share.clone(), cex_receiver)));
@@ -117,17 +118,17 @@ impl Pdr {
 
 pub fn solve(aig: Aig, args: Args) -> (bool, Duration) {
     let transition_cnf = aig.get_cnf();
-    assert!(aig
-        .latch_init_cube()
-        .to_cube()
-        .iter()
-        .all(|l| !l.polarity()));
+    let mut init = HashMap::new();
+    for l in aig.latch_init_cube().to_cube() {
+        init.insert(l.var(), l.polarity());
+    }
     let state_transform = StateTransform::new(&aig);
     let share = Arc::new(BasicShare {
         aig,
         transition_cnf,
         state_transform,
         args,
+        init,
         statistic: Mutex::new(Statistic::default()),
     });
     let mut pdr = Pdr::new(share);

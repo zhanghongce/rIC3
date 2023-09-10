@@ -4,6 +4,8 @@ use crate::utils::state_transform::StateTransform;
 use aig::Aig;
 use logic_form::Cnf;
 use logic_form::Cube;
+use logic_form::Var;
+use std::collections::HashMap;
 use std::sync::Mutex;
 
 pub struct BasicShare {
@@ -11,6 +13,7 @@ pub struct BasicShare {
     pub transition_cnf: Cnf,
     pub state_transform: StateTransform,
     pub args: Args,
+    pub init: HashMap<Var, bool>,
     pub statistic: Mutex<Statistic>,
 }
 

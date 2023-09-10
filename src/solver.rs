@@ -55,7 +55,7 @@ impl PdrSolver {
 
     pub fn blocked<'a>(&'a mut self, cube: &Cube) -> BlockResult<'a> {
         let start = Instant::now();
-        assert!(!cube_subsume_init(&cube));
+        assert!(!cube_subsume_init(&self.share.init, &cube));
         let mut assumption = self.share.state_transform.cube_next(cube);
         let act = self.solver.new_var().into();
         assumption.push(act);
@@ -79,6 +79,7 @@ impl PdrSolver {
                     solver: &mut self.solver,
                     cube: cube.clone(),
                     assumption,
+                    share: self.share.clone(),
                 })
             }
         };
@@ -101,6 +102,7 @@ pub struct BlockResultYes<'a> {
     solver: &'a mut Solver,
     cube: Cube,
     assumption: Cube,
+    share: Arc<BasicShare>,
 }
 
 impl BlockResultYes<'_> {
@@ -113,11 +115,17 @@ impl BlockResultYes<'_> {
                 ans.push(self.cube[i]);
             }
         }
-        if cube_subsume_init(&ans) {
-            ans.push(*self.cube.iter().find(|l| l.polarity()).unwrap());
+        if cube_subsume_init(&self.share.init, &ans) {
+            ans.push(
+                *self
+                    .cube
+                    .iter()
+                    .find(|l| self.share.init[&l.var()] != l.polarity())
+                    .unwrap(),
+            );
             ans.sort_by_key(|x| x.var());
         }
-        assert!(!cube_subsume_init(&ans));
+        assert!(!cube_subsume_init(&self.share.init, &ans));
         ans
     }
 }

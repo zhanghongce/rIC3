@@ -1,5 +1,8 @@
 use super::broadcast::PdrSolverBroadcastSender;
-use crate::utils::relation::{cube_subsume, cube_subsume_init};
+use crate::{
+    basic::BasicShare,
+    utils::relation::{cube_subsume, cube_subsume_init},
+};
 use logic_form::Cube;
 use std::{
     fmt::Debug,
@@ -10,14 +13,16 @@ use std::{
 
 pub struct Frames {
     time: Mutex<Duration>,
+    share: Arc<BasicShare>,
     pub frames: RwLock<Vec<Vec<Cube>>>,
     early_update: Mutex<usize>,
     broadcast: Vec<PdrSolverBroadcastSender>,
 }
 
 impl Frames {
-    pub fn new() -> Self {
+    pub fn new(share: Arc<BasicShare>) -> Self {
         Self {
+            share,
             frames: RwLock::new(Vec::new()),
             broadcast: Vec::new(),
             time: Mutex::new(Duration::default()),
@@ -46,7 +51,7 @@ impl Frames {
                 *self.time.lock().unwrap() += start.elapsed();
                 return;
             }
-            assert!(!cube_subsume_init(&cube));
+            assert!(!cube_subsume_init(&self.share.init, &cube));
             let mut begin = 1;
             for i in 1..=frame {
                 let cubes = take(&mut frames[i]);
