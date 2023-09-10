@@ -213,9 +213,7 @@ dependencies = [
 
 [[package]]
 name = "gipsyh-aiger"
-version = "0.3.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1f1a343baac81d1e32038ff5b53d203f05d4237b83e86772aadb495e958c61d6"
+version = "0.4.0"
 
 [[package]]
 name = "glob"
