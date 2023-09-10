@@ -10,7 +10,6 @@ pub struct Cex {
     solver: Solver,
     receiver: PdrSolverBroadcastReceiver,
     share: Arc<BasicShare>,
-    cexs: Vec<Vec<Cube>>,
 }
 
 impl Cex {
@@ -23,7 +22,6 @@ impl Cex {
             solver,
             receiver,
             share,
-            cexs: vec![vec![]],
         }
     }
 
@@ -33,7 +31,6 @@ impl Cex {
         solver.add_cnf(&self.share.as_ref().transition_cnf);
         self.solver = solver;
         self.receiver = receiver;
-        self.cexs.push(vec![]);
     }
 
     fn fetch_clauses(&mut self) {
@@ -60,7 +57,6 @@ impl Cex {
 
     pub fn get(&mut self) -> Option<Cube> {
         if let Some(cex) = self.find_cex() {
-            self.cexs.last_mut().unwrap().push(cex.clone());
             return Some(cex);
         }
         None

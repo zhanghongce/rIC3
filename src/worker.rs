@@ -98,9 +98,9 @@ impl PdrWorker {
                     // self.share.statistic.lock().unwrap().test_b += 1;
                     // }
                     let (frame, core) = self.generalize(frame, conflict, false);
-                    if frame < self.depth() {
-                        heap.push(HeapFrameCube::new(frame + 1, cube));
-                        heap_num[frame + 1] += 1;
+                    if frame <= self.depth() {
+                        heap.push(HeapFrameCube::new(frame, cube));
+                        heap_num[frame] += 1;
                     }
                     self.frames.add_cube(frame - 1, core);
                 }
