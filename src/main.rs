@@ -60,8 +60,10 @@ impl Pdr {
         }
         unsafe { Arc::get_mut_unchecked(&mut frames) }.new_frame(broadcast);
         for l in share.aig.latchs.iter() {
-            let cube = Cube::from([Lit::new(l.input.into(), !l.init)]);
-            frames.add_cube(0, cube)
+            if let Some(init) = l.init {
+                let cube = Cube::from([Lit::new(l.input.into(), !init)]);
+                frames.add_cube(0, cube)
+            }
         }
         Self {
             frames,

@@ -120,7 +120,12 @@ impl BlockResultYes<'_> {
                 *self
                     .cube
                     .iter()
-                    .find(|l| self.share.init[&l.var()] != l.polarity())
+                    .find(|l| {
+                        self.share
+                            .init
+                            .get(&l.var())
+                            .is_some_and(|i| *i != l.polarity())
+                    })
                     .unwrap(),
             );
             ans.sort_by_key(|x| x.var());
