@@ -2,8 +2,6 @@
 
 mod activity;
 mod basic;
-mod broadcast;
-mod cex;
 mod command;
 mod frames;
 mod mic;
@@ -13,10 +11,9 @@ mod utils;
 mod verify;
 mod worker;
 
-use crate::{basic::BasicShare, frames::Frames, statistic::Statistic, worker::PdrWorker};
-use crate::{broadcast::create_broadcast, command::Args, utils::state_transform::StateTransform};
+use crate::{basic::BasicShare, statistic::Statistic, worker::PdrWorker};
+use crate::{command::Args, utils::state_transform::StateTransform};
 use aig::Aig;
-use cex::Cex;
 use clap::Parser;
 use logic_form::{Cube, Lit};
 use std::collections::HashMap;
@@ -28,52 +25,41 @@ use std::{
 };
 
 pub struct Pdr {
-    pub frames: Arc<Frames>,
     workers: Vec<PdrWorker>,
     pub share: Arc<BasicShare>,
 }
 
 impl Pdr {
     pub fn new_frame(&mut self) {
-        let (broadcast, mut receivers) = create_broadcast(self.workers.len() + 1);
-        let cex_receiver = receivers.pop().unwrap();
-        for (receiver, worker) in receivers.into_iter().zip(self.workers.iter_mut()) {
-            worker.new_frame(receiver)
+        for worker in self.workers.iter_mut() {
+            worker.new_frame()
         }
-        self.workers[0].cex.lock().unwrap().new_frame(cex_receiver);
-        unsafe { Arc::get_mut_unchecked(&mut self.frames) }.new_frame(broadcast);
     }
 }
 
 impl Pdr {
     pub fn new(share: Arc<BasicShare>) -> Self {
-        let mut frames = Arc::new(Frames::new(share.clone()));
-        let (broadcast, mut receivers) = create_broadcast(share.args.parallel + 1);
-        let cex_receiver = receivers.pop().unwrap();
-        let cex = Arc::new(Mutex::new(Cex::new(share.clone(), cex_receiver)));
         let mut workers = Vec::new();
         for _ in 0..share.args.parallel {
-            workers.push(PdrWorker::new(share.clone(), frames.clone(), cex.clone()))
+            workers.push(PdrWorker::new(share.clone()))
         }
-        for (receiver, worker) in receivers.into_iter().zip(workers.iter_mut()) {
-            worker.new_frame(receiver)
+        for worker in workers.iter_mut() {
+            worker.new_frame()
         }
-        unsafe { Arc::get_mut_unchecked(&mut frames) }.new_frame(broadcast);
-        for l in share.aig.latchs.iter() {
+        let mut res = Self { workers, share };
+        for l in res.share.aig.latchs.iter() {
             if let Some(init) = l.init {
                 let cube = Cube::from([Lit::new(l.input.into(), !init)]);
-                frames.add_cube(0, cube)
+                for worker in res.workers.iter_mut() {
+                    worker.add_cube(0, cube.clone())
+                }
             }
         }
-        Self {
-            frames,
-            workers,
-            share,
-        }
+        res
     }
 
     pub fn check(&mut self) -> bool {
-        if self.workers[0].cex.lock().unwrap().get().is_some() {
+        if self.workers[0].solvers[0].get_bad().is_some() {
             return false;
         }
         self.new_frame();
@@ -111,7 +97,7 @@ impl Pdr {
             self.share.statistic.lock().unwrap().overall_propagate_time += start.elapsed();
             if propagate {
                 self.statistic();
-                assert!(self.verify());
+                assert!(self.workers[0].verify());
                 return true;
             }
         }
@@ -144,7 +130,7 @@ fn main() {
     let aig = // Safe
     // 1000s vs 0.2s
     "../MC-Benchmark/hwmcc20/aig/2019/beem/pgm_protocol.7.prop1-back-serstep.aag";
-    // 37s vs 17s
+    // 31s vs 17s
     // "../MC-Benchmark/hwmcc20/aig/2019/goel/industry/cal143/cal143.aag";
     // 47s vs 23s
     // "../MC-Benchmark/hwmcc20/aig/2019/goel/industry/cal118/cal118.aag";

@@ -56,8 +56,7 @@ impl AddAssign<f64> for StatisticAverage {
 
 impl Pdr {
     pub fn statistic(&self) {
-        self.frames.statistic();
-        println!("{:?}", self.share.statistic.lock().unwrap());
+        self.workers[0].statistic()
     }
 }
 

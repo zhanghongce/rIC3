@@ -1,4 +1,4 @@
-use super::{basic::BasicShare, broadcast::PdrSolverBroadcastReceiver, frames::Frames};
+use super::{basic::BasicShare, frames::Frames};
 use crate::utils::{generalize::generalize_by_ternary_simulation, relation::cube_subsume_init};
 use aig::AigCube;
 use logic_form::{Clause, Cube};
@@ -7,20 +7,18 @@ use std::{mem::take, sync::Arc, time::Instant};
 
 pub struct PdrSolver {
     solver: Solver,
-    receiver: PdrSolverBroadcastReceiver,
     num_act: usize,
     share: Arc<BasicShare>,
     frame: usize,
 }
 
 impl PdrSolver {
-    pub fn new(share: Arc<BasicShare>, frame: usize, receiver: PdrSolverBroadcastReceiver) -> Self {
+    pub fn new(share: Arc<BasicShare>, frame: usize) -> Self {
         let mut solver = Solver::new();
         solver.set_random_seed(91648253_f64);
         solver.add_cnf(&share.as_ref().transition_cnf);
         Self {
             solver,
-            receiver,
             frame,
             num_act: 0,
             share,
@@ -33,7 +31,6 @@ impl PdrSolver {
             self.num_act = 0;
             self.solver = Solver::new();
             self.solver.add_cnf(&self.share.transition_cnf);
-            let frames = frames.frames.read().unwrap();
             let frames_slice = if self.frame == 0 {
                 &frames[0..1]
             } else {
@@ -44,18 +41,12 @@ impl PdrSolver {
                     self.add_clause(&!cube.clone());
                 }
             }
-            while self.receiver.receive_clause().is_some() {}
-            drop(frames);
-        } else {
-            while let Some(clause) = self.receiver.receive_clause() {
-                self.add_clause(&clause);
-            }
         }
     }
 
     pub fn blocked<'a>(&'a mut self, cube: &Cube) -> BlockResult<'a> {
         let start = Instant::now();
-        assert!(!cube_subsume_init(&self.share.init, &cube));
+        assert!(!cube_subsume_init(&self.share.init, cube));
         let mut assumption = self.share.state_transform.cube_next(cube);
         let act = self.solver.new_var().into();
         assumption.push(act);
@@ -90,6 +81,20 @@ impl PdrSolver {
     pub fn add_clause(&mut self, clause: &Clause) {
         self.solver.add_clause(clause);
         self.solver.simplify();
+    }
+
+    pub fn get_bad(&mut self) -> Option<Cube> {
+        let bad = if self.share.aig.bads.is_empty() {
+            self.share.aig.outputs[0]
+        } else {
+            self.share.aig.bads[0]
+        };
+        if let SatResult::Sat(model) = self.solver.solve(&[bad.to_lit()]) {
+            self.share.statistic.lock().unwrap().num_get_bad_state += 1;
+            let cex = generalize_by_ternary_simulation(&self.share.aig, model, &[bad]).to_cube();
+            return Some(cex);
+        }
+        None
     }
 }
 

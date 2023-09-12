@@ -1,35 +1,32 @@
 use super::{
     activity::Activity,
     basic::{BasicShare, ProofObligation},
-    broadcast::PdrSolverBroadcastReceiver,
     frames::Frames,
     solver::{BlockResult, PdrSolver},
 };
-use crate::{cex::Cex, utils::relation::cube_subsume_init};
+use crate::utils::relation::cube_subsume_init;
 use logic_form::Cube;
 use std::{
     collections::{BinaryHeap, VecDeque},
-    sync::{Arc, Mutex},
+    sync::Arc,
 };
 
 pub struct PdrWorker {
-    solvers: Vec<PdrSolver>,
-    pub frames: Arc<Frames>,
+    pub solvers: Vec<PdrSolver>,
+    pub frames: Frames,
     pub share: Arc<BasicShare>,
     pub activity: Activity,
     pub cav23_activity: Activity,
-    pub cex: Arc<Mutex<Cex>>,
 }
 
 impl PdrWorker {
-    pub fn new(share: Arc<BasicShare>, frames: Arc<Frames>, cex: Arc<Mutex<Cex>>) -> Self {
+    pub fn new(share: Arc<BasicShare>) -> Self {
         Self {
             solvers: Vec::new(),
-            frames,
+            frames: Frames::new(),
             activity: Activity::new(&share.aig),
             cav23_activity: Activity::new(&share.aig),
             share,
-            cex,
         }
     }
 
@@ -37,12 +34,10 @@ impl PdrWorker {
         self.solvers.len() - 1
     }
 
-    pub fn new_frame(&mut self, receiver: PdrSolverBroadcastReceiver) {
-        self.solvers.push(PdrSolver::new(
-            self.share.clone(),
-            self.solvers.len(),
-            receiver,
-        ));
+    pub fn new_frame(&mut self) {
+        self.frames.new_frame();
+        self.solvers
+            .push(PdrSolver::new(self.share.clone(), self.solvers.len()));
     }
 
     pub fn blocked<'a>(&'a mut self, frame: usize, cube: &Cube) -> BlockResult<'a> {
@@ -103,7 +98,7 @@ impl PdrWorker {
                         heap.push(ProofObligation::new(frame, cube));
                         heap_num[frame] += 1;
                     }
-                    self.frames.add_cube(frame - 1, core);
+                    self.add_cube(frame - 1, core);
                 }
                 BlockResult::No(model) => {
                     heap.push(ProofObligation::new(frame - 1, model.get_model()));
@@ -129,11 +124,11 @@ impl PdrWorker {
             }
             assert!(!cube_subsume_init(&self.share.init, cube));
             max_try -= 1;
-            match self.blocked(frame, &cube) {
+            match self.blocked(frame, cube) {
                 BlockResult::Yes(conflict) => {
                     let conflict = conflict.get_conflict();
                     let (frame, core) = self.generalize(frame, conflict, simple);
-                    self.frames.add_cube(frame - 1, core);
+                    self.add_cube(frame - 1, core);
                     return true;
                 }
                 BlockResult::No(cex) => {
@@ -148,8 +143,7 @@ impl PdrWorker {
 
     pub fn start(&mut self) -> bool {
         loop {
-            let cex = self.cex.lock().unwrap().get();
-            if let Some(cex) = cex {
+            if let Some(cex) = self.solvers.last_mut().unwrap().get_bad() {
                 if !self.block(self.depth(), cex) {
                     return false;
                 }
@@ -161,56 +155,23 @@ impl PdrWorker {
 
     pub fn propagate(&mut self) -> bool {
         for frame_idx in 1..self.depth() {
-            let mut frame = VecDeque::from_iter(
-                self.frames.frames.read().unwrap()[frame_idx]
-                    .iter()
-                    .cloned(),
-            );
+            let mut frame = VecDeque::from_iter(self.frames[frame_idx].iter().cloned());
             while let Some(cube) = frame.pop_front() {
                 if self.frames.trivial_contained(frame_idx + 1, &cube) {
                     continue;
                 }
-                if self.share.args.ctp {
-                    let mut ctp = 0;
-                    loop {
-                        if ctp > 5 {
-                            break;
-                        }
-                        match self.blocked(frame_idx + 1, &cube) {
-                            BlockResult::Yes(conflict) => {
-                                let conflict = conflict.get_conflict();
-                                self.frames.add_cube(frame_idx + 1, conflict);
-                                break;
-                            }
-                            BlockResult::No(cex) => {
-                                let cex = cex.get_model();
-                                ctp += 1;
-                                if let BlockResult::Yes(conflict) = self.blocked(frame_idx, &cex) {
-                                    let conflict = conflict.get_conflict();
-                                    let cex = self.mic(frame_idx, conflict, true);
-                                    frame.push_back(cex.clone());
-                                    self.frames.add_cube(frame_idx, cex);
-                                } else {
-                                    break;
-                                }
-                            }
-                        }
-                    }
-                } else {
-                    if let BlockResult::Yes(conflict) = self.blocked(frame_idx + 1, &cube) {
-                        let conflict = conflict.get_conflict();
-                        self.frames.add_cube(frame_idx + 1, conflict);
-                        if self.share.args.cav23 {
-                            self.activity.pump_cube_activity(&cube);
-                        }
+                if let BlockResult::Yes(conflict) = self.blocked(frame_idx + 1, &cube) {
+                    let conflict = conflict.get_conflict();
+                    self.add_cube(frame_idx + 1, conflict);
+                    if self.share.args.cav23 {
+                        self.activity.pump_cube_activity(&cube);
                     }
                 }
             }
-            if self.frames.frames.read().unwrap()[frame_idx].is_empty() {
+            if self.frames[frame_idx].is_empty() {
                 return true;
             }
         }
-        self.frames.reset_early_update();
         false
     }
 }

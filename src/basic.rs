@@ -36,10 +36,7 @@ impl PartialEq for ProofObligation {
 
 impl PartialOrd for ProofObligation {
     fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
-        match other.frame.partial_cmp(&self.frame) {
-            Some(core::cmp::Ordering::Equal) => other.cube.len().partial_cmp(&self.cube.len()),
-            ord => ord,
-        }
+        Some(self.cmp(other))
     }
 }
 
@@ -49,6 +46,12 @@ impl Eq for ProofObligation {
 
 impl Ord for ProofObligation {
     fn cmp(&self, other: &Self) -> std::cmp::Ordering {
-        other.frame.cmp(&self.frame)
+        match other.frame.cmp(&self.frame) {
+            std::cmp::Ordering::Less => todo!(),
+            std::cmp::Ordering::Equal => todo!(),
+            std::cmp::Ordering::Greater => todo!(),
+            // Some(core::cmp::Ordering::Equal) => other.cube.len().cmp(&self.cube.len()),
+            // ord => ord,
+        }
     }
 }
