@@ -128,7 +128,6 @@ impl BlockResultYes<'_> {
                     })
                     .unwrap(),
             );
-            ans.sort_by_key(|x| x.var());
         }
         assert!(!cube_subsume_init(&self.share.init, &ans));
         ans

@@ -2,6 +2,8 @@ use logic_form::{Cube, Var};
 use std::collections::HashMap;
 
 pub fn cube_subsume(x: &Cube, y: &Cube) -> bool {
+    assert!(x.is_sorted_by_key(|l| l.var()));
+    assert!(y.is_sorted_by_key(|l| l.var()));
     if x.len() > y.len() {
         return false;
     }

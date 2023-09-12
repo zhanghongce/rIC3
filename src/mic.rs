@@ -1,5 +1,5 @@
 use super::{solver::BlockResult, worker::PdrWorker};
-use crate::utils::relation::cube_subsume_init;
+use crate::utils::relation::{cube_subsume, cube_subsume_init};
 use logic_form::{Cube, Lit};
 use std::{collections::HashSet, time::Instant};
 
@@ -25,9 +25,12 @@ impl PdrWorker {
             match self.blocked(frame, &cube) {
                 BlockResult::Yes(conflict) => return Some(conflict.get_conflict()),
                 BlockResult::No(model) => {
-                    let model = model.get_model();
+                    let mut model = model.get_model();
                     if ctgs < 3 && frame > 1 && !cube_subsume_init(&self.share.init, &model) {
                         assert!(!cube_subsume_init(&self.share.init, &model));
+                        if self.share.args.cav23 {
+                            self.cav23_activity.sort_by_activity_descending(&mut model);
+                        }
                         if let BlockResult::Yes(conflict) = self.blocked(frame - 1, &model) {
                             ctgs += 1;
                             let conflict = conflict.get_conflict();
@@ -68,9 +71,25 @@ impl PdrWorker {
         }
         self.share.statistic.lock().unwrap().average_mic_cube_len += cube.len();
         let mut i = 0;
-        assert!(cube.is_sorted_by_key(|x| x.var()));
-        cube = self.activity.sort_by_activity_ascending(cube);
+        self.activity.sort_by_activity_ascending(&mut cube);
         let mut keep = HashSet::new();
+        let cav23_parent = self.share.args.cav23.then(|| {
+            self.cav23_activity.sort_by_activity_ascending(&mut cube);
+            let mut similar = self.frames.similar(&cube, frame);
+            similar.sort_by(|a, b| {
+                self.cav23_activity
+                    .cube_average_activity(b)
+                    .partial_cmp(&self.cav23_activity.cube_average_activity(a))
+                    .unwrap()
+            });
+            let similar = similar.into_iter().nth(0);
+            if let Some(similar) = &similar {
+                for l in similar.iter() {
+                    keep.insert(*l);
+                }
+            }
+            similar
+        });
         while i < cube.len() {
             let mut removed_cube = cube.clone();
             removed_cube.remove(i);
@@ -98,9 +117,12 @@ impl PdrWorker {
             }
         }
         cube.sort_by_key(|x| *x.var());
-        for l in cube.iter() {
-            self.activity.pump_activity(l);
+        if let Some(Some(cav23)) = cav23_parent {
+            if cube_subsume(&cav23, &cube) {
+                self.cav23_activity.pump_cube_activity(&cube);
+            }
         }
+        self.activity.pump_cube_activity(&cube);
         if simple {
             self.share.statistic.lock().unwrap().simple_mic_time += start.elapsed()
         } else {

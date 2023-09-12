@@ -38,9 +38,9 @@ impl Frames {
         self.broadcast.push(broadcast);
     }
 
-    pub fn add_cube(&self, frame: usize, cube: Cube) {
+    pub fn add_cube(&self, frame: usize, mut cube: Cube) {
         let start = Instant::now();
-        assert!(cube.is_sorted_by_key(|x| x.var()));
+        cube.sort_by_key(|x| x.var());
         let mut frames = self.frames.write().unwrap();
         let mut early_update = self.early_update.lock().unwrap();
         let begin = if frame == 0 {
@@ -111,19 +111,18 @@ impl Frames {
     }
 
     pub fn similar(&self, cube: &Cube, frame: usize) -> Vec<Cube> {
+        let mut cube = cube.clone();
+        cube.sort_by_key(|l| l.var());
         let mut res = Vec::new();
         if frame == 1 {
             return res;
         }
         let frames = self.frames.read().unwrap();
-        for i in (1..frame).rev() {
-            for c in frames[i - 1].iter() {
-                if cube_subsume(c, cube) {
-                    res.push(c.clone());
-                }
+        for c in frames[frame - 1].iter() {
+            if cube_subsume(c, &cube) {
+                res.push(c.clone());
             }
         }
-        res.sort_by(|a, b| b.len().cmp(&a.len()));
         res
     }
 }

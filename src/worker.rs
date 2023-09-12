@@ -17,6 +17,7 @@ pub struct PdrWorker {
     pub frames: Arc<Frames>,
     pub share: Arc<BasicShare>,
     pub activity: Activity,
+    pub cav23_activity: Activity,
     pub cex: Arc<Mutex<Cex>>,
 }
 
@@ -26,6 +27,7 @@ impl PdrWorker {
             solvers: Vec::new(),
             frames,
             activity: Activity::new(&share.aig),
+            cav23_activity: Activity::new(&share.aig),
             share,
             cex,
         }
@@ -66,7 +68,6 @@ impl PdrWorker {
         heap.push(HeapFrameCube::new(frame, cube));
         heap_num[frame] += 1;
         while let Some(HeapFrameCube { frame, cube }) = heap.pop() {
-            assert!(cube.is_sorted_by_key(|x| x.var()));
             if frame == 0 {
                 return false;
             }
@@ -149,7 +150,6 @@ impl PdrWorker {
         loop {
             let cex = self.cex.lock().unwrap().get();
             if let Some(cex) = cex {
-                assert!(cex.is_sorted_by_key(|x| x.var()));
                 if !self.block(self.depth(), cex) {
                     return false;
                 }
@@ -200,6 +200,9 @@ impl PdrWorker {
                     if let BlockResult::Yes(conflict) = self.blocked(frame_idx + 1, &cube) {
                         let conflict = conflict.get_conflict();
                         self.frames.add_cube(frame_idx + 1, conflict);
+                        if self.share.args.cav23 {
+                            self.activity.pump_cube_activity(&cube);
+                        }
                     }
                 }
             }
