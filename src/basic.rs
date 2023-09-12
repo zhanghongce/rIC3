@@ -5,6 +5,7 @@ use aig::Aig;
 use logic_form::Cnf;
 use logic_form::Cube;
 use logic_form::Var;
+use std::cmp::Ordering;
 use std::collections::HashMap;
 use std::sync::Mutex;
 
@@ -35,7 +36,7 @@ impl PartialEq for ProofObligation {
 }
 
 impl PartialOrd for ProofObligation {
-    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         Some(self.cmp(other))
     }
 }
@@ -45,13 +46,10 @@ impl Eq for ProofObligation {
 }
 
 impl Ord for ProofObligation {
-    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+    fn cmp(&self, other: &Self) -> Ordering {
         match other.frame.cmp(&self.frame) {
-            std::cmp::Ordering::Less => todo!(),
-            std::cmp::Ordering::Equal => todo!(),
-            std::cmp::Ordering::Greater => todo!(),
-            // Some(core::cmp::Ordering::Equal) => other.cube.len().cmp(&self.cube.len()),
-            // ord => ord,
+            Ordering::Equal => other.cube.len().cmp(&self.cube.len()),
+            ord => ord,
         }
     }
 }

@@ -76,7 +76,7 @@ impl Pdr {
             for join in joins {
                 let (worker, res) = join.join().unwrap();
                 if !res {
-                    self.statistic();
+                    worker.statistic();
                     return false;
                 }
                 self.workers.push(worker)
