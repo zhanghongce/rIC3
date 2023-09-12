@@ -118,7 +118,7 @@ impl PdrWorker {
         }
         cube.sort_by_key(|x| *x.var());
         if let Some(Some(cav23)) = cav23_parent {
-            if cube_subsume(&cav23, &cube) {
+            if cube_subsume(&cube, &cav23) {
                 self.cav23_activity.pump_cube_activity(&cube);
             }
         }
