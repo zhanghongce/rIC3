@@ -91,6 +91,10 @@ impl PdrWorker {
             similar
         });
         while i < cube.len() {
+            if keep.contains(&cube[i]) {
+                i += 1;
+                continue;
+            }
             let mut removed_cube = cube.clone();
             removed_cube.remove(i);
             let res = if simple {
