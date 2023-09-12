@@ -1,6 +1,6 @@
 use super::{
     activity::Activity,
-    basic::{BasicShare, HeapFrameCube},
+    basic::{BasicShare, ProofObligation},
     broadcast::PdrSolverBroadcastReceiver,
     frames::Frames,
     solver::{BlockResult, PdrSolver},
@@ -65,9 +65,9 @@ impl PdrWorker {
     pub fn block(&mut self, frame: usize, cube: Cube) -> bool {
         let mut heap = BinaryHeap::new();
         let mut heap_num = vec![0; self.depth() + 1];
-        heap.push(HeapFrameCube::new(frame, cube));
+        heap.push(ProofObligation::new(frame, cube));
         heap_num[frame] += 1;
-        while let Some(HeapFrameCube { frame, cube }) = heap.pop() {
+        while let Some(ProofObligation { frame, cube }) = heap.pop() {
             if frame == 0 {
                 return false;
             }
@@ -100,14 +100,14 @@ impl PdrWorker {
                     // }
                     let (frame, core) = self.generalize(frame, conflict, false);
                     if frame <= self.depth() {
-                        heap.push(HeapFrameCube::new(frame, cube));
+                        heap.push(ProofObligation::new(frame, cube));
                         heap_num[frame] += 1;
                     }
                     self.frames.add_cube(frame - 1, core);
                 }
                 BlockResult::No(model) => {
-                    heap.push(HeapFrameCube::new(frame - 1, model.get_model()));
-                    heap.push(HeapFrameCube::new(frame, cube));
+                    heap.push(ProofObligation::new(frame - 1, model.get_model()));
+                    heap.push(ProofObligation::new(frame, cube));
                     heap_num[frame - 1] += 1;
                     heap_num[frame] += 1;
                 }

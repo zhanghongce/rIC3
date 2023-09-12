@@ -17,24 +17,24 @@ pub struct BasicShare {
     pub statistic: Mutex<Statistic>,
 }
 
-pub struct HeapFrameCube {
+pub struct ProofObligation {
     pub frame: usize,
     pub cube: Cube,
 }
 
-impl HeapFrameCube {
+impl ProofObligation {
     pub fn new(frame: usize, cube: Cube) -> Self {
         Self { frame, cube }
     }
 }
 
-impl PartialEq for HeapFrameCube {
+impl PartialEq for ProofObligation {
     fn eq(&self, other: &Self) -> bool {
         self.frame == other.frame
     }
 }
 
-impl PartialOrd for HeapFrameCube {
+impl PartialOrd for ProofObligation {
     fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
         match other.frame.partial_cmp(&self.frame) {
             Some(core::cmp::Ordering::Equal) => other.cube.len().partial_cmp(&self.cube.len()),
@@ -43,11 +43,11 @@ impl PartialOrd for HeapFrameCube {
     }
 }
 
-impl Eq for HeapFrameCube {
+impl Eq for ProofObligation {
     fn assert_receiver_is_total_eq(&self) {}
 }
 
-impl Ord for HeapFrameCube {
+impl Ord for ProofObligation {
     fn cmp(&self, other: &Self) -> std::cmp::Ordering {
         other.frame.cmp(&self.frame)
     }
