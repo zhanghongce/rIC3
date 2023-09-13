@@ -23,12 +23,6 @@ pub struct ProofObligation {
     pub cube: Cube,
 }
 
-impl ProofObligation {
-    pub fn new(frame: usize, cube: Cube) -> Self {
-        Self { frame, cube }
-    }
-}
-
 impl PartialEq for ProofObligation {
     fn eq(&self, other: &Self) -> bool {
         self.frame == other.frame
@@ -51,5 +45,34 @@ impl Ord for ProofObligation {
             Ordering::Equal => other.cube.len().cmp(&self.cube.len()),
             ord => ord,
         }
+    }
+}
+
+pub struct ProofObligationQueue {
+    obligations: Vec<Vec<Cube>>,
+}
+
+impl ProofObligationQueue {
+    pub fn new() -> Self {
+        Self {
+            obligations: Vec::new(),
+        }
+    }
+
+    pub fn add(&mut self, frame: usize, cube: Cube) {
+        while self.obligations.len() <= frame {
+            self.obligations.push(Vec::new());
+        }
+        self.obligations[frame].push(cube);
+        self.obligations[frame].sort_by_key(|c| c.len());
+    }
+
+    pub fn get(&mut self) -> Option<(usize, Cube)> {
+        for i in 0..self.obligations.len() {
+            if !self.obligations[i].is_empty() {
+                return Some((i, self.obligations[i].remove(0)));
+            }
+        }
+        None
     }
 }

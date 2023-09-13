@@ -1,15 +1,12 @@
 use super::{
     activity::Activity,
-    basic::{BasicShare, ProofObligation},
+    basic::BasicShare,
     frames::Frames,
     solver::{BlockResult, PdrSolver},
 };
-use crate::utils::relation::cube_subsume_init;
+use crate::{basic::ProofObligationQueue, utils::relation::cube_subsume_init};
 use logic_form::Cube;
-use std::{
-    collections::{BinaryHeap, VecDeque},
-    sync::Arc,
-};
+use std::{collections::VecDeque, sync::Arc};
 
 pub struct PdrWorker {
     pub solvers: Vec<PdrSolver>,
@@ -58,11 +55,11 @@ impl PdrWorker {
     }
 
     pub fn block(&mut self, frame: usize, cube: Cube) -> bool {
-        let mut heap = BinaryHeap::new();
+        let mut obligations = ProofObligationQueue::new();
         let mut heap_num = vec![0; self.depth() + 1];
-        heap.push(ProofObligation::new(frame, cube));
+        obligations.add(frame, cube);
         heap_num[frame] += 1;
-        while let Some(ProofObligation { frame, cube }) = heap.pop() {
+        while let Some((frame, cube)) = obligations.get() {
             if frame == 0 {
                 return false;
             }
@@ -80,14 +77,14 @@ impl PdrWorker {
                     let conflict = conflict.get_conflict();
                     let (frame, core) = self.generalize(frame, conflict, !self.share.args.ctg);
                     if frame <= self.depth() {
-                        heap.push(ProofObligation::new(frame, cube));
+                        obligations.add(frame, cube);
                         heap_num[frame] += 1;
                     }
                     self.add_cube(frame - 1, core);
                 }
                 BlockResult::No(model) => {
-                    heap.push(ProofObligation::new(frame - 1, model.get_model()));
-                    heap.push(ProofObligation::new(frame, cube));
+                    obligations.add(frame - 1, model.get_model());
+                    obligations.add(frame, cube);
                     heap_num[frame - 1] += 1;
                     heap_num[frame] += 1;
                 }
