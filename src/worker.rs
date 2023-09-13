@@ -93,7 +93,7 @@ impl PdrWorker {
                     // }
                     // self.share.statistic.lock().unwrap().test_b += 1;
                     // }
-                    let (frame, core) = self.generalize(frame, conflict, false);
+                    let (frame, core) = self.generalize(frame, conflict, !self.share.args.ctg);
                     if frame <= self.depth() {
                         heap.push(ProofObligation::new(frame, cube));
                         heap_num[frame] += 1;
@@ -152,6 +152,52 @@ impl PdrWorker {
             }
         }
     }
+
+    // pub fn eliminate_check(&mut self) {
+    //     let mut remove = HashSet::new();
+    //     for frame_idx in 1..self.depth() - 1 {
+    //         for c in self.frames[frame_idx].iter() {
+    //             let mut solver = PdrSolver::new(self.share.clone(), frame_idx);
+    //             for frame in &self.frames[frame_idx..] {
+    //                 for cc in frame {
+    //                     if c != cc {
+    //                         solver.add_clause(&!cc);
+    //                     }
+    //                 }
+    //             }
+    //             let mut ans = true;
+    //             for cc in self.frames[frame_idx + 1].iter() {
+    //                 if let SatResult::Sat(_) =
+    //                     solver.solve(&self.share.state_transform.cube_next(cc))
+    //                 {
+    //                     self.share.statistic.lock().unwrap().test_a += 1;
+    //                     ans = false;
+    //                     break;
+    //                 }
+    //             }
+    //             if ans {
+    //                 if let SatResult::Unsat(_) = self.solvers[frame_idx - 1].solve(&c) {
+    //                     remove.insert(c.clone());
+    //                     self.share.statistic.lock().unwrap().test_b += 1;
+    //                 }
+    //             }
+    //         }
+    //     }
+    //     for i in 1..self.depth() - 1 {
+    //         self.frames[i] = self.frames[i]
+    //             .iter()
+    //             .filter(|c| !remove.contains(c))
+    //             .cloned()
+    //             .collect();
+    //     }
+    //     for i in 1..self.depth() - 1 {
+    //         self.solvers[i].reset(&self.frames);
+    //         while let Some(bad) = self.solvers[i].get_bad() {
+    //             dbg!(i);
+    //             self.block(i, bad);
+    //         }
+    //     }
+    // }
 
     pub fn propagate(&mut self) -> bool {
         for frame_idx in 1..self.depth() {

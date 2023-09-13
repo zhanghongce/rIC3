@@ -11,9 +11,11 @@ impl PdrWorker {
             .position(|frame| frame.is_empty())
             .unwrap();
         let mut solver = PdrSolver::new(self.share.clone(), invariant);
+        let mut num = 0;
         for i in invariant..self.frames.len() {
             for cube in self.frames[i].iter() {
-                solver.add_clause(&!cube.clone());
+                num += 1;
+                solver.add_clause(&!cube);
             }
         }
         for i in invariant..self.frames.len() {
@@ -24,7 +26,7 @@ impl PdrWorker {
                 }
             }
         }
-        println!("inductive invariant verified!");
+        println!("inductive invariant verified with {num} lemmas!");
         true
     }
 }

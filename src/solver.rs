@@ -1,8 +1,11 @@
 use super::{basic::BasicShare, frames::Frames};
 use crate::utils::{generalize::generalize_by_ternary_simulation, relation::cube_subsume_init};
 use aig::AigCube;
-use logic_form::{Clause, Cube};
-use sat_solver::{minisat::Solver, SatResult, SatSolver, UnsatConflict};
+use logic_form::{Clause, Cube, Lit};
+use sat_solver::{
+    minisat::{Conflict, Model, Solver},
+    SatResult, SatSolver, UnsatConflict,
+};
 use std::{mem::take, sync::Arc, time::Instant};
 
 pub struct PdrSolver {
@@ -25,22 +28,26 @@ impl PdrSolver {
         }
     }
 
+    pub fn reset(&mut self, frames: &Frames) {
+        self.num_act = 0;
+        self.solver = Solver::new();
+        self.solver.add_cnf(&self.share.transition_cnf);
+        let frames_slice = if self.frame == 0 {
+            &frames[0..1]
+        } else {
+            &frames[self.frame..]
+        };
+        for dnf in frames_slice.iter() {
+            for cube in dnf {
+                self.add_clause(&!cube);
+            }
+        }
+    }
+
     pub fn block_fetch(&mut self, frames: &Frames) {
         self.num_act += 1;
         if self.num_act > 300 {
-            self.num_act = 0;
-            self.solver = Solver::new();
-            self.solver.add_cnf(&self.share.transition_cnf);
-            let frames_slice = if self.frame == 0 {
-                &frames[0..1]
-            } else {
-                &frames[self.frame..]
-            };
-            for dnf in frames_slice.iter() {
-                for cube in dnf {
-                    self.add_clause(&!cube.clone());
-                }
-            }
+            self.reset(frames)
         }
     }
 
@@ -50,7 +57,7 @@ impl PdrSolver {
         let mut assumption = self.share.state_transform.cube_next(cube);
         let act = self.solver.new_var().into();
         assumption.push(act);
-        let mut tmp_cls = !cube.clone();
+        let mut tmp_cls = !cube;
         tmp_cls.push(!act);
         self.add_clause(&tmp_cls);
         let res = match self.solver.solve(&assumption) {
@@ -95,6 +102,11 @@ impl PdrSolver {
             return Some(cex);
         }
         None
+    }
+
+    #[allow(unused)]
+    pub fn solve<'a>(&'a mut self, assumptions: &[Lit]) -> SatResult<Model<'a>, Conflict<'a>> {
+        self.solver.solve(assumptions)
     }
 }
 

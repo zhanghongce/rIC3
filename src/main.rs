@@ -129,9 +129,9 @@ fn main() {
 
     let aig = // Safe
     // 1000s vs 0.2s
-    "../MC-Benchmark/hwmcc20/aig/2019/beem/pgm_protocol.7.prop1-back-serstep.aag";
+    // "../MC-Benchmark/hwmcc20/aig/2019/beem/pgm_protocol.7.prop1-back-serstep.aag";
     // 31s vs 17s
-    // "../MC-Benchmark/hwmcc20/aig/2019/goel/industry/cal143/cal143.aag";
+    "../MC-Benchmark/hwmcc20/aig/2019/goel/industry/cal143/cal143.aag";
     // 47s vs 23s
     // "../MC-Benchmark/hwmcc20/aig/2019/goel/industry/cal118/cal118.aag";
     // 131s vs 47s
