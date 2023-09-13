@@ -78,21 +78,6 @@ impl PdrWorker {
             match self.blocked(frame, &cube) {
                 BlockResult::Yes(conflict) => {
                     let conflict = conflict.get_conflict();
-                    // if self.share.args.ctp {
-                    // let similars = self.frames.similar(&conflict, frame);
-                    // let mut ans = false;
-                    // for similar in similars.iter() {
-                    //     self.share.statistic.lock().unwrap().test_a += 1;
-                    //     if self.try_block(frame, &similar, 5, false) {
-                    //         self.share.statistic.lock().unwrap().test_c += 1;
-                    //         ans = true;
-                    //     }
-                    // }
-                    // if ans {
-                    //     continue;
-                    // }
-                    // self.share.statistic.lock().unwrap().test_b += 1;
-                    // }
                     let (frame, core) = self.generalize(frame, conflict, !self.share.args.ctg);
                     if frame <= self.depth() {
                         heap.push(ProofObligation::new(frame, cube));

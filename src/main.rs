@@ -138,7 +138,7 @@ fn main() {
     // "../MC-Benchmark/hwmcc20/aig/2019/goel/industry/cal102/cal102.aag";
     // 216s vs 73s
     // "../MC-Benchmark/hwmcc20/aig/2019/goel/industry/cal112/cal112.aag";
-    // 34s vs 11s
+    // 28s vs 11s
     // "../MC-Benchmark/hwmcc20/aig/2019/goel/industry/cal140/cal140.aag";
     // 21s vs 19s
     // "../MC-Benchmark/hwmcc17/single/intel007.aag";
