@@ -1,7 +1,4 @@
-use crate::{
-    utils::relation::{cube_subsume, cube_subsume_init},
-    worker::PdrWorker,
-};
+use crate::{utils::relation::cube_subsume_init, worker::PdrWorker};
 use logic_form::Cube;
 use std::{
     fmt::Debug,
@@ -26,7 +23,7 @@ impl Frames {
     pub fn trivial_contained(&self, frame: usize, cube: &Cube) -> bool {
         for i in frame..self.frames.len() {
             for c in self.frames[i].iter() {
-                if cube_subsume(c, cube) {
+                if c.ordered_subsume(cube) {
                     return true;
                 }
             }
@@ -49,7 +46,7 @@ impl Frames {
             return res;
         }
         for c in self.frames[frame - 1].iter() {
-            if cube_subsume(c, &cube) {
+            if c.ordered_subsume(&cube) {
                 res.push(c.clone());
             }
         }
@@ -92,10 +89,10 @@ impl PdrWorker {
             for i in 1..=frame {
                 let cubes = take(&mut self.frames[i]);
                 for c in cubes {
-                    if cube_subsume(&c, &cube) {
+                    if c.ordered_subsume(&cube) {
                         begin = i + 1;
                     }
-                    if !cube_subsume(&cube, &c) {
+                    if !cube.ordered_subsume(&c) {
                         self.frames[i].push(c);
                     }
                 }

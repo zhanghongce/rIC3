@@ -1,5 +1,5 @@
 use super::{solver::BlockResult, worker::PdrWorker};
-use crate::utils::relation::{cube_subsume, cube_subsume_init};
+use crate::utils::relation::cube_subsume_init;
 use logic_form::{Cube, Lit};
 use std::{collections::HashSet, time::Instant};
 
@@ -122,7 +122,7 @@ impl PdrWorker {
         }
         cube.sort_by_key(|x| *x.var());
         if let Some(Some(cav23)) = cav23_parent {
-            if cube_subsume(&cube, &cav23) {
+            if cube.ordered_subsume(&cav23) {
                 self.cav23_activity.pump_cube_activity(&cube);
             }
         }
