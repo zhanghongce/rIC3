@@ -1,5 +1,6 @@
 use crate::{utils::relation::cube_subsume_init, worker::Ic3Worker};
 use logic_form::Cube;
+use pic3::{Lemma, LemmaSharer};
 use std::{
     fmt::Debug,
     mem::take,
@@ -9,11 +10,15 @@ use std::{
 
 pub struct Frames {
     pub frames: Vec<Vec<Cube>>,
+    sharer: Option<LemmaSharer>,
 }
 
 impl Frames {
-    pub fn new() -> Self {
-        Self { frames: Vec::new() }
+    pub fn new(sharer: Option<LemmaSharer>) -> Self {
+        Self {
+            frames: Vec::new(),
+            sharer,
+        }
     }
 
     pub fn new_frame(&mut self) {
@@ -100,6 +105,12 @@ impl Ic3Worker {
             begin
         };
         self.frames[frame].push(cube.clone());
+        if let Some(sharer) = &mut self.frames.sharer {
+            sharer.share(Lemma {
+                frame_idx: frame,
+                cube: cube.clone(),
+            })
+        }
         let clause = Arc::new(!cube);
         for i in begin..=frame {
             self.solvers[i].add_clause(&clause);

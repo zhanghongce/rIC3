@@ -10,6 +10,7 @@ aig = { path = "../aig-rs" }
 sat-solver = { path = "../sat-solver" }
 logic-form = { path = "../logic-form" }
 clap = { version = "4.3.0" , features = ["derive"] }
+pic3 = { path = "../pic3/pic3" }
 
 [profile.release]
 debug = true

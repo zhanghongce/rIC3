@@ -51,7 +51,7 @@ fn main() {
     };
 
     let aig = aig::Aig::from_file(aig).unwrap();
-    let mut ic3 = Ic3::new(aig, args);
+    let mut ic3 = Ic3::new(aig, args, None);
     let start = Instant::now();
     dbg!(ic3.check(), start.elapsed());
 }

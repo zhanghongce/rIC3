@@ -12,6 +12,7 @@ mod verify;
 mod worker;
 
 pub use command::Args;
+use pic3::LemmaSharer;
 
 use crate::utils::state_transform::StateTransform;
 use crate::{basic::BasicShare, statistic::Statistic, worker::Ic3Worker};
@@ -39,7 +40,7 @@ impl Ic3 {
 }
 
 impl Ic3 {
-    pub fn new(aig: Aig, args: Args) -> Self {
+    pub fn new(aig: Aig, args: Args, sharer: Option<LemmaSharer>) -> Self {
         let transition_cnf = aig.get_cnf();
         let mut init = HashMap::new();
         for l in aig.latch_init_cube().to_cube() {
@@ -54,7 +55,7 @@ impl Ic3 {
             init,
             statistic: Mutex::new(Statistic::default()),
         });
-        let mut workers = vec![Ic3Worker::new(share.clone())];
+        let mut workers = vec![Ic3Worker::new(share.clone(), sharer)];
         for worker in workers.iter_mut() {
             worker.new_frame()
         }

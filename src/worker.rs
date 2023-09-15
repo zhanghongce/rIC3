@@ -6,6 +6,7 @@ use super::{
 };
 use crate::{basic::ProofObligationQueue, utils::relation::cube_subsume_init};
 use logic_form::Cube;
+use pic3::LemmaSharer;
 use std::{collections::VecDeque, sync::Arc};
 
 pub struct Ic3Worker {
@@ -17,10 +18,10 @@ pub struct Ic3Worker {
 }
 
 impl Ic3Worker {
-    pub fn new(share: Arc<BasicShare>) -> Self {
+    pub fn new(share: Arc<BasicShare>, lemma_sharer: Option<LemmaSharer>) -> Self {
         Self {
             solvers: Vec::new(),
-            frames: Frames::new(),
+            frames: Frames::new(lemma_sharer),
             activity: Activity::new(&share.aig),
             cav23_activity: Activity::new(&share.aig),
             share,
