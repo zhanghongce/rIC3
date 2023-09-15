@@ -22,3 +22,9 @@ pub struct Args {
     #[arg(long, default_value_t = false)]
     pub cav23: bool,
 }
+
+impl Default for Args {
+    fn default() -> Self {
+        Args::parse_from([""])
+    }
+}
