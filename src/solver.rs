@@ -8,17 +8,17 @@ use sat_solver::{
 };
 use std::{mem::take, sync::Arc, time::Instant};
 
-pub struct PdrSolver {
+pub struct Ic3Solver {
     solver: Solver,
     num_act: usize,
     share: Arc<BasicShare>,
     frame: usize,
 }
 
-impl PdrSolver {
+impl Ic3Solver {
     pub fn new(share: Arc<BasicShare>, frame: usize) -> Self {
         let mut solver = Solver::new();
-        solver.set_random_seed(91648253_f64);
+        solver.set_random_seed(share.args.random as f64);
         solver.add_cnf(&share.as_ref().transition_cnf);
         Self {
             solver,

@@ -1,4 +1,4 @@
-use crate::{utils::relation::cube_subsume_init, worker::PdrWorker};
+use crate::{utils::relation::cube_subsume_init, worker::Ic3Worker};
 use logic_form::Cube;
 use std::{
     fmt::Debug,
@@ -74,7 +74,7 @@ impl DerefMut for Frames {
     }
 }
 
-impl PdrWorker {
+impl Ic3Worker {
     pub fn add_cube(&mut self, frame: usize, mut cube: Cube) {
         cube.sort_by_key(|x| x.var());
         let begin = if frame == 0 {

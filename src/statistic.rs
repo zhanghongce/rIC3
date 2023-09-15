@@ -1,4 +1,4 @@
-use crate::{worker::PdrWorker, Pdr};
+use crate::{worker::Ic3Worker, Ic3};
 use std::{fmt::Debug, ops::AddAssign, time::Duration};
 
 #[derive(Debug, Default)]
@@ -54,13 +54,13 @@ impl AddAssign<f64> for StatisticAverage {
     }
 }
 
-impl Pdr {
+impl Ic3 {
     pub fn statistic(&self) {
         self.workers[0].statistic()
     }
 }
 
-impl PdrWorker {
+impl Ic3Worker {
     pub fn statistic(&self) {
         self.frames.statistic();
         println!("{:?}", self.share.statistic.lock().unwrap());

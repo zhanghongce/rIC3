@@ -1,9 +1,9 @@
-use super::{solver::BlockResult, worker::PdrWorker};
+use super::{solver::BlockResult, worker::Ic3Worker};
 use crate::utils::relation::cube_subsume_init;
 use logic_form::{Cube, Lit};
 use std::{collections::HashSet, time::Instant};
 
-impl PdrWorker {
+impl Ic3Worker {
     fn down(&mut self, frame: usize, cube: Cube) -> Option<Cube> {
         if cube_subsume_init(&self.share.init, &cube) {
             return None;

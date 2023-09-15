@@ -2,21 +2,21 @@ use super::{
     activity::Activity,
     basic::BasicShare,
     frames::Frames,
-    solver::{BlockResult, PdrSolver},
+    solver::{BlockResult, Ic3Solver},
 };
 use crate::{basic::ProofObligationQueue, utils::relation::cube_subsume_init};
 use logic_form::Cube;
 use std::{collections::VecDeque, sync::Arc};
 
-pub struct PdrWorker {
-    pub solvers: Vec<PdrSolver>,
+pub struct Ic3Worker {
+    pub solvers: Vec<Ic3Solver>,
     pub frames: Frames,
     pub share: Arc<BasicShare>,
     pub activity: Activity,
     pub cav23_activity: Activity,
 }
 
-impl PdrWorker {
+impl Ic3Worker {
     pub fn new(share: Arc<BasicShare>) -> Self {
         Self {
             solvers: Vec::new(),
@@ -34,7 +34,7 @@ impl PdrWorker {
     pub fn new_frame(&mut self) {
         self.frames.new_frame();
         self.solvers
-            .push(PdrSolver::new(self.share.clone(), self.solvers.len()));
+            .push(Ic3Solver::new(self.share.clone(), self.solvers.len()));
     }
 
     pub fn blocked<'a>(&'a mut self, frame: usize, cube: &Cube) -> BlockResult<'a> {
@@ -139,7 +139,7 @@ impl PdrWorker {
     //     let mut remove = HashSet::new();
     //     for frame_idx in 1..self.depth() - 1 {
     //         for c in self.frames[frame_idx].iter() {
-    //             let mut solver = PdrSolver::new(self.share.clone(), frame_idx);
+    //             let mut solver = Ic3Solver::new(self.share.clone(), frame_idx);
     //             for frame in &self.frames[frame_idx..] {
     //                 for cc in frame {
     //                     if c != cc {

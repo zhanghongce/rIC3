@@ -1,16 +1,16 @@
 use crate::{
-    solver::{BlockResult, PdrSolver},
-    worker::PdrWorker,
+    solver::{BlockResult, Ic3Solver},
+    worker::Ic3Worker,
 };
 
-impl PdrWorker {
+impl Ic3Worker {
     pub fn verify(&self) -> bool {
         let invariant = self
             .frames
             .iter()
             .position(|frame| frame.is_empty())
             .unwrap();
-        let mut solver = PdrSolver::new(self.share.clone(), invariant);
+        let mut solver = Ic3Solver::new(self.share.clone(), invariant);
         let mut num = 0;
         for i in invariant..self.frames.len() {
             for cube in self.frames[i].iter() {
