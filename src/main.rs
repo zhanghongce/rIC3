@@ -3,7 +3,7 @@ use ic3::{Args, Ic3};
 use std::time::Instant;
 
 fn main() {
-    let args = Args::parse();
+    let mut args = Args::parse();
     let aig = // Safe
     // 1000s vs 0.2s
     // "../MC-Benchmark/hwmcc20/aig/2019/beem/pgm_protocol.7.prop1-back-serstep.aag";
@@ -44,14 +44,11 @@ fn main() {
     // ?
     // "../MC-Benchmark/hwmcc20/aig/2019/beem/at.6.prop1-back-serstep.aag";
 
-    let aig = if let Some(model) = &args.model {
-        model
-    } else {
-        aig
-    };
+    if args.model.is_none() {
+        args.model = Some(aig.to_string());
+    }
 
-    let aig = aig::Aig::from_file(aig).unwrap();
-    let mut ic3 = Ic3::new(aig, args, None);
+    let mut ic3 = Ic3::new(args, None);
     let start = Instant::now();
     dbg!(ic3.check(), start.elapsed());
 }

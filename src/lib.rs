@@ -40,7 +40,8 @@ impl Ic3 {
 }
 
 impl Ic3 {
-    pub fn new(aig: Aig, args: Args, sharer: Option<LemmaSharer>) -> Self {
+    pub fn new(args: Args, sharer: Option<LemmaSharer>) -> Self {
+        let aig = Aig::from_file(args.model.as_ref().unwrap()).unwrap();
         let transition_cnf = aig.get_cnf();
         let mut init = HashMap::new();
         for l in aig.latch_init_cube().to_cube() {
