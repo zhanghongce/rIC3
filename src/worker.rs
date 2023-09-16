@@ -39,6 +39,7 @@ impl Ic3Worker {
     }
 
     pub fn blocked<'a>(&'a mut self, frame: usize, cube: &Cube) -> BlockResult<'a> {
+        self.acquire_lemma();
         assert!(!cube_subsume_init(&self.share.init, cube));
         assert!(frame > 0);
         self.solvers[frame - 1].block_fetch(&self.frames);
@@ -94,6 +95,7 @@ impl Ic3Worker {
         true
     }
 
+    #[allow(dead_code)]
     pub fn try_block(
         &mut self,
         frame: usize,
@@ -126,6 +128,7 @@ impl Ic3Worker {
 
     pub fn start(&mut self) -> bool {
         loop {
+            self.acquire_lemma();
             if let Some(cex) = self.solvers.last_mut().unwrap().get_bad() {
                 if !self.block(self.depth(), cex) {
                     return false;

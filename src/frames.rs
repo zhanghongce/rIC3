@@ -82,28 +82,28 @@ impl DerefMut for Frames {
 impl Ic3Worker {
     pub fn add_cube(&mut self, frame: usize, mut cube: Cube) {
         cube.sort_by_key(|x| x.var());
-        let begin = if frame == 0 {
+        if frame == 0 {
             assert!(self.frames.len() == 1);
-            0
-        } else {
-            if self.frames.trivial_contained(frame, &cube) {
-                return;
-            }
-            assert!(!cube_subsume_init(&self.share.init, &cube));
-            let mut begin = 1;
-            for i in 1..=frame {
-                let cubes = take(&mut self.frames[i]);
-                for c in cubes {
-                    if c.ordered_subsume(&cube) {
-                        begin = i + 1;
-                    }
-                    if !cube.ordered_subsume(&c) {
-                        self.frames[i].push(c);
-                    }
+            self.solvers[0].add_clause(&!&cube);
+            self.frames[0].push(cube);
+            return;
+        }
+        if self.frames.trivial_contained(frame, &cube) {
+            return;
+        }
+        assert!(!cube_subsume_init(&self.share.init, &cube));
+        let mut begin = 1;
+        for i in 1..=frame {
+            let cubes = take(&mut self.frames[i]);
+            for c in cubes {
+                if c.ordered_subsume(&cube) {
+                    begin = i + 1;
+                }
+                if !cube.ordered_subsume(&c) {
+                    self.frames[i].push(c);
                 }
             }
-            begin
-        };
+        }
         self.frames[frame].push(cube.clone());
         if let Some(sharer) = &mut self.frames.sharer {
             sharer.share(Lemma {
@@ -114,6 +114,15 @@ impl Ic3Worker {
         let clause = Arc::new(!cube);
         for i in begin..=frame {
             self.solvers[i].add_clause(&clause);
+        }
+    }
+
+    pub fn acquire_lemma(&mut self) {
+        let depth = self.depth();
+        if let Some(sharer) = self.frames.sharer.as_mut() {
+            if let Some(Lemma { frame_idx, cube }) = sharer.acquire(depth) {
+                self.add_cube(frame_idx, cube)
+            }
         }
     }
 }
