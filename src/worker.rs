@@ -7,7 +7,7 @@ use super::{
 use crate::{basic::ProofObligationQueue, utils::relation::cube_subsume_init};
 use logic_form::Cube;
 use pic3::LemmaSharer;
-use std::{collections::VecDeque, sync::Arc};
+use std::{collections::VecDeque, sync::Arc, time::Instant};
 
 pub struct Ic3Worker {
     pub solvers: Vec<Ic3Solver>,
@@ -74,6 +74,11 @@ impl Ic3Worker {
             if self.frames.trivial_contained(frame, &cube) {
                 continue;
             }
+            let start = Instant::now();
+            if self.sat_contained(frame, &cube) {
+                continue;
+            }
+            self.share.statistic.lock().unwrap().test_duration += start.elapsed();
             match self.blocked(frame, &cube) {
                 BlockResult::Yes(conflict) => {
                     let conflict = conflict.get_conflict();

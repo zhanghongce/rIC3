@@ -1,6 +1,7 @@
 use crate::{utils::relation::cube_subsume_init, worker::Ic3Worker};
 use logic_form::Cube;
 use pic3::{Lemma, LemmaSharer};
+use sat_solver::SatResult;
 use std::{
     fmt::Debug,
     mem::take,
@@ -115,6 +116,10 @@ impl Ic3Worker {
         for i in begin..=frame {
             self.solvers[i].add_clause(&clause);
         }
+    }
+
+    pub fn sat_contained(&mut self, frame: usize, cube: &Cube) -> bool {
+        matches!(self.solvers[frame].solve(cube), SatResult::Unsat(_))
     }
 
     pub fn acquire_lemma(&mut self) {
