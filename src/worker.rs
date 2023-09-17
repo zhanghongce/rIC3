@@ -7,7 +7,7 @@ use super::{
 use crate::{basic::ProofObligationQueue, utils::relation::cube_subsume_init};
 use logic_form::Cube;
 use pic3::Synchronizer;
-use rand::{seq::SliceRandom, thread_rng};
+use rand::{rngs::StdRng, seq::SliceRandom, SeedableRng};
 use std::{sync::Arc, time::Instant};
 
 pub struct Ic3Worker {
@@ -18,6 +18,7 @@ pub struct Ic3Worker {
     pub pic3_synchronizer: Option<Synchronizer>,
     pub cav23_activity: Activity,
     pub stop_block: bool,
+    rng: StdRng,
 }
 
 impl Ic3Worker {
@@ -28,6 +29,7 @@ impl Ic3Worker {
             activity: Activity::new(&share.aig),
             cav23_activity: Activity::new(&share.aig),
             pic3_synchronizer,
+            rng: SeedableRng::seed_from_u64(share.args.random as _),
             share,
             stop_block: false,
         }
@@ -160,7 +162,7 @@ impl Ic3Worker {
     pub fn propagate(&mut self) -> bool {
         for frame_idx in 1..self.depth() {
             let mut frame = self.frames[frame_idx].clone();
-            frame.shuffle(&mut thread_rng());
+            frame.shuffle(&mut self.rng);
             for cube in frame {
                 if self.frames.trivial_contained(frame_idx + 1, &cube) {
                     continue;
