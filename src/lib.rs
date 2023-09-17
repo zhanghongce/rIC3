@@ -20,22 +20,18 @@ use logic_form::{Cube, Lit};
 use pic3::Synchronizer;
 use std::collections::HashMap;
 use std::{
-    mem::take,
     sync::{Arc, Mutex},
-    thread::spawn,
     time::Instant,
 };
 
 pub struct Ic3 {
-    workers: Vec<Ic3Worker>,
+    worker: Ic3Worker,
     pub share: Arc<BasicShare>,
 }
 
 impl Ic3 {
     pub fn new_frame(&mut self) {
-        for worker in self.workers.iter_mut() {
-            worker.new_frame()
-        }
+        self.worker.new_frame()
     }
 }
 
@@ -56,62 +52,49 @@ impl Ic3 {
             init,
             statistic: Mutex::new(Statistic::default()),
         });
-        let mut workers = vec![Ic3Worker::new(share.clone(), synchronizer)];
-        for worker in workers.iter_mut() {
-            worker.new_frame()
-        }
-        let mut res = Self { workers, share };
+        let mut worker = Ic3Worker::new(share.clone(), synchronizer);
+        worker.new_frame();
+        let mut res = Self { worker, share };
         for l in res.share.aig.latchs.iter() {
             if let Some(init) = l.init {
                 let cube = Cube::from([Lit::new(l.input.into(), !init)]);
-                for worker in res.workers.iter_mut() {
-                    worker.add_cube(0, cube.clone())
-                }
+                res.worker.add_cube(0, cube.clone())
             }
         }
         res
     }
 
     pub fn check(&mut self) -> bool {
-        if self.workers[0].solvers[0].get_bad().is_some() {
+        if self.worker.solvers[0].get_bad().is_some() {
             return false;
         }
         self.new_frame();
         loop {
-            let mut joins = Vec::new();
-            let workers = take(&mut self.workers);
             let start = Instant::now();
-            for mut worker in workers.into_iter() {
-                joins.push(spawn(move || {
-                    let res = worker.start();
-                    (worker, res)
-                }));
-            }
-            for join in joins {
-                let (worker, res) = join.join().unwrap();
-                if !res {
-                    worker.statistic();
-                    return false;
-                }
-                self.workers.push(worker)
+            if !self.worker.start() {
+                self.worker.statistic();
+                return false;
             }
             let blocked_time = start.elapsed();
+            if let Some(pic3_synchronizer) = self.worker.pic3_synchronizer.as_mut() {
+                pic3_synchronizer.sync();
+            }
             println!(
                 "[{}:{}] frame: {}, time: {:?}",
                 file!(),
                 line!(),
-                self.workers[0].depth(),
+                self.worker.depth(),
                 blocked_time,
             );
             self.share.statistic.lock().unwrap().overall_block_time += blocked_time;
             // self.statistic();
             self.new_frame();
             let start = Instant::now();
-            let propagate = self.workers[0].propagate();
+            let propagate = self.worker.propagate();
             self.share.statistic.lock().unwrap().overall_propagate_time += start.elapsed();
             if propagate {
                 self.statistic();
-                assert!(self.workers[0].verify());
+                assert!(self.worker.verify());
                 return true;
             }
         }

@@ -58,7 +58,7 @@ impl AddAssign<f64> for StatisticAverage {
 
 impl Ic3 {
     pub fn statistic(&self) {
-        self.workers[0].statistic()
+        self.worker.statistic()
     }
 }
 
