@@ -17,6 +17,7 @@ pub struct Ic3Worker {
     pub activity: Activity,
     pub pic3_synchronizer: Option<Synchronizer>,
     pub cav23_activity: Activity,
+    pub stop_block: bool,
 }
 
 impl Ic3Worker {
@@ -28,6 +29,7 @@ impl Ic3Worker {
             cav23_activity: Activity::new(&share.aig),
             pic3_synchronizer,
             share,
+            stop_block: false,
         }
     }
 
@@ -39,6 +41,7 @@ impl Ic3Worker {
         self.frames.new_frame();
         self.solvers
             .push(Ic3Solver::new(self.share.clone(), self.solvers.len()));
+        self.stop_block = false;
     }
 
     pub fn blocked<'a>(&'a mut self, frame: usize, cube: &Cube) -> BlockResult<'a> {
@@ -67,6 +70,9 @@ impl Ic3Worker {
         while let Some((frame, cube)) = obligations.get() {
             if frame == 0 {
                 return false;
+            }
+            if self.stop_block {
+                return true;
             }
             assert!(!cube_subsume_init(&self.share.init, &cube));
             if self.share.args.verbose {
@@ -141,57 +147,15 @@ impl Ic3Worker {
                 if !self.block(self.depth(), cex) {
                     return false;
                 }
+                if self.stop_block {
+                    self.stop_block = false;
+                    return true;
+                }
             } else {
                 return true;
             }
         }
     }
-
-    // pub fn eliminate_check(&mut self) {
-    //     let mut remove = HashSet::new();
-    //     for frame_idx in 1..self.depth() - 1 {
-    //         for c in self.frames[frame_idx].iter() {
-    //             let mut solver = Ic3Solver::new(self.share.clone(), frame_idx);
-    //             for frame in &self.frames[frame_idx..] {
-    //                 for cc in frame {
-    //                     if c != cc {
-    //                         solver.add_clause(&!cc);
-    //                     }
-    //                 }
-    //             }
-    //             let mut ans = true;
-    //             for cc in self.frames[frame_idx + 1].iter() {
-    //                 if let SatResult::Sat(_) =
-    //                     solver.solve(&self.share.state_transform.cube_next(cc))
-    //                 {
-    //                     self.share.statistic.lock().unwrap().test_a += 1;
-    //                     ans = false;
-    //                     break;
-    //                 }
-    //             }
-    //             if ans {
-    //                 if let SatResult::Unsat(_) = self.solvers[frame_idx - 1].solve(&c) {
-    //                     remove.insert(c.clone());
-    //                     self.share.statistic.lock().unwrap().test_b += 1;
-    //                 }
-    //             }
-    //         }
-    //     }
-    //     for i in 1..self.depth() - 1 {
-    //         self.frames[i] = self.frames[i]
-    //             .iter()
-    //             .filter(|c| !remove.contains(c))
-    //             .cloned()
-    //             .collect();
-    //     }
-    //     for i in 1..self.depth() - 1 {
-    //         self.solvers[i].reset(&self.frames);
-    //         while let Some(bad) = self.solvers[i].get_bad() {
-    //             dbg!(i);
-    //             self.block(i, bad);
-    //         }
-    //     }
-    // }
 
     pub fn propagate(&mut self) -> bool {
         for frame_idx in 1..self.depth() {

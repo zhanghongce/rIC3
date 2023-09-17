@@ -151,7 +151,12 @@ impl Ic3Worker {
                     }
                     Message::SyncAcquire => todo!(),
                     Message::SyncResponse => todo!(),
-                    Message::FrameBlocked(_) => todo!(),
+                    Message::FrameBlocked(depth) => {
+                        assert!(self.solvers.len() > depth);
+                        if depth == self.solvers.len() - 1 {
+                            self.stop_block = true;
+                        }
+                    }
                 }
             }
         }
