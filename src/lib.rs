@@ -12,12 +12,12 @@ mod verify;
 mod worker;
 
 pub use command::Args;
-use pic3::LemmaSharer;
 
 use crate::utils::state_transform::StateTransform;
 use crate::{basic::BasicShare, statistic::Statistic, worker::Ic3Worker};
 use aig::Aig;
 use logic_form::{Cube, Lit};
+use pic3::Synchronizer;
 use std::collections::HashMap;
 use std::{
     mem::take,
@@ -40,7 +40,7 @@ impl Ic3 {
 }
 
 impl Ic3 {
-    pub fn new(args: Args, sharer: Option<LemmaSharer>) -> Self {
+    pub fn new(args: Args, synchronizer: Option<Synchronizer>) -> Self {
         let aig = Aig::from_file(args.model.as_ref().unwrap()).unwrap();
         let transition_cnf = aig.get_cnf();
         let mut init = HashMap::new();
@@ -56,7 +56,7 @@ impl Ic3 {
             init,
             statistic: Mutex::new(Statistic::default()),
         });
-        let mut workers = vec![Ic3Worker::new(share.clone(), sharer)];
+        let mut workers = vec![Ic3Worker::new(share.clone(), synchronizer)];
         for worker in workers.iter_mut() {
             worker.new_frame()
         }
@@ -104,7 +104,7 @@ impl Ic3 {
                 blocked_time,
             );
             self.share.statistic.lock().unwrap().overall_block_time += blocked_time;
-            self.statistic();
+            // self.statistic();
             self.new_frame();
             let start = Instant::now();
             let propagate = self.workers[0].propagate();

@@ -11,6 +11,7 @@ sat-solver = { path = "../sat-solver" }
 logic-form = { path = "../logic-form" }
 clap = { version = "4.3.0" , features = ["derive"] }
 pic3 = { path = "../pic3/pic3" }
+rand = "0.8.5"
 
 [profile.release]
 debug = true

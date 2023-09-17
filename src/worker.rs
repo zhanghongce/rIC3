@@ -6,24 +6,27 @@ use super::{
 };
 use crate::{basic::ProofObligationQueue, utils::relation::cube_subsume_init};
 use logic_form::Cube;
-use pic3::LemmaSharer;
-use std::{collections::VecDeque, sync::Arc, time::Instant};
+use pic3::Synchronizer;
+use rand::{seq::SliceRandom, thread_rng};
+use std::{sync::Arc, time::Instant};
 
 pub struct Ic3Worker {
     pub solvers: Vec<Ic3Solver>,
     pub frames: Frames,
     pub share: Arc<BasicShare>,
     pub activity: Activity,
+    pub pic3_synchronizer: Option<Synchronizer>,
     pub cav23_activity: Activity,
 }
 
 impl Ic3Worker {
-    pub fn new(share: Arc<BasicShare>, lemma_sharer: Option<LemmaSharer>) -> Self {
+    pub fn new(share: Arc<BasicShare>, pic3_synchronizer: Option<Synchronizer>) -> Self {
         Self {
             solvers: Vec::new(),
-            frames: Frames::new(lemma_sharer),
+            frames: Frames::new(),
             activity: Activity::new(&share.aig),
             cav23_activity: Activity::new(&share.aig),
+            pic3_synchronizer,
             share,
         }
     }
@@ -39,7 +42,7 @@ impl Ic3Worker {
     }
 
     pub fn blocked<'a>(&'a mut self, frame: usize, cube: &Cube) -> BlockResult<'a> {
-        self.acquire_lemma();
+        self.pic3_sync();
         assert!(!cube_subsume_init(&self.share.init, cube));
         assert!(frame > 0);
         self.solvers[frame - 1].block_fetch(&self.frames);
@@ -133,7 +136,7 @@ impl Ic3Worker {
 
     pub fn start(&mut self) -> bool {
         loop {
-            self.acquire_lemma();
+            self.pic3_sync();
             if let Some(cex) = self.solvers.last_mut().unwrap().get_bad() {
                 if !self.block(self.depth(), cex) {
                     return false;
@@ -192,8 +195,9 @@ impl Ic3Worker {
 
     pub fn propagate(&mut self) -> bool {
         for frame_idx in 1..self.depth() {
-            let mut frame = VecDeque::from_iter(self.frames[frame_idx].iter().cloned());
-            while let Some(cube) = frame.pop_front() {
+            let mut frame = self.frames[frame_idx].clone();
+            frame.shuffle(&mut thread_rng());
+            for cube in frame {
                 if self.frames.trivial_contained(frame_idx + 1, &cube) {
                     continue;
                 }

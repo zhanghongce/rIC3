@@ -1,6 +1,6 @@
 use crate::{utils::relation::cube_subsume_init, worker::Ic3Worker};
 use logic_form::Cube;
-use pic3::{Lemma, LemmaSharer};
+use pic3::{Lemma, Message};
 use sat_solver::SatResult;
 use std::{
     fmt::Debug,
@@ -10,16 +10,12 @@ use std::{
 };
 
 pub struct Frames {
-    pub frames: Vec<Vec<Cube>>,
-    sharer: Option<LemmaSharer>,
+    frames: Vec<Vec<Cube>>,
 }
 
 impl Frames {
-    pub fn new(sharer: Option<LemmaSharer>) -> Self {
-        Self {
-            frames: Vec::new(),
-            sharer,
-        }
+    pub fn new() -> Self {
+        Self { frames: Vec::new() }
     }
 
     pub fn new_frame(&mut self) {
@@ -106,8 +102,8 @@ impl Ic3Worker {
             }
         }
         self.frames[frame].push(cube.clone());
-        if let Some(sharer) = &mut self.frames.sharer {
-            sharer.share(Lemma {
+        if let Some(synchronizer) = &mut self.pic3_synchronizer {
+            synchronizer.share_lemma(Lemma {
                 frame_idx: frame,
                 cube: cube.clone(),
             })
@@ -122,11 +118,36 @@ impl Ic3Worker {
         matches!(self.solvers[frame].solve(cube), SatResult::Unsat(_))
     }
 
-    pub fn acquire_lemma(&mut self) {
-        let depth = self.depth();
-        if let Some(sharer) = self.frames.sharer.as_mut() {
-            if let Some(Lemma { frame_idx, cube }) = sharer.acquire(depth) {
-                self.add_cube(frame_idx, cube)
+    pub fn pic3_sync(&mut self) {
+        if let Some(synchronizer) = self.pic3_synchronizer.as_mut() {
+            while let Some(Message::Lemma(Lemma {
+                frame_idx,
+                mut cube,
+            })) = synchronizer.receive_message()
+            {
+                let frame = frame_idx;
+                cube.sort_by_key(|x| x.var());
+                if self.frames.trivial_contained(frame, &cube) {
+                    return;
+                }
+                assert!(!cube_subsume_init(&self.share.init, &cube));
+                let mut begin = 1;
+                for i in 1..=frame {
+                    let cubes = take(&mut self.frames[i]);
+                    for c in cubes {
+                        if c.ordered_subsume(&cube) {
+                            begin = i + 1;
+                        }
+                        if !cube.ordered_subsume(&c) {
+                            self.frames[i].push(c);
+                        }
+                    }
+                }
+                self.frames[frame].push(cube.clone());
+                let clause = Arc::new(!cube);
+                for i in begin..=frame {
+                    self.solvers[i].add_clause(&clause);
+                }
             }
         }
     }
