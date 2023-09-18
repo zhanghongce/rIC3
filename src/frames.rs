@@ -149,8 +149,6 @@ impl Ic3Worker {
                             self.solvers[i].add_clause(&clause);
                         }
                     }
-                    Message::SyncAcquire => todo!(),
-                    Message::SyncResponse => todo!(),
                     Message::FrameBlocked(depth) => {
                         assert!(self.solvers.len() > depth);
                         if depth == self.solvers.len() - 1 {

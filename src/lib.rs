@@ -17,7 +17,7 @@ use crate::utils::state_transform::StateTransform;
 use crate::{basic::BasicShare, statistic::Statistic, worker::Ic3Worker};
 use aig::Aig;
 use logic_form::{Cube, Lit};
-use pic3::{Message, Synchronizer};
+use pic3::Synchronizer;
 use std::collections::HashMap;
 use std::{
     sync::{Arc, Mutex},
@@ -78,7 +78,7 @@ impl Ic3 {
             let blocked_time = start.elapsed();
             let depth = self.worker.depth();
             if let Some(pic3_synchronizer) = self.worker.pic3_synchronizer.as_mut() {
-                pic3_synchronizer.send_message(Message::FrameBlocked(depth));
+                pic3_synchronizer.frame_blocked(depth);
             }
             println!(
                 "[{}:{}] frame: {}, time: {:?}",
