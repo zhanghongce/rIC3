@@ -65,10 +65,6 @@ impl Ic3 {
     }
 
     pub fn check(&mut self) -> bool {
-        if self.worker.solvers[0].get_bad().is_some() {
-            return false;
-        }
-        self.new_frame();
         loop {
             let start = Instant::now();
             if !self.worker.start() {
