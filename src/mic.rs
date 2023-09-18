@@ -1,29 +1,36 @@
 use super::{solver::BlockResult, worker::Ic3Worker};
-use crate::utils::relation::cube_subsume_init;
+use crate::{basic::Ic3Error, utils::relation::cube_subsume_init};
 use logic_form::{Cube, Lit};
 use std::{collections::HashSet, time::Instant};
 
 impl Ic3Worker {
-    fn down(&mut self, frame: usize, cube: Cube) -> Option<Cube> {
+    fn down(&mut self, frame: usize, cube: Cube) -> Result<Option<Cube>, Ic3Error> {
+        self.check_stop_block()?;
         if cube_subsume_init(&self.share.init, &cube) {
-            return None;
+            return Ok(None);
         }
         self.share.statistic.lock().unwrap().num_down_blocked += 1;
-        match self.blocked(frame, &cube) {
+        Ok(match self.blocked(frame, &cube) {
             BlockResult::Yes(conflict) => Some(conflict.get_conflict()),
             BlockResult::No(_) => None,
-        }
+        })
     }
 
-    fn ctg_down(&mut self, frame: usize, mut cube: Cube, keep: &HashSet<Lit>) -> Option<Cube> {
+    fn ctg_down(
+        &mut self,
+        frame: usize,
+        mut cube: Cube,
+        keep: &HashSet<Lit>,
+    ) -> Result<Option<Cube>, Ic3Error> {
         self.share.statistic.lock().unwrap().num_ctg_down += 1;
         let mut ctgs = 0;
         loop {
+            self.check_stop_block()?;
             if cube_subsume_init(&self.share.init, &cube) {
-                return None;
+                return Ok(None);
             }
             match self.blocked(frame, &cube) {
-                BlockResult::Yes(conflict) => return Some(conflict.get_conflict()),
+                BlockResult::Yes(conflict) => return Ok(Some(conflict.get_conflict())),
                 BlockResult::No(model) => {
                     let mut model = model.get_model();
                     if ctgs < 3 && frame > 1 && !cube_subsume_init(&self.share.init, &model) {
@@ -41,7 +48,7 @@ impl Ic3Worker {
                                 }
                                 i += 1;
                             }
-                            let conflict = self.mic(i - 1, conflict, true);
+                            let conflict = self.mic(i - 1, conflict, true)?;
                             self.add_cube(i - 1, conflict);
                             continue;
                         }
@@ -53,7 +60,7 @@ impl Ic3Worker {
                         if cex_set.contains(&lit) {
                             cube_new.push(lit);
                         } else if keep.contains(&lit) {
-                            return None;
+                            return Ok(None);
                         }
                     }
                     cube = cube_new;
@@ -62,7 +69,7 @@ impl Ic3Worker {
         }
     }
 
-    pub fn mic(&mut self, frame: usize, mut cube: Cube, simple: bool) -> Cube {
+    pub fn mic(&mut self, frame: usize, mut cube: Cube, simple: bool) -> Result<Cube, Ic3Error> {
         let start = Instant::now();
         if simple {
             self.share.statistic.lock().unwrap().num_simple_mic += 1;
@@ -98,9 +105,9 @@ impl Ic3Worker {
             let mut removed_cube = cube.clone();
             removed_cube.remove(i);
             let res = if simple {
-                self.down(frame, removed_cube)
+                self.down(frame, removed_cube)?
             } else {
-                self.ctg_down(frame, removed_cube, &keep)
+                self.ctg_down(frame, removed_cube, &keep)?
             };
             match res {
                 Some(new_cube) => {
@@ -132,6 +139,6 @@ impl Ic3Worker {
         } else {
             self.share.statistic.lock().unwrap().mic_time += start.elapsed()
         }
-        cube
+        Ok(cube)
     }
 }

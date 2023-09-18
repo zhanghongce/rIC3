@@ -18,6 +18,9 @@ impl Ic3Worker {
                 solver.add_clause(&!cube);
             }
         }
+        if solver.get_bad().is_some() {
+            return false;
+        }
         for i in invariant..self.frames.len() {
             for cube in self.frames[i].iter() {
                 solver.block_fetch(&self.frames);

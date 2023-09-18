@@ -4,7 +4,10 @@ use super::{
     frames::Frames,
     solver::{BlockResult, Ic3Solver},
 };
-use crate::{basic::ProofObligationQueue, utils::relation::cube_subsume_init};
+use crate::{
+    basic::{Ic3Error, ProofObligationQueue},
+    utils::relation::cube_subsume_init,
+};
 use logic_form::Cube;
 use pic3::Synchronizer;
 use rand::{rngs::StdRng, seq::SliceRandom, SeedableRng};
@@ -54,28 +57,31 @@ impl Ic3Worker {
         self.solvers[frame - 1].blocked(cube)
     }
 
-    fn generalize(&mut self, frame: usize, cube: Cube, simple: bool) -> (usize, Cube) {
-        let cube = self.mic(frame, cube, simple);
+    fn generalize(
+        &mut self,
+        frame: usize,
+        cube: Cube,
+        simple: bool,
+    ) -> Result<(usize, Cube), Ic3Error> {
+        let cube = self.mic(frame, cube, simple)?;
         for i in frame + 1..=self.depth() {
             if let BlockResult::No(_) = self.blocked(i, &cube) {
-                return (i, cube);
+                return Ok((i, cube));
             }
         }
-        (self.depth() + 1, cube)
+        Ok((self.depth() + 1, cube))
     }
 
-    pub fn block(&mut self, frame: usize, cube: Cube) -> bool {
+    pub fn block(&mut self, frame: usize, cube: Cube) -> Result<bool, Ic3Error> {
         let mut obligations = ProofObligationQueue::new();
         let mut heap_num = vec![0; self.depth() + 1];
         obligations.add(frame, cube);
         heap_num[frame] += 1;
         while let Some((frame, cube)) = obligations.get() {
             if frame == 0 {
-                return false;
+                return Ok(false);
             }
-            if self.stop_block {
-                return true;
-            }
+            self.check_stop_block()?;
             assert!(!cube_subsume_init(&self.share.init, &cube));
             if self.share.args.verbose {
                 println!("{:?}", heap_num);
@@ -93,7 +99,7 @@ impl Ic3Worker {
             match self.blocked(frame, &cube) {
                 BlockResult::Yes(conflict) => {
                     let conflict = conflict.get_conflict();
-                    let (frame, core) = self.generalize(frame, conflict, !self.share.args.ctg);
+                    let (frame, core) = self.generalize(frame, conflict, !self.share.args.ctg)?;
                     if frame <= self.depth() {
                         obligations.add(frame, cube);
                         heap_num[frame] += 1;
@@ -108,7 +114,7 @@ impl Ic3Worker {
                 }
             }
         }
-        true
+        Ok(true)
     }
 
     #[allow(dead_code)]
@@ -128,7 +134,7 @@ impl Ic3Worker {
             match self.blocked(frame, cube) {
                 BlockResult::Yes(conflict) => {
                     let conflict = conflict.get_conflict();
-                    let (frame, core) = self.generalize(frame, conflict, simple);
+                    let (frame, core) = self.generalize(frame, conflict, simple).unwrap();
                     self.add_cube(frame - 1, core);
                     return true;
                 }
@@ -146,12 +152,13 @@ impl Ic3Worker {
         loop {
             self.pic3_sync();
             if let Some(cex) = self.solvers.last_mut().unwrap().get_bad() {
-                if !self.block(self.depth(), cex) {
-                    return false;
-                }
-                if self.stop_block {
-                    self.stop_block = false;
-                    return true;
+                match self.block(self.depth(), cex) {
+                    Ok(false) => return false,
+                    Ok(true) => (),
+                    Err(Ic3Error::StopBlock) => {
+                        self.stop_block = false;
+                        return true;
+                    }
                 }
             } else {
                 return true;

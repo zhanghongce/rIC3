@@ -1,6 +1,7 @@
 use super::statistic::Statistic;
 use crate::command::Args;
 use crate::utils::state_transform::StateTransform;
+use crate::worker::Ic3Worker;
 use aig::Aig;
 use logic_form::Cnf;
 use logic_form::Cube;
@@ -74,5 +75,16 @@ impl ProofObligationQueue {
             }
         }
         None
+    }
+}
+
+#[derive(Debug)]
+pub enum Ic3Error {
+    StopBlock,
+}
+
+impl Ic3Worker {
+    pub fn check_stop_block(&self) -> Result<(), Ic3Error> {
+        (!self.stop_block).then_some(()).ok_or(Ic3Error::StopBlock)
     }
 }
