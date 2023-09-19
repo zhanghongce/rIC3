@@ -112,12 +112,10 @@ impl Ic3Worker {
             match res {
                 Some(new_cube) => {
                     cube = new_cube;
-                    // let clause = !cube.clone();
-                    // TODO:
-                    // for i in 1..=frame {
-                    //     self.solvers[i].add_clause(&clause);
-                    //     self.solvers[i].solver.simplify();
-                    // }
+                    let clause = !cube.clone();
+                    for i in 1..=frame {
+                        self.solvers[i].add_clause(&clause);
+                    }
                     self.share.statistic.lock().unwrap().num_mic_drop_success += 1;
                 }
                 None => {
