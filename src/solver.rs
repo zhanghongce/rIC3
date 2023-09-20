@@ -4,7 +4,7 @@ use aig::AigCube;
 use logic_form::{Clause, Cube, Lit};
 use sat_solver::{
     minisat::{Conflict, Model, Solver},
-    SatResult, SatSolver, UnsatConflict,
+    SatModel, SatResult, SatSolver, UnsatConflict,
 };
 use std::{mem::take, sync::Arc, time::Instant};
 
@@ -167,5 +167,10 @@ impl BlockResultNo<'_> {
         )
         .to_cube();
         res
+    }
+
+    pub fn lit_value(&mut self, lit: Lit) -> bool {
+        let model = unsafe { self.solver.get_model() };
+        model.lit_value(lit)
     }
 }

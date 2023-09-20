@@ -31,6 +31,10 @@ impl StateTransform {
         self.previous_map[&lit]
     }
 
+    pub fn lit_next(&self, lit: Lit) -> Lit {
+        self.next_map[&lit]
+    }
+
     pub fn cube_next(&self, cube: &Cube) -> Cube {
         cube.iter().map(|l| self.next_map[l]).collect()
     }

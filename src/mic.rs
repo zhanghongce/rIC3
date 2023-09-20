@@ -4,6 +4,37 @@ use logic_form::{Cube, Lit};
 use std::{collections::HashSet, time::Instant};
 
 impl Ic3Worker {
+    fn test_down(
+        &mut self,
+        frame: usize,
+        cube: Cube,
+        first: Lit,
+        second: Lit,
+    ) -> Result<Cube, Lit> {
+        let first_next = self.share.state_transform.lit_next(first);
+        let second_next = self.share.state_transform.lit_next(second);
+        if cube_subsume_init(&self.share.init, &cube) {
+            let mut tmp = cube.clone();
+            tmp.push(first);
+            if cube_subsume_init(&self.share.init, &tmp) {
+                return Err(second);
+            } else {
+                return Err(first);
+            }
+        }
+        match self.blocked(frame, &cube) {
+            BlockResult::Yes(conflict) => Ok(conflict.get_conflict()),
+            BlockResult::No(mut model) => {
+                if !model.lit_value(first_next) {
+                    Err(first)
+                } else {
+                    assert!(!model.lit_value(second_next));
+                    Err(second)
+                }
+            }
+        }
+    }
+
     fn down(&mut self, frame: usize, cube: Cube) -> Result<Option<Cube>, Ic3Error> {
         self.check_stop_block()?;
         if cube_subsume_init(&self.share.init, &cube) {
@@ -22,6 +53,7 @@ impl Ic3Worker {
         mut cube: Cube,
         keep: &HashSet<Lit>,
     ) -> Result<Option<Cube>, Ic3Error> {
+        panic!();
         self.share.statistic.lock().unwrap().num_ctg_down += 1;
         let mut ctgs = 0;
         loop {
@@ -131,6 +163,84 @@ impl Ic3Worker {
                 self.cav23_activity.pump_cube_activity(&cube);
             }
         }
+        self.activity.pump_cube_activity(&cube);
+        if simple {
+            self.share.statistic.lock().unwrap().simple_mic_time += start.elapsed()
+        } else {
+            self.share.statistic.lock().unwrap().mic_time += start.elapsed()
+        }
+        Ok(cube)
+    }
+
+    pub fn test_mic(
+        &mut self,
+        frame: usize,
+        mut cube: Cube,
+        simple: bool,
+    ) -> Result<Cube, Ic3Error> {
+        let start = Instant::now();
+        self.share.statistic.lock().unwrap().average_mic_cube_len += cube.len();
+        let mut i = 0;
+        self.activity.sort_by_activity_ascending(&mut cube);
+        while i < cube.len() {
+            let mut removed_cube = cube.clone();
+            if i + 1 < cube.len() {
+                let first = removed_cube.remove(i);
+                let second = removed_cube.remove(i);
+                match self.test_down(frame, removed_cube, first, second) {
+                    Ok(new_cube) => {
+                        self.share.statistic.lock().unwrap().test_a += 1;
+                        cube = new_cube;
+                        let clause = !cube.clone();
+                        for i in 1..=frame {
+                            self.solvers[i].add_clause(&clause);
+                        }
+                    }
+                    Err(fail) => {
+                        self.share.statistic.lock().unwrap().test_b += 1;
+                        assert!(cube[i] == first);
+                        assert!(cube[i + 1] == second);
+                        cube[i] = fail;
+                        cube[i + 1] = if fail == first {
+                            second
+                        } else {
+                            assert!(fail == second);
+                            first
+                        };
+                        i += 1;
+                        let mut removed_cube = cube.clone();
+                        removed_cube.remove(i);
+                        match self.down(frame, removed_cube)? {
+                            Some(new_cube) => {
+                                cube = new_cube;
+                                let clause = !cube.clone();
+                                for i in 1..=frame {
+                                    self.solvers[i].add_clause(&clause);
+                                }
+                            }
+                            None => {
+                                i += 1;
+                            }
+                        }
+                    }
+                }
+            } else {
+                removed_cube.remove(i);
+                match self.down(frame, removed_cube)? {
+                    Some(new_cube) => {
+                        cube = new_cube;
+                        let clause = !cube.clone();
+                        for i in 1..=frame {
+                            self.solvers[i].add_clause(&clause);
+                        }
+                    }
+                    None => {
+                        i += 1;
+                    }
+                }
+            }
+        }
+        cube.sort_by_key(|x| *x.var());
         self.activity.pump_cube_activity(&cube);
         if simple {
             self.share.statistic.lock().unwrap().simple_mic_time += start.elapsed()
