@@ -8,7 +8,7 @@ use crate::{
     basic::{Ic3Error, ProofObligationQueue},
     utils::relation::cube_subsume_init,
 };
-use logic_form::Cube;
+use logic_form::{Cube, Lit};
 use pic3::Synchronizer;
 use rand::{rngs::StdRng, seq::SliceRandom, SeedableRng};
 use std::{sync::Arc, time::Instant};
@@ -54,6 +54,22 @@ impl Ic3Worker {
         assert!(!cube_subsume_init(&self.share.init, cube));
         assert!(frame > 0);
         self.solvers[frame - 1].block_fetch(&self.frames);
+        self.solvers[frame - 1].blocked(cube)
+    }
+
+    pub fn blocked_with_polarity<'a>(
+        &'a mut self,
+        frame: usize,
+        cube: &Cube,
+        polarity: &[Lit],
+    ) -> BlockResult<'a> {
+        self.pic3_sync();
+        assert!(!cube_subsume_init(&self.share.init, cube));
+        assert!(frame > 0);
+        self.solvers[frame - 1].block_fetch(&self.frames);
+        for l in polarity {
+            self.solvers[frame - 1].set_polarity(*l)
+        }
         self.solvers[frame - 1].blocked(cube)
     }
 

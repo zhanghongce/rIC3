@@ -28,6 +28,10 @@ pub struct Statistic {
     pub test_a: usize,
     pub test_b: usize,
     pub test_c: usize,
+
+    pub test_x: usize,
+    pub test_y: usize,
+    pub test_z: usize,
 }
 
 #[derive(Default)]

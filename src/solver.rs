@@ -104,6 +104,10 @@ impl Ic3Solver {
         None
     }
 
+    pub fn set_polarity(&mut self, lit: Lit) {
+        self.solver.set_polarity(lit)
+    }
+
     #[allow(unused)]
     pub fn solve<'a>(&'a mut self, assumptions: &[Lit]) -> SatResult<Model<'a>, Conflict<'a>> {
         self.solver.solve(assumptions)
