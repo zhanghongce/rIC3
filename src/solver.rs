@@ -137,18 +137,22 @@ impl BlockResultYes<'_> {
             }
         }
         if cube_subsume_init(&self.share.init, &ans) {
-            ans.push(
-                *self
-                    .cube
-                    .iter()
-                    .find(|l| {
-                        self.share
-                            .init
-                            .get(&l.var())
-                            .is_some_and(|i| *i != l.polarity())
-                    })
-                    .unwrap(),
-            );
+            ans = Cube::new();
+            let new = *self
+                .cube
+                .iter()
+                .find(|l| {
+                    self.share
+                        .init
+                        .get(&l.var())
+                        .is_some_and(|i| *i != l.polarity())
+                })
+                .unwrap();
+            for i in 0..self.cube.len() {
+                if conflict.has(!self.assumption[i]) || self.cube[i] == new {
+                    ans.push(self.cube[i]);
+                }
+            }
         }
         assert!(!cube_subsume_init(&self.share.init, &ans));
         ans

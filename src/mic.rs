@@ -7,39 +7,30 @@ impl Ic3Worker {
     fn test_down(
         &mut self,
         frame: usize,
-        cube: Cube,
+        mut cube: Cube,
         first: Lit,
         second: Lit,
-    ) -> Result<Cube, Lit> {
+    ) -> Result<Cube, Option<Lit>> {
         let first_next = self.share.state_transform.lit_next(first);
         let second_next = self.share.state_transform.lit_next(second);
         if cube_subsume_init(&self.share.init, &cube) {
-            let mut tmp = cube.clone();
-            tmp.push(first);
-            if cube_subsume_init(&self.share.init, &tmp) {
-                return Err(second);
+            cube.push(first);
+            return if cube_subsume_init(&self.share.init, &cube) {
+                Err(Some(second))
             } else {
-                return Err(first);
-            }
+                Err(Some(first))
+            };
         }
         match self.blocked_with_polarity(frame, &cube, &[first_next, second_next]) {
-            // match self.blocked(frame, &cube) {
             BlockResult::Yes(conflict) => Ok(conflict.get_conflict()),
-            BlockResult::No(mut model) => {
-                let res = if !model.lit_value(first_next) {
-                    Err(first)
-                } else {
-                    assert!(!model.lit_value(second_next));
-                    Err(second)
-                };
+            BlockResult::No(mut model) => Err(
                 match (model.lit_value(first_next), model.lit_value(second_next)) {
-                    (true, true) => todo!(),
-                    (true, false) => self.share.statistic.lock().unwrap().test_x += 1,
-                    (false, true) => self.share.statistic.lock().unwrap().test_x += 1,
-                    (false, false) => self.share.statistic.lock().unwrap().test_y += 1,
-                }
-                res
-            }
+                    (true, false) => Some(second),
+                    (false, true) => Some(first),
+                    (false, false) => None,
+                    (true, true) => panic!(),
+                },
+            ),
         }
     }
 
@@ -109,6 +100,27 @@ impl Ic3Worker {
         }
     }
 
+    fn handle_down_success(
+        &mut self,
+        frame: usize,
+        cube: Cube,
+        i: usize,
+        new_cube: Cube,
+    ) -> (Cube, usize) {
+        let clause = !&new_cube;
+        for solver in self.solvers[1..=frame].iter_mut() {
+            solver.add_clause(&clause);
+        }
+        let new_i = new_cube
+            .iter()
+            .position(|l| !(cube[0..i]).contains(l))
+            .unwrap_or(new_cube.len());
+        if new_i < new_cube.len() {
+            assert!(!(cube[0..=i]).contains(&new_cube[new_i]))
+        }
+        (new_cube, new_i)
+    }
+
     pub fn mic(&mut self, frame: usize, mut cube: Cube, simple: bool) -> Result<Cube, Ic3Error> {
         let start = Instant::now();
         if simple {
@@ -151,11 +163,7 @@ impl Ic3Worker {
             };
             match res {
                 Some(new_cube) => {
-                    cube = new_cube;
-                    let clause = !cube.clone();
-                    for i in 1..=frame {
-                        self.solvers[i].add_clause(&clause);
-                    }
+                    (cube, i) = self.handle_down_success(frame, cube, i, new_cube);
                     self.share.statistic.lock().unwrap().num_mic_drop_success += 1;
                 }
                 None => {
@@ -194,23 +202,15 @@ impl Ic3Worker {
             if i + 1 < cube.len() {
                 let first = removed_cube.remove(i);
                 let second = removed_cube.remove(i);
-                match self.test_down(frame, removed_cube.clone(), first, second) {
+                match self.test_down(frame, removed_cube, first, second) {
                     Ok(new_cube) => {
                         self.share.statistic.lock().unwrap().test_a += 1;
-                        // for j in 0..i {
-                        //     if cube[j] != new_cube[j] {
-                        //     }
-                        // }
-                        cube = new_cube;
-                        let clause = !cube.clone();
-                        for i in 1..=frame {
-                            self.solvers[i].add_clause(&clause);
-                        }
+                        assert!(!new_cube.contains(&first));
+                        assert!(!new_cube.contains(&second));
+                        (cube, i) = self.handle_down_success(frame, cube, i, new_cube);
                     }
-                    Err(fail) => {
+                    Err(Some(fail)) => {
                         self.share.statistic.lock().unwrap().test_b += 1;
-                        assert!(cube[i] == first);
-                        assert!(cube[i + 1] == second);
                         cube[i] = fail;
                         cube[i + 1] = if fail == first {
                             second
@@ -219,31 +219,28 @@ impl Ic3Worker {
                             first
                         };
                         i += 1;
+                    }
+                    Err(None) => {
+                        self.share.statistic.lock().unwrap().test_c += 1;
+                        assert!(cube[i] == first);
                         let mut removed_cube = cube.clone();
                         removed_cube.remove(i);
                         match self.down(frame, removed_cube)? {
                             Some(new_cube) => {
-                                cube = new_cube;
-                                let clause = !cube.clone();
-                                for i in 1..=frame {
-                                    self.solvers[i].add_clause(&clause);
-                                }
+                                (cube, i) = self.handle_down_success(frame, cube, i, new_cube);
                             }
                             None => {
                                 i += 1;
                             }
                         }
+                        assert!(cube[i] == second);
                     }
                 }
             } else {
                 removed_cube.remove(i);
                 match self.down(frame, removed_cube)? {
                     Some(new_cube) => {
-                        cube = new_cube;
-                        let clause = !cube.clone();
-                        for i in 1..=frame {
-                            self.solvers[i].add_clause(&clause);
-                        }
+                        (cube, i) = self.handle_down_success(frame, cube, i, new_cube);
                     }
                     None => {
                         i += 1;
