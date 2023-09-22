@@ -26,11 +26,11 @@ impl Ic3Worker {
         let first_next = self.share.state_transform.lit_next(first);
         let second_next = self.share.state_transform.lit_next(second);
         if cube_subsume_init(&self.share.init, &cube) {
-            cube.push(first);
+            cube.push(second);
             return if cube_subsume_init(&self.share.init, &cube) {
-                Err(Some(second))
-            } else {
                 Err(Some(first))
+            } else {
+                Err(Some(second))
             };
         }
         match self.blocked_with_polarity(frame, &cube, &[first_next, second_next]) {
@@ -113,11 +113,11 @@ impl Ic3Worker {
         loop {
             if cube_subsume_init(&self.share.init, &cube) {
                 if err.is_none() {
-                    cube.push(first);
+                    cube.push(second);
                     err = Some(if cube_subsume_init(&self.share.init, &cube) {
-                        Some(second)
-                    } else {
                         Some(first)
+                    } else {
+                        Some(second)
                     });
                 }
                 return Err(err.unwrap());
@@ -289,8 +289,8 @@ impl Ic3Worker {
                         self.share.statistic.lock().unwrap().test_b += 1;
                         if fail != first {
                             cube.swap(i, i + 1);
-                            assert!(cube[i] == fail);
                         }
+                        assert!(cube[i] == fail);
                         keep.insert(cube[i]);
                         i += 1;
                     }
