@@ -4,7 +4,19 @@ use logic_form::{Cube, Lit};
 use std::{collections::HashSet, time::Instant};
 
 impl Ic3Worker {
-    fn test_down(
+    fn down(&mut self, frame: usize, cube: Cube) -> Result<Option<Cube>, Ic3Error> {
+        self.check_stop_block()?;
+        if cube_subsume_init(&self.share.init, &cube) {
+            return Ok(None);
+        }
+        self.share.statistic.lock().unwrap().num_down_blocked += 1;
+        Ok(match self.blocked(frame, &cube) {
+            BlockResult::Yes(conflict) => Some(conflict.get_conflict()),
+            BlockResult::No(_) => None,
+        })
+    }
+
+    fn double_drop_down(
         &mut self,
         frame: usize,
         mut cube: Cube,
@@ -34,25 +46,12 @@ impl Ic3Worker {
         }
     }
 
-    fn down(&mut self, frame: usize, cube: Cube) -> Result<Option<Cube>, Ic3Error> {
-        self.check_stop_block()?;
-        if cube_subsume_init(&self.share.init, &cube) {
-            return Ok(None);
-        }
-        self.share.statistic.lock().unwrap().num_down_blocked += 1;
-        Ok(match self.blocked(frame, &cube) {
-            BlockResult::Yes(conflict) => Some(conflict.get_conflict()),
-            BlockResult::No(_) => None,
-        })
-    }
-
     fn ctg_down(
         &mut self,
         frame: usize,
         mut cube: Cube,
         keep: &HashSet<Lit>,
     ) -> Result<Option<Cube>, Ic3Error> {
-        todo!();
         self.share.statistic.lock().unwrap().num_ctg_down += 1;
         let mut ctgs = 0;
         loop {
@@ -65,7 +64,6 @@ impl Ic3Worker {
                 BlockResult::No(model) => {
                     let mut model = model.get_model();
                     if ctgs < 3 && frame > 1 && !cube_subsume_init(&self.share.init, &model) {
-                        assert!(!cube_subsume_init(&self.share.init, &model));
                         if self.share.args.cav23 {
                             self.cav23_activity.sort_by_activity_descending(&mut model);
                         }
@@ -100,6 +98,76 @@ impl Ic3Worker {
         }
     }
 
+    fn double_drop_ctg_down(
+        &mut self,
+        frame: usize,
+        mut cube: Cube,
+        first: Lit,
+        second: Lit,
+        keep: &HashSet<Lit>,
+    ) -> Result<Cube, Option<Lit>> {
+        let mut ctgs = 0;
+        let first_next = self.share.state_transform.lit_next(first);
+        let second_next = self.share.state_transform.lit_next(second);
+        let mut err: Option<Option<Lit>> = None;
+        loop {
+            if cube_subsume_init(&self.share.init, &cube) {
+                if err.is_none() {
+                    cube.push(first);
+                    err = Some(if cube_subsume_init(&self.share.init, &cube) {
+                        Some(second)
+                    } else {
+                        Some(first)
+                    });
+                }
+                return Err(err.unwrap());
+            }
+            match self.blocked_with_polarity(frame, &cube, &[first_next, second_next]) {
+                BlockResult::Yes(conflict) => return Ok(conflict.get_conflict()),
+                BlockResult::No(mut model) => {
+                    if err.is_none() {
+                        err = Some(
+                            match (model.lit_value(first_next), model.lit_value(second_next)) {
+                                (true, false) => Some(second),
+                                (false, true) => Some(first),
+                                (false, false) => None,
+                                (true, true) => panic!(),
+                            },
+                        );
+                    }
+                    let model = model.get_model();
+                    if ctgs < 3 && frame > 1 && !cube_subsume_init(&self.share.init, &model) {
+                        if let BlockResult::Yes(conflict) = self.blocked(frame - 1, &model) {
+                            ctgs += 1;
+                            let conflict = conflict.get_conflict();
+                            let mut i = frame;
+                            while i <= self.depth() {
+                                if let BlockResult::No(_) = self.blocked(i, &conflict) {
+                                    break;
+                                }
+                                i += 1;
+                            }
+                            let conflict = self.double_drop_mic(i - 1, conflict, true).unwrap();
+                            self.add_cube(i - 1, conflict);
+                            continue;
+                        }
+                    }
+                    ctgs = 0;
+                    let cex_set: HashSet<Lit> = HashSet::from_iter(model);
+                    let mut cube_new = Cube::new();
+                    for lit in cube {
+                        if cex_set.contains(&lit) {
+                            cube_new.push(lit);
+                        } else if keep.contains(&lit) {
+                            return Err(err.unwrap());
+                        }
+                    }
+                    cube = cube_new;
+                }
+            }
+        }
+    }
+
     fn handle_down_success(
         &mut self,
         frame: usize,
@@ -107,10 +175,10 @@ impl Ic3Worker {
         i: usize,
         new_cube: Cube,
     ) -> (Cube, usize) {
-        let clause = !&new_cube;
-        for solver in self.solvers[1..=frame].iter_mut() {
-            solver.add_clause(&clause);
-        }
+        // let clause = !&new_cube;
+        // for solver in self.solvers[1..=frame].iter_mut() {
+        //     solver.add_clause(&clause);
+        // }
         let new_i = new_cube
             .iter()
             .position(|l| !(cube[0..i]).contains(l))
@@ -150,10 +218,7 @@ impl Ic3Worker {
             similar
         });
         while i < cube.len() {
-            if keep.contains(&cube[i]) {
-                i += 1;
-                continue;
-            }
+            assert!(!keep.contains(&cube[i]));
             let mut removed_cube = cube.clone();
             removed_cube.remove(i);
             let res = if simple {
@@ -188,7 +253,7 @@ impl Ic3Worker {
         Ok(cube)
     }
 
-    pub fn test_mic(
+    pub fn double_drop_mic(
         &mut self,
         frame: usize,
         mut cube: Cube,
@@ -197,12 +262,20 @@ impl Ic3Worker {
         self.share.statistic.lock().unwrap().average_mic_cube_len += cube.len();
         let mut i = 0;
         self.activity.sort_by_activity_ascending(&mut cube);
+        let mut keep = HashSet::new();
         while i < cube.len() {
+            assert!(!keep.contains(&cube[i]));
             let mut removed_cube = cube.clone();
             if i + 1 < cube.len() {
+                assert!(!keep.contains(&cube[i + 1]));
                 let first = removed_cube.remove(i);
                 let second = removed_cube.remove(i);
-                match self.test_down(frame, removed_cube, first, second) {
+                let res = if simple {
+                    self.double_drop_down(frame, removed_cube, first, second)
+                } else {
+                    self.double_drop_ctg_down(frame, removed_cube, first, second, &keep)
+                };
+                match res {
                     Ok(new_cube) => {
                         self.share.statistic.lock().unwrap().test_a += 1;
                         assert!(!new_cube.contains(&first));
@@ -211,13 +284,11 @@ impl Ic3Worker {
                     }
                     Err(Some(fail)) => {
                         self.share.statistic.lock().unwrap().test_b += 1;
-                        cube[i] = fail;
-                        cube[i + 1] = if fail == first {
-                            second
-                        } else {
-                            assert!(fail == second);
-                            first
-                        };
+                        if fail != first {
+                            cube.swap(i, i + 1);
+                            assert!(cube[i] == fail);
+                        }
+                        keep.insert(cube[i]);
                         i += 1;
                     }
                     Err(None) => {
@@ -230,10 +301,10 @@ impl Ic3Worker {
                                 (cube, i) = self.handle_down_success(frame, cube, i, new_cube);
                             }
                             None => {
+                                keep.insert(cube[i]);
                                 i += 1;
                             }
                         }
-                        assert!(cube[i] == second);
                     }
                 }
             } else {
@@ -243,6 +314,7 @@ impl Ic3Worker {
                         (cube, i) = self.handle_down_success(frame, cube, i, new_cube);
                     }
                     None => {
+                        keep.insert(cube[i]);
                         i += 1;
                     }
                 }
