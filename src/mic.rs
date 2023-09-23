@@ -168,13 +168,7 @@ impl Ic3Worker {
         }
     }
 
-    fn handle_down_success(
-        &mut self,
-        frame: usize,
-        cube: Cube,
-        i: usize,
-        new_cube: Cube,
-    ) -> (Cube, usize) {
+    fn handle_down_success(&mut self, cube: Cube, i: usize, new_cube: Cube) -> (Cube, usize) {
         let new_i = new_cube
             .iter()
             .position(|l| !(cube[0..i]).contains(l))
@@ -224,7 +218,7 @@ impl Ic3Worker {
             };
             match res {
                 Some(new_cube) => {
-                    (cube, i) = self.handle_down_success(frame, cube, i, new_cube);
+                    (cube, i) = self.handle_down_success(cube, i, new_cube);
                     self.share.statistic.lock().unwrap().num_mic_drop_success += 1;
                 }
                 None => {
@@ -276,7 +270,7 @@ impl Ic3Worker {
                         self.share.statistic.lock().unwrap().test_a += 1;
                         assert!(!new_cube.contains(&first));
                         assert!(!new_cube.contains(&second));
-                        (cube, i) = self.handle_down_success(frame, cube, i, new_cube);
+                        (cube, i) = self.handle_down_success(cube, i, new_cube);
                     }
                     Err(Some(fail)) => {
                         self.share.statistic.lock().unwrap().test_b += 1;
@@ -294,7 +288,7 @@ impl Ic3Worker {
                         removed_cube.remove(i);
                         match self.down(frame, removed_cube)? {
                             Some(new_cube) => {
-                                (cube, i) = self.handle_down_success(frame, cube, i, new_cube);
+                                (cube, i) = self.handle_down_success(cube, i, new_cube);
                             }
                             None => {
                                 keep.insert(cube[i]);
@@ -307,7 +301,7 @@ impl Ic3Worker {
                 removed_cube.remove(i);
                 match self.down(frame, removed_cube)? {
                     Some(new_cube) => {
-                        (cube, i) = self.handle_down_success(frame, cube, i, new_cube);
+                        (cube, i) = self.handle_down_success(cube, i, new_cube);
                     }
                     None => {
                         keep.insert(cube[i]);
