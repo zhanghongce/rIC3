@@ -175,10 +175,6 @@ impl Ic3Worker {
         i: usize,
         new_cube: Cube,
     ) -> (Cube, usize) {
-        let clause = !&new_cube;
-        for solver in self.solvers[1..=frame].iter_mut() {
-            solver.add_temporary_clause(&clause);
-        }
         let new_i = new_cube
             .iter()
             .position(|l| !(cube[0..i]).contains(l))
@@ -249,9 +245,6 @@ impl Ic3Worker {
             self.share.statistic.lock().unwrap().simple_mic_time += start.elapsed()
         } else {
             self.share.statistic.lock().unwrap().mic_time += start.elapsed()
-        }
-        for solver in self.solvers[1..=frame].iter_mut() {
-            solver.clean_temporary(&cube);
         }
         Ok(cube)
     }
@@ -325,9 +318,6 @@ impl Ic3Worker {
         }
         cube.sort_by_key(|x| *x.var());
         self.activity.pump_cube_activity(&cube);
-        for solver in self.solvers[1..=frame].iter_mut() {
-            solver.clean_temporary(&cube);
-        }
         Ok(cube)
     }
 }

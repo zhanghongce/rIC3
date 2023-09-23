@@ -13,7 +13,6 @@ pub struct Ic3Solver {
     num_act: usize,
     share: Arc<BasicShare>,
     frame: usize,
-    temporary: Vec<Cube>,
 }
 
 impl Ic3Solver {
@@ -26,7 +25,6 @@ impl Ic3Solver {
             frame,
             num_act: 0,
             share,
-            temporary: Vec::new(),
         }
     }
 
@@ -43,9 +41,6 @@ impl Ic3Solver {
             for cube in dnf {
                 self.add_clause(&!cube);
             }
-        }
-        for t in self.temporary.iter() {
-            self.solver.add_clause(&!t);
         }
     }
 
@@ -93,31 +88,6 @@ impl Ic3Solver {
     pub fn add_clause(&mut self, clause: &Clause) {
         self.solver.add_clause(clause);
         self.solver.simplify();
-    }
-
-    pub fn add_temporary_clause(&mut self, clause: &Clause) {
-        let mut cube = !clause;
-        cube.sort_by_key(|x| x.var());
-        let temporary = take(&mut self.temporary);
-        for t in temporary {
-            if !cube.ordered_subsume(&t) {
-                self.temporary.push(t);
-            }
-        }
-        self.temporary.push(cube);
-        self.solver.add_clause(clause);
-        self.solver.simplify();
-    }
-
-    pub fn clean_temporary(&mut self, cube: &Cube) {
-        let mut cube = cube.clone();
-        cube.sort_by_key(|x| x.var());
-        let temporary = take(&mut self.temporary);
-        for t in temporary {
-            if !cube.ordered_subsume(&t) {
-                self.temporary.push(t);
-            }
-        }
     }
 
     pub fn get_bad(&mut self) -> Option<Cube> {
