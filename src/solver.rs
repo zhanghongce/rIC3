@@ -1,7 +1,10 @@
 use super::{basic::BasicShare, frames::Frames};
-use crate::utils::{generalize::generalize_by_ternary_simulation, relation::cube_subsume_init};
+use crate::{
+    activity::Activity,
+    utils::{generalize::generalize_by_ternary_simulation, relation::cube_subsume_init},
+};
 use aig::AigCube;
-use logic_form::{Clause, Cube, Lit};
+use logic_form::{Clause, Cube, Lit, Var};
 use sat_solver::{
     minisat::{Conflict, Model, Solver},
     SatModel, SatResult, SatSolver, UnsatConflict,
@@ -51,7 +54,12 @@ impl Ic3Solver {
         }
     }
 
-    pub fn blocked<'a>(&'a mut self, cube: &Cube) -> BlockResult<'a> {
+    pub fn blocked<'a>(
+        &'a mut self,
+        cube: &Cube,
+        lift: &'a mut Lift,
+        activity: &'a Activity,
+    ) -> BlockResult<'a> {
         let start = Instant::now();
         assert!(!cube_subsume_init(&self.share.init, cube));
         let mut assumption = self.share.state_transform.cube_next(cube);
@@ -68,6 +76,8 @@ impl Ic3Solver {
                     solver: &mut self.solver,
                     share: self.share.clone(),
                     assumption,
+                    lift,
+                    activity,
                 })
             }
             SatResult::Unsat(_) => {
@@ -163,22 +173,88 @@ pub struct BlockResultNo<'a> {
     solver: &'a mut Solver,
     share: Arc<BasicShare>,
     assumption: Cube,
+    lift: &'a mut Lift,
+    activity: &'a Activity,
 }
 
 impl BlockResultNo<'_> {
     pub fn get_model(mut self) -> Cube {
         let model = unsafe { self.solver.get_model() };
-        let res = generalize_by_ternary_simulation(
-            &self.share.as_ref().aig,
-            model,
-            &AigCube::from_cube(take(&mut self.assumption)),
-        )
-        .to_cube();
-        res
+        self.lift
+            .minimal_predecessor(self.assumption, model, self.activity)
+        // let res = generalize_by_ternary_simulation(
+        //     &self.share.as_ref().aig,
+        //     model,
+        //     &AigCube::from_cube(take(&mut self.assumption)),
+        // )
+        // .to_cube();
+        // res
     }
 
     pub fn lit_value(&mut self, lit: Lit) -> bool {
         let model = unsafe { self.solver.get_model() };
         model.lit_value(lit)
+    }
+}
+
+pub struct Lift {
+    solver: Solver,
+    num_act: usize,
+    share: Arc<BasicShare>,
+}
+
+impl Lift {
+    pub fn new(share: Arc<BasicShare>) -> Self {
+        let mut solver = Solver::new();
+        solver.set_random_seed(share.args.random as f64);
+        solver.add_cnf(&share.as_ref().transition_cnf);
+        Self {
+            solver,
+            num_act: 0,
+            share,
+        }
+    }
+
+    pub fn minimal_predecessor<'a, M: SatModel<'a>>(
+        &mut self,
+        successor: Cube,
+        model: M,
+        activity: &Activity,
+    ) -> Cube {
+        self.num_act += 1;
+        if self.num_act == 300 {
+            *self = Self::new(self.share.clone())
+        }
+        let act: Lit = self.solver.new_var().into();
+        let mut assumption = Cube::from([act]);
+        let mut cls = !successor;
+        cls.push(!act);
+        self.solver.add_clause(&cls);
+        for input in self.share.aig.inputs.iter() {
+            let mut lit: Lit = Var::from(*input).into();
+            if !model.lit_value(lit) {
+                lit = !lit;
+            }
+            assumption.push(lit);
+        }
+        let mut latchs = Cube::new();
+        for latch in &self.share.aig.latchs {
+            let mut lit: Lit = Var::from(latch.input).into();
+            if !model.lit_value(lit) {
+                lit = !lit;
+            }
+            latchs.push(lit);
+        }
+        activity.sort_by_activity_ascending(&mut latchs);
+        assumption.extend_from_slice(&latchs);
+        let mut res: Cube = match self.solver.solve(&assumption) {
+            SatResult::Sat(_) => panic!(),
+            SatResult::Unsat(conflict) => {
+                latchs.into_iter().filter(|l| conflict.has(!*l)).collect()
+            }
+        };
+        self.solver.release_var(!act);
+        res.sort_by_key(|x| x.var());
+        res
     }
 }

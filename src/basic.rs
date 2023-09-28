@@ -1,12 +1,13 @@
 use super::statistic::Statistic;
 use crate::command::Args;
 use crate::utils::state_transform::StateTransform;
-use crate::worker::Ic3Worker;
+use crate::Ic3;
 use aig::Aig;
 use logic_form::Cnf;
 use logic_form::Cube;
 use logic_form::Var;
 use std::cmp::Ordering;
+use std::collections::BinaryHeap;
 use std::collections::HashMap;
 use std::sync::Mutex;
 
@@ -19,15 +20,11 @@ pub struct BasicShare {
     pub statistic: Mutex<Statistic>,
 }
 
+#[derive(PartialEq, Eq, Clone)]
 pub struct ProofObligation {
     pub frame: usize,
     pub cube: Cube,
-}
-
-impl PartialEq for ProofObligation {
-    fn eq(&self, other: &Self) -> bool {
-        self.frame == other.frame
-    }
+    pub depth: usize,
 }
 
 impl PartialOrd for ProofObligation {
@@ -36,45 +33,42 @@ impl PartialOrd for ProofObligation {
     }
 }
 
-impl Eq for ProofObligation {
-    fn assert_receiver_is_total_eq(&self) {}
-}
-
 impl Ord for ProofObligation {
     fn cmp(&self, other: &Self) -> Ordering {
         match other.frame.cmp(&self.frame) {
-            Ordering::Equal => other.cube.len().cmp(&self.cube.len()),
+            Ordering::Equal => other.depth.cmp(&self.depth),
             ord => ord,
         }
     }
 }
 
 pub struct ProofObligationQueue {
-    obligations: Vec<Vec<Cube>>,
+    obligations: BinaryHeap<ProofObligation>,
+    num: Vec<usize>,
 }
 
 impl ProofObligationQueue {
     pub fn new() -> Self {
         Self {
-            obligations: Vec::new(),
+            obligations: BinaryHeap::new(),
+            num: Vec::new(),
         }
     }
 
-    pub fn add(&mut self, frame: usize, cube: Cube) {
-        while self.obligations.len() <= frame {
-            self.obligations.push(Vec::new());
+    pub fn add(&mut self, po: ProofObligation) {
+        if self.num.len() <= po.frame {
+            self.num.resize(po.frame + 1, 0);
         }
-        self.obligations[frame].push(cube);
-        self.obligations[frame].sort_by_key(|c| c.len());
+        self.num[po.frame] += 1;
+        self.obligations.push(po)
     }
 
-    pub fn get(&mut self) -> Option<(usize, Cube)> {
-        for i in 0..self.obligations.len() {
-            if !self.obligations[i].is_empty() {
-                return Some((i, self.obligations[i].remove(0)));
-            }
-        }
-        None
+    pub fn get(&mut self) -> Option<ProofObligation> {
+        self.obligations.pop()
+    }
+
+    pub fn statistic(&self) {
+        println!("{:?}", self.num);
     }
 }
 
@@ -83,7 +77,7 @@ pub enum Ic3Error {
     StopBlock,
 }
 
-impl Ic3Worker {
+impl Ic3 {
     pub fn check_stop_block(&self) -> Result<(), Ic3Error> {
         (!self.stop_block).then_some(()).ok_or(Ic3Error::StopBlock)
     }

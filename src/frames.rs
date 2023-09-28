@@ -1,4 +1,4 @@
-use crate::{utils::relation::cube_subsume_init, worker::Ic3Worker};
+use crate::{utils::relation::cube_subsume_init, Ic3};
 use logic_form::Cube;
 use pic3::{Lemma, Message};
 use sat_solver::SatResult;
@@ -76,7 +76,7 @@ impl DerefMut for Frames {
     }
 }
 
-impl Ic3Worker {
+impl Ic3 {
     pub fn add_cube(&mut self, frame: usize, mut cube: Cube) {
         cube.sort_by_key(|x| x.var());
         if frame == 0 {

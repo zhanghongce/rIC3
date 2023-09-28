@@ -1,9 +1,9 @@
-use super::{solver::BlockResult, worker::Ic3Worker};
+use super::{solver::BlockResult, Ic3};
 use crate::{basic::Ic3Error, utils::relation::cube_subsume_init};
 use logic_form::{Cube, Lit};
 use std::{collections::HashSet, time::Instant};
 
-impl Ic3Worker {
+impl Ic3 {
     fn down(&mut self, frame: usize, cube: Cube) -> Result<Option<Cube>, Ic3Error> {
         self.check_stop_block()?;
         if cube_subsume_init(&self.share.init, &cube) {
@@ -168,7 +168,12 @@ impl Ic3Worker {
         }
     }
 
-    fn handle_down_success(&mut self, cube: Cube, i: usize, new_cube: Cube) -> (Cube, usize) {
+    fn handle_down_success(&mut self, cube: Cube, i: usize, mut new_cube: Cube) -> (Cube, usize) {
+        new_cube = cube
+            .iter()
+            .filter(|l| new_cube.contains(l))
+            .cloned()
+            .collect();
         let new_i = new_cube
             .iter()
             .position(|l| !(cube[0..i]).contains(l))
@@ -211,6 +216,7 @@ impl Ic3Worker {
             assert!(!keep.contains(&cube[i]));
             let mut removed_cube = cube.clone();
             removed_cube.remove(i);
+            self.activity.sort_by_activity_descending(&mut removed_cube);
             let res = if simple {
                 self.down(frame, removed_cube)?
             } else {

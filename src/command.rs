@@ -15,8 +15,12 @@ pub struct Args {
     pub random: usize,
 
     /// counter example to generalize
-    #[arg(long, default_value_t = true, action = clap::ArgAction::Set)]
+    #[arg(long, default_value_t = false, action = clap::ArgAction::Set)]
     pub ctg: bool,
+
+    /// verify
+    #[arg(long, default_value_t = false)]
+    pub verify: bool,
 
     /// cav23
     #[arg(long, default_value_t = false)]

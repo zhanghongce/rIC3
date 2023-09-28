@@ -1,10 +1,10 @@
 use crate::{
     solver::{BlockResult, Ic3Solver},
-    worker::Ic3Worker,
+    Ic3,
 };
 
-impl Ic3Worker {
-    pub fn verify(&self) -> bool {
+impl Ic3 {
+    pub fn verify(&mut self) -> bool {
         let invariant = self
             .frames
             .iter()
@@ -24,7 +24,7 @@ impl Ic3Worker {
         for i in invariant..self.frames.len() {
             for cube in self.frames[i].iter() {
                 solver.block_fetch(&self.frames);
-                if let BlockResult::No(_) = solver.blocked(cube) {
+                if let BlockResult::No(_) = solver.blocked(cube, &mut self.lift, &self.activity) {
                     return false;
                 }
             }
