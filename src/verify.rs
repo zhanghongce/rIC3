@@ -1,7 +1,5 @@
-use crate::{
-    solver::{BlockResult, Ic3Solver},
-    Ic3,
-};
+use crate::{solver::Ic3Solver, Ic3};
+use sat_solver::SatResult;
 
 impl Ic3 {
     pub fn verify(&mut self) -> bool {
@@ -23,8 +21,9 @@ impl Ic3 {
         }
         for i in invariant..self.frames.len() {
             for cube in self.frames[i].iter() {
-                solver.block_fetch(&self.frames);
-                if let BlockResult::No(_) = solver.blocked(cube, &mut self.lift, &self.activity) {
+                if let SatResult::Sat(_) =
+                    solver.solve(&self.share.state_transform.cube_next(&cube))
+                {
                     return false;
                 }
             }

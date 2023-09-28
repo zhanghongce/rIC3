@@ -2,14 +2,14 @@ use super::{basic::BasicShare, frames::Frames};
 use crate::{
     activity::Activity,
     utils::{generalize::generalize_by_ternary_simulation, relation::cube_subsume_init},
+    Ic3,
 };
-use aig::AigCube;
 use logic_form::{Clause, Cube, Lit, Var};
 use sat_solver::{
     minisat::{Conflict, Model, Solver},
     SatModel, SatResult, SatSolver, UnsatConflict,
 };
-use std::{mem::take, sync::Arc, time::Instant};
+use std::{sync::Arc, time::Instant};
 
 pub struct Ic3Solver {
     solver: Solver,
@@ -23,6 +23,7 @@ impl Ic3Solver {
         let mut solver = Solver::new();
         solver.set_random_seed(share.args.random as f64);
         solver.add_cnf(&share.as_ref().transition_cnf);
+        solver.simplify();
         Self {
             solver,
             frame,
@@ -45,59 +46,15 @@ impl Ic3Solver {
                 self.add_clause(&!cube);
             }
         }
-    }
-
-    pub fn block_fetch(&mut self, frames: &Frames) {
-        self.num_act += 1;
-        if self.num_act > 300 {
-            self.reset(frames)
-        }
-    }
-
-    pub fn blocked<'a>(
-        &'a mut self,
-        cube: &Cube,
-        lift: &'a mut Lift,
-        activity: &'a Activity,
-    ) -> BlockResult<'a> {
-        let start = Instant::now();
-        assert!(!cube_subsume_init(&self.share.init, cube));
-        let mut assumption = self.share.state_transform.cube_next(cube);
-        let act = self.solver.new_var().into();
-        assumption.push(act);
-        let mut tmp_cls = !cube;
-        tmp_cls.push(!act);
-        self.add_clause(&tmp_cls);
-        let res = match self.solver.solve(&assumption) {
-            SatResult::Sat(_) => {
-                let act = !assumption.pop().unwrap();
-                self.solver.release_var(act);
-                BlockResult::No(BlockResultNo {
-                    solver: &mut self.solver,
-                    share: self.share.clone(),
-                    assumption,
-                    lift,
-                    activity,
-                })
-            }
-            SatResult::Unsat(_) => {
-                let act = !assumption.pop().unwrap();
-                self.solver.release_var(act);
-                BlockResult::Yes(BlockResultYes {
-                    solver: &mut self.solver,
-                    cube: cube.clone(),
-                    assumption,
-                    share: self.share.clone(),
-                })
-            }
-        };
-        self.share.statistic.lock().unwrap().blocked_check_time += start.elapsed();
-        res
+        self.simplify()
     }
 
     pub fn add_clause(&mut self, clause: &Clause) {
         self.solver.add_clause(clause);
-        self.solver.simplify();
+    }
+
+    pub fn simplify(&mut self) {
+        self.solver.simplify()
     }
 
     pub fn get_bad(&mut self) -> Option<Cube> {
@@ -121,6 +78,56 @@ impl Ic3Solver {
     #[allow(unused)]
     pub fn solve<'a>(&'a mut self, assumptions: &[Lit]) -> SatResult<Model<'a>, Conflict<'a>> {
         self.solver.solve(assumptions)
+    }
+}
+
+impl Ic3 {
+    pub fn blocked<'a>(&'a mut self, frame: usize, cube: &Cube) -> BlockResult<'a> {
+        self.pic3_sync();
+        assert!(!cube_subsume_init(&self.share.init, cube));
+        assert!(frame > 0);
+        let solver = &mut self.solvers[frame - 1];
+        solver.num_act += 1;
+        if solver.num_act > 300 {
+            solver.reset(&self.frames)
+        }
+        let solver = &mut solver.solver;
+        let start = Instant::now();
+        assert!(!cube_subsume_init(&self.share.init, cube));
+        let mut assumption = self.share.state_transform.cube_next(cube);
+        let act = solver.new_var().into();
+        assumption.push(act);
+        let mut tmp_cls = !cube;
+        tmp_cls.push(!act);
+        solver.add_clause(&tmp_cls);
+        let mut ordered_assumption = assumption.clone();
+        self.activity
+            .sort_by_activity_descending(&mut ordered_assumption);
+        let res = solver.solve(&ordered_assumption);
+        let act = !assumption.pop().unwrap();
+        let res = match res {
+            SatResult::Sat(_) => {
+                solver.release_var(act);
+                BlockResult::No(BlockResultNo {
+                    solver: solver,
+                    share: self.share.clone(),
+                    assumption,
+                    lift: &mut self.lift,
+                    activity: &self.activity,
+                })
+            }
+            SatResult::Unsat(_) => {
+                solver.release_var(act);
+                BlockResult::Yes(BlockResultYes {
+                    solver,
+                    cube: cube.clone(),
+                    assumption,
+                    share: self.share.clone(),
+                })
+            }
+        };
+        self.share.statistic.lock().unwrap().blocked_check_time += start.elapsed();
+        res
     }
 }
 
@@ -178,7 +185,7 @@ pub struct BlockResultNo<'a> {
 }
 
 impl BlockResultNo<'_> {
-    pub fn get_model(mut self) -> Cube {
+    pub fn get_model(self) -> Cube {
         let model = unsafe { self.solver.get_model() };
         self.lift
             .minimal_predecessor(self.assumption, model, self.activity)
