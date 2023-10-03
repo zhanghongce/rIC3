@@ -16,7 +16,13 @@ impl Ic3 {
                 solver.add_clause(&!cube);
             }
         }
-        if solver.get_bad().is_some() {
+        let bad = if self.share.aig.bads.is_empty() {
+            self.share.aig.outputs[0]
+        } else {
+            self.share.aig.bads[0]
+        }
+        .to_lit();
+        if let SatResult::Sat(_) = solver.solve(&[bad]) {
             return false;
         }
         for i in invariant..self.frames.len() {

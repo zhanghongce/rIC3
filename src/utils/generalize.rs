@@ -3,6 +3,7 @@ use logic_form::Var;
 use sat_solver::SatModel;
 use std::assert_matches::assert_matches;
 
+#[allow(dead_code)]
 pub fn generalize_by_ternary_simulation<'a, M: SatModel<'a>>(
     aig: &Aig,
     model: M,

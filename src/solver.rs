@@ -57,20 +57,6 @@ impl Ic3Solver {
         self.solver.simplify()
     }
 
-    pub fn get_bad(&mut self) -> Option<Cube> {
-        let bad = if self.share.aig.bads.is_empty() {
-            self.share.aig.outputs[0]
-        } else {
-            self.share.aig.bads[0]
-        };
-        if let SatResult::Sat(model) = self.solver.solve(&[bad.to_lit()]) {
-            self.share.statistic.lock().unwrap().num_get_bad_state += 1;
-            let cex = generalize_by_ternary_simulation(&self.share.aig, model, &[bad]).to_cube();
-            return Some(cex);
-        }
-        None
-    }
-
     pub fn set_polarity(&mut self, lit: Lit) {
         self.solver.set_polarity(lit)
     }
@@ -82,6 +68,23 @@ impl Ic3Solver {
 }
 
 impl Ic3 {
+    pub fn get_bad(&mut self) -> Option<Cube> {
+        let bad = if self.share.aig.bads.is_empty() {
+            self.share.aig.outputs[0]
+        } else {
+            self.share.aig.bads[0]
+        };
+        if let SatResult::Sat(model) = self.solvers.last_mut().unwrap().solve(&[bad.to_lit()]) {
+            self.share.statistic.lock().unwrap().num_get_bad_state += 1;
+            // let cex = self
+            //     .lift
+            //     .minimal_predecessor(Cube::from([bad]), model, &self.activity);
+            let cex = generalize_by_ternary_simulation(&self.share.aig, model, &[bad]).to_cube();
+            return Some(cex);
+        }
+        None
+    }
+
     pub fn blocked<'a>(&'a mut self, frame: usize, cube: &Cube) -> BlockResult<'a> {
         self.pic3_sync();
         assert!(!cube_subsume_init(&self.share.init, cube));

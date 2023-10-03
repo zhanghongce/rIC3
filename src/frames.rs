@@ -108,7 +108,7 @@ impl Ic3 {
                 cube: cube.clone(),
             })
         }
-        let clause = Arc::new(!cube);
+        let clause = !cube;
         for i in begin..=frame {
             self.solvers[i].add_clause(&clause);
         }

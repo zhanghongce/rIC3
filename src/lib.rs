@@ -78,7 +78,7 @@ impl Ic3 {
             let l = &res.share.aig.latchs[i];
             if let Some(init) = l.init {
                 let cube = Cube::from([Lit::new(l.input.into(), !init)]);
-                res.add_cube(0, cube.clone())
+                res.add_cube(0, cube)
             }
         }
         res.solvers[0].simplify();
@@ -241,7 +241,7 @@ impl Ic3 {
             let mut trivial = true;
             loop {
                 self.pic3_sync();
-                if let Some(cex) = self.solvers.last_mut().unwrap().get_bad() {
+                if let Some(cex) = self.get_bad() {
                     trivial = false;
                     match self.block(self.depth(), cex) {
                         Ok(false) => {
