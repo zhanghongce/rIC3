@@ -100,7 +100,7 @@ impl Ic3 {
         cube: Cube,
         simple: bool,
     ) -> Result<(usize, Cube), Ic3Error> {
-        let cube = self.mic(frame, cube, simple)?;
+        let cube = self.double_drop_mic(frame, cube, simple)?;
         for i in frame + 1..=self.depth() {
             if let BlockResult::No(_) = self.blocked(i, &cube) {
                 return Ok((i, cube));

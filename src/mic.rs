@@ -175,27 +175,20 @@ impl Ic3 {
     //     }
     // }
 
-    fn handle_down_success(
-        &mut self,
-        mut cube: Cube,
-        i: usize,
-        mut new_cube: Cube,
-    ) -> (Cube, usize) {
-        // new_cube = cube
-        //     .iter()
-        //     .filter(|l| new_cube.contains(l))
-        //     .cloned()
-        //     .collect();
-        // let new_i = new_cube
-        //     .iter()
-        //     .position(|l| !(cube[0..i]).contains(l))
-        //     .unwrap_or(new_cube.len());
-        // if new_i < new_cube.len() {
-        //     assert!(!(cube[0..=i]).contains(&new_cube[new_i]))
-        // }
-        // (new_cube, new_i)
-        cube.remove(i);
-        (cube, i)
+    fn handle_down_success(&mut self, cube: Cube, i: usize, mut new_cube: Cube) -> (Cube, usize) {
+        new_cube = cube
+            .iter()
+            .filter(|l| new_cube.contains(l))
+            .cloned()
+            .collect();
+        let new_i = new_cube
+            .iter()
+            .position(|l| !(cube[0..i]).contains(l))
+            .unwrap_or(new_cube.len());
+        if new_i < new_cube.len() {
+            assert!(!(cube[0..=i]).contains(&new_cube[new_i]))
+        }
+        (new_cube, new_i)
     }
 
     pub fn mic(&mut self, frame: usize, mut cube: Cube, simple: bool) -> Result<Cube, Ic3Error> {
@@ -232,7 +225,8 @@ impl Ic3 {
             };
             match res {
                 Some(new_cube) => {
-                    (cube, i) = self.handle_down_success(cube, i, new_cube);
+                    // (cube, i) = self.handle_down_success(cube, i, new_cube);
+                    cube = removed_cube;
                     self.share.statistic.lock().unwrap().num_mic_drop_success += 1;
                 }
                 None => {
@@ -283,7 +277,8 @@ impl Ic3 {
                 match res {
                     Ok(new_cube) => {
                         self.share.statistic.lock().unwrap().test_a += 1;
-                        (cube, i) = self.handle_down_success(cube, i, new_cube);
+                        // (cube, i) = self.handle_down_success(cube, i, new_cube);
+                        cube = removed_cube;
                     }
                     Err(Some(fail)) => {
                         self.share.statistic.lock().unwrap().test_b += 1;
@@ -301,7 +296,8 @@ impl Ic3 {
                         removed_cube.remove(i);
                         match self.down(frame, &removed_cube)? {
                             Some(new_cube) => {
-                                (cube, i) = self.handle_down_success(cube, i, new_cube);
+                                // (cube, i) = self.handle_down_success(cube, i, new_cube);
+                                cube = removed_cube;
                             }
                             None => {
                                 keep.insert(cube[i]);
@@ -314,7 +310,8 @@ impl Ic3 {
                 removed_cube.remove(i);
                 match self.down(frame, &removed_cube)? {
                     Some(new_cube) => {
-                        (cube, i) = self.handle_down_success(cube, i, new_cube);
+                        cube = removed_cube;
+                        // (cube, i) = self.handle_down_success(cube, i, new_cube);
                     }
                     None => {
                         keep.insert(cube[i]);
