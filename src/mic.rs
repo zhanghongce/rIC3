@@ -10,7 +10,7 @@ impl Ic3 {
             return Ok(None);
         }
         self.share.statistic.lock().unwrap().num_down_blocked += 1;
-        Ok(match self.blocked(frame, &cube) {
+        Ok(match self.blocked_with_ordered(frame, &cube, false) {
             BlockResult::Yes(conflict) => Some(conflict.get_conflict()),
             BlockResult::No(_) => None,
         })
@@ -65,7 +65,7 @@ impl Ic3 {
                     let mut model = model.get_model();
                     if ctgs < 3 && frame > 1 && !cube_subsume_init(&self.share.init, &model) {
                         if self.share.args.cav23 {
-                            self.cav23_activity.sort_by_activity_descending(&mut model);
+                            self.cav23_activity.sort_by_activity(&mut model, false);
                         }
                         if let BlockResult::Yes(conflict) = self.blocked(frame - 1, &model) {
                             ctgs += 1;
@@ -186,17 +186,12 @@ impl Ic3 {
 
     pub fn mic(&mut self, frame: usize, mut cube: Cube, simple: bool) -> Result<Cube, Ic3Error> {
         let start = Instant::now();
-        if simple {
-            self.share.statistic.lock().unwrap().num_simple_mic += 1;
-        } else {
-            self.share.statistic.lock().unwrap().num_normal_mic += 1;
-        }
         self.share.statistic.lock().unwrap().average_mic_cube_len += cube.len();
         let mut i = 0;
-        self.activity.sort_by_activity_ascending(&mut cube);
+        self.activity.sort_by_activity(&mut cube, true);
         let mut keep = HashSet::new();
         let cav23_parent = self.share.args.cav23.then(|| {
-            self.cav23_activity.sort_by_activity_ascending(&mut cube);
+            self.cav23_activity.sort_by_activity(&mut cube, true);
             let mut similar = self.frames.similar(&cube, frame);
             similar.sort_by(|a, b| {
                 self.cav23_activity

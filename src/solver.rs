@@ -88,7 +88,6 @@ impl Ic3 {
     pub fn blocked<'a>(&'a mut self, frame: usize, cube: &Cube) -> BlockResult<'a> {
         self.pic3_sync();
         assert!(!cube_subsume_init(&self.share.init, cube));
-        assert!(frame > 0);
         let solver = &mut self.solvers[frame - 1];
         solver.num_act += 1;
         if solver.num_act > 300 {
@@ -96,17 +95,13 @@ impl Ic3 {
         }
         let solver = &mut solver.solver;
         let start = Instant::now();
-        assert!(!cube_subsume_init(&self.share.init, cube));
         let mut assumption = self.share.state_transform.cube_next(cube);
         let act = solver.new_var().into();
         assumption.push(act);
         let mut tmp_cls = !cube;
         tmp_cls.push(!act);
         solver.add_clause(&tmp_cls);
-        let mut ordered_assumption = assumption.clone();
-        self.activity
-            .sort_by_activity_descending(&mut ordered_assumption);
-        let res = solver.solve(&ordered_assumption);
+        let res = solver.solve(&assumption);
         let act = !assumption.pop().unwrap();
         let res = match res {
             SatResult::Sat(_) => {
@@ -131,6 +126,17 @@ impl Ic3 {
         };
         self.share.statistic.lock().unwrap().blocked_check_time += start.elapsed();
         res
+    }
+
+    pub fn blocked_with_ordered<'a>(
+        &'a mut self,
+        frame: usize,
+        cube: &Cube,
+        ascending: bool,
+    ) -> BlockResult<'a> {
+        let mut ordered_cube = cube.clone();
+        self.activity.sort_by_activity(&mut ordered_cube, ascending);
+        self.blocked(frame, &ordered_cube)
     }
 }
 
@@ -173,8 +179,8 @@ impl BlockResultYes<'_> {
                     ans.push(self.cube[i]);
                 }
             }
+            assert!(!cube_subsume_init(&self.share.init, &ans));
         }
-        assert!(!cube_subsume_init(&self.share.init, &ans));
         ans
     }
 }
@@ -218,6 +224,7 @@ impl Lift {
         let mut solver = Solver::new();
         solver.set_random_seed(share.args.random as f64);
         solver.add_cnf(&share.as_ref().transition_cnf);
+        solver.simplify();
         Self {
             solver,
             num_act: 0,
@@ -255,16 +262,15 @@ impl Lift {
             }
             latchs.push(lit);
         }
-        activity.sort_by_activity_ascending(&mut latchs);
+        activity.sort_by_activity(&mut latchs, true);
         assumption.extend_from_slice(&latchs);
-        let mut res: Cube = match self.solver.solve(&assumption) {
+        let res: Cube = match self.solver.solve(&assumption) {
             SatResult::Sat(_) => panic!(),
             SatResult::Unsat(conflict) => {
                 latchs.into_iter().filter(|l| conflict.has(!*l)).collect()
             }
         };
         self.solver.release_var(!act);
-        res.sort_by_key(|x| x.var());
         res
     }
 }

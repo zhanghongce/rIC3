@@ -8,8 +8,6 @@ pub struct Statistic {
     pub num_down_blocked: usize,
     pub num_mic_drop_success: usize,
     pub num_mic_drop_fail: usize,
-    pub num_normal_mic: usize,
-    pub num_simple_mic: usize,
     pub num_ctg_down: usize,
     pub num_get_bad_state: usize,
     pub average_mic_cube_len: StatisticAverage,

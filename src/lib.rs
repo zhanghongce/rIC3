@@ -10,9 +10,6 @@ mod statistic;
 mod utils;
 mod verify;
 
-use activity::Activity;
-pub use command::Args;
-
 use crate::basic::ProofObligation;
 use crate::utils::state_transform::StateTransform;
 use crate::{basic::BasicShare, statistic::Statistic};
@@ -21,11 +18,13 @@ use crate::{
     solver::Lift,
     utils::relation::cube_subsume_init,
 };
+use activity::Activity;
 use aig::Aig;
+pub use command::Args;
 use frames::Frames;
 use logic_form::{Cube, Lit};
 use pic3::Synchronizer;
-use rand::{rngs::StdRng, seq::SliceRandom, SeedableRng};
+use rand::{rngs::StdRng, SeedableRng};
 use solver::{BlockResult, Ic3Solver};
 use std::collections::HashMap;
 use std::{
@@ -42,7 +41,7 @@ pub struct Ic3 {
     pub cav23_activity: Activity,
     pub stop_block: bool,
     pub lift: Lift,
-    rng: StdRng,
+    _rng: StdRng,
 }
 
 impl Ic3 {
@@ -68,7 +67,7 @@ impl Ic3 {
             activity: Activity::new(),
             cav23_activity: Activity::new(),
             pic3_synchronizer,
-            rng: SeedableRng::seed_from_u64(share.args.random as _),
+            _rng: SeedableRng::seed_from_u64(share.args.random as _),
             lift: Lift::new(share.clone()),
             share,
             stop_block: false,
@@ -81,7 +80,6 @@ impl Ic3 {
                 res.add_cube(0, cube)
             }
         }
-        res.solvers[0].simplify();
         res
     }
 
@@ -212,20 +210,20 @@ impl Ic3 {
         let start = if trivial { self.depth() - 1 } else { 1 };
         for frame_idx in start..self.depth() {
             let mut frame = self.frames[frame_idx].clone();
-            frame.shuffle(&mut self.rng);
+            frame.sort_by(|a, b| a.len().cmp(&b.len()));
             for cube in frame {
-                if self.frames.trivial_contained(frame_idx + 1, &cube) {
+                if !self.frames[frame_idx].contains(&cube) {
                     continue;
                 }
                 if let BlockResult::Yes(conflict) = self.blocked(frame_idx + 1, &cube) {
                     let conflict = conflict.get_conflict();
                     self.add_cube(frame_idx + 1, conflict);
                     if self.share.args.cav23 {
-                        self.activity.pump_cube_activity(&cube);
+                        self.cav23_activity.pump_cube_activity(&cube);
                     }
                 }
             }
-            self.solvers[frame_idx].simplify();
+            self.solvers[frame_idx + 1].simplify();
             if self.frames[frame_idx].is_empty() {
                 return true;
             }
@@ -274,7 +272,6 @@ impl Ic3 {
                 pic3_synchronizer.sync();
             }
             self.share.statistic.lock().unwrap().overall_block_time += blocked_time;
-            // self.statistic();
             self.new_frame();
             let start = Instant::now();
             let propagate = self.propagate(trivial);

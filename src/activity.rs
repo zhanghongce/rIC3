@@ -39,20 +39,20 @@ impl Activity {
         cube.iter().for_each(|l| self.pump_lit_activity(l));
     }
 
-    pub fn sort_by_activity_ascending(&self, cube: &mut Cube) {
-        cube.sort_by(|a, b| {
-            self.var_activity(*a)
-                .partial_cmp(&self.var_activity(*b))
-                .unwrap()
-        });
-    }
-
-    pub fn sort_by_activity_descending(&self, cube: &mut Cube) {
-        cube.sort_by(|a, b| {
-            self.var_activity(*b)
-                .partial_cmp(&self.var_activity(*a))
-                .unwrap()
-        });
+    pub fn sort_by_activity(&self, cube: &mut Cube, ascending: bool) {
+        if ascending {
+            cube.sort_by(|a, b| {
+                self.var_activity(*a)
+                    .partial_cmp(&self.var_activity(*b))
+                    .unwrap()
+            });
+        } else {
+            cube.sort_by(|a, b| {
+                self.var_activity(*b)
+                    .partial_cmp(&self.var_activity(*a))
+                    .unwrap()
+            });
+        }
     }
 
     pub fn cube_average_activity(&self, cube: &Cube) -> f64 {

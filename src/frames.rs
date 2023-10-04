@@ -9,8 +9,9 @@ use std::{
     sync::Arc,
 };
 
+#[derive(Debug)]
 pub struct Frames {
-    frames: Vec<Vec<Cube>>,
+    pub frames: Vec<Vec<Cube>>,
 }
 
 impl Frames {
@@ -56,12 +57,6 @@ impl Frames {
     }
 }
 
-impl Debug for Frames {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        self.frames.fmt(f)
-    }
-}
-
 impl Deref for Frames {
     type Target = Vec<Vec<Cube>>;
 
@@ -78,13 +73,13 @@ impl DerefMut for Frames {
 
 impl Ic3 {
     pub fn add_cube(&mut self, frame: usize, mut cube: Cube) {
-        cube.sort_by_key(|x| x.var());
         if frame == 0 {
             assert!(self.frames.len() == 1);
             self.solvers[0].add_clause(&!&cube);
             self.frames[0].push(cube);
             return;
         }
+        cube.sort_by_key(|x| x.var());
         if self.frames.trivial_contained(frame, &cube) {
             return;
         }

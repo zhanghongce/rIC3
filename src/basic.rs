@@ -55,7 +55,8 @@ impl ProofObligationQueue {
         }
     }
 
-    pub fn add(&mut self, po: ProofObligation) {
+    pub fn add(&mut self, mut po: ProofObligation) {
+        po.cube.sort_by_key(|x| x.var());
         if self.num.len() <= po.frame {
             self.num.resize(po.frame + 1, 0);
         }
@@ -64,7 +65,11 @@ impl ProofObligationQueue {
     }
 
     pub fn get(&mut self) -> Option<ProofObligation> {
-        self.obligations.pop()
+        let po = self.obligations.pop();
+        if let Some(po) = &po {
+            self.num[po.frame] -= 1
+        }
+        po
     }
 
     pub fn statistic(&self) {
