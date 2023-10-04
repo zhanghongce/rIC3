@@ -4,54 +4,61 @@ use logic_form::{Cube, Lit};
 use std::{collections::HashSet, time::Instant};
 
 impl Ic3 {
-    fn down(&mut self, frame: usize, cube: Cube) -> Result<Option<Cube>, Ic3Error> {
+    fn down(&mut self, frame: usize, cube: &Cube) -> Result<Option<Cube>, Ic3Error> {
         self.check_stop_block()?;
-        if cube_subsume_init(&self.share.init, &cube) {
+        if cube_subsume_init(&self.share.init, cube) {
             return Ok(None);
         }
         self.share.statistic.lock().unwrap().num_down_blocked += 1;
-        Ok(match self.blocked_with_ordered(frame, &cube, false) {
+        Ok(match self.blocked_with_ordered(frame, cube, false) {
             BlockResult::Yes(conflict) => Some(conflict.get_conflict()),
             BlockResult::No(_) => None,
         })
     }
 
-    // fn double_drop_down(
-    //     &mut self,
-    //     frame: usize,
-    //     mut cube: Cube,
-    //     first: Lit,
-    //     second: Lit,
-    // ) -> Result<Cube, Option<Lit>> {
-    //     let first_next = self.share.state_transform.lit_next(first);
-    //     let second_next = self.share.state_transform.lit_next(second);
-    //     if cube_subsume_init(&self.share.init, &cube) {
-    //         cube.push(second);
-    //         return if cube_subsume_init(&self.share.init, &cube) {
-    //             Err(Some(first))
-    //         } else {
-    //             Err(Some(second))
-    //         };
-    //     }
-    //     match self.blocked_with_polarity(frame, &cube, &[first_next, second_next]) {
-    //         BlockResult::Yes(conflict) => Ok(conflict.get_conflict()),
-    //         BlockResult::No(mut model) => Err(
-    //             match (model.lit_value(first_next), model.lit_value(second_next)) {
-    //                 (true, false) => Some(second),
-    //                 (false, true) => Some(first),
-    //                 (false, false) => None,
-    //                 (true, true) => panic!(),
-    //             },
-    //         ),
-    //     }
-    // }
+    fn double_drop_down(
+        &mut self,
+        frame: usize,
+        cube: &Cube,
+        first: Lit,
+        second: Lit,
+    ) -> Result<Cube, Option<Lit>> {
+        let first_next = self.share.state_transform.lit_next(first);
+        let second_next = self.share.state_transform.lit_next(second);
+        if cube_subsume_init(&self.share.init, &cube) {
+            let mut cube = cube.clone();
+            cube.push(second);
+            return if cube_subsume_init(&self.share.init, &cube) {
+                Err(Some(first))
+            } else {
+                Err(Some(second))
+            };
+        }
+        match self.blocked_with_polarity_with_ordered(
+            frame,
+            &cube,
+            &[first_next, second_next],
+            false,
+        ) {
+            BlockResult::Yes(conflict) => Ok(conflict.get_conflict()),
+            BlockResult::No(mut model) => Err(
+                match (model.lit_value(first_next), model.lit_value(second_next)) {
+                    (true, false) => Some(second),
+                    (false, true) => Some(first),
+                    (false, false) => None,
+                    (true, true) => panic!(),
+                },
+            ),
+        }
+    }
 
     fn ctg_down(
         &mut self,
         frame: usize,
-        mut cube: Cube,
+        mut cube: &Cube,
         keep: &HashSet<Lit>,
     ) -> Result<Option<Cube>, Ic3Error> {
+        let mut cube = cube.clone();
         self.share.statistic.lock().unwrap().num_ctg_down += 1;
         let mut ctgs = 0;
         loop {
@@ -168,26 +175,32 @@ impl Ic3 {
     //     }
     // }
 
-    fn handle_down_success(&mut self, cube: Cube, i: usize, mut new_cube: Cube) -> (Cube, usize) {
-        new_cube = cube
-            .iter()
-            .filter(|l| new_cube.contains(l))
-            .cloned()
-            .collect();
-        let new_i = new_cube
-            .iter()
-            .position(|l| !(cube[0..i]).contains(l))
-            .unwrap_or(new_cube.len());
-        if new_i < new_cube.len() {
-            assert!(!(cube[0..=i]).contains(&new_cube[new_i]))
-        }
-        (new_cube, new_i)
+    fn handle_down_success(
+        &mut self,
+        mut cube: Cube,
+        i: usize,
+        mut new_cube: Cube,
+    ) -> (Cube, usize) {
+        // new_cube = cube
+        //     .iter()
+        //     .filter(|l| new_cube.contains(l))
+        //     .cloned()
+        //     .collect();
+        // let new_i = new_cube
+        //     .iter()
+        //     .position(|l| !(cube[0..i]).contains(l))
+        //     .unwrap_or(new_cube.len());
+        // if new_i < new_cube.len() {
+        //     assert!(!(cube[0..=i]).contains(&new_cube[new_i]))
+        // }
+        // (new_cube, new_i)
+        cube.remove(i);
+        (cube, i)
     }
 
     pub fn mic(&mut self, frame: usize, mut cube: Cube, simple: bool) -> Result<Cube, Ic3Error> {
         let start = Instant::now();
         self.share.statistic.lock().unwrap().average_mic_cube_len += cube.len();
-        let mut i = 0;
         self.activity.sort_by_activity(&mut cube, true);
         let mut keep = HashSet::new();
         let cav23_parent = self.share.args.cav23.then(|| {
@@ -207,14 +220,15 @@ impl Ic3 {
             }
             similar
         });
+        let mut i = 0;
         while i < cube.len() {
             assert!(!keep.contains(&cube[i]));
             let mut removed_cube = cube.clone();
             removed_cube.remove(i);
             let res = if simple {
-                self.down(frame, removed_cube)?
+                self.down(frame, &removed_cube)?
             } else {
-                self.ctg_down(frame, removed_cube, &keep)?
+                self.ctg_down(frame, &removed_cube, &keep)?
             };
             match res {
                 Some(new_cube) => {
@@ -228,8 +242,8 @@ impl Ic3 {
                 }
             }
         }
-        cube.sort_by_key(|x| *x.var());
         if let Some(Some(cav23)) = cav23_parent {
+            cube.sort_by_key(|x| *x.var());
             if cube.ordered_subsume(&cav23) {
                 self.cav23_activity.pump_cube_activity(&cube);
             }
@@ -243,75 +257,74 @@ impl Ic3 {
         Ok(cube)
     }
 
-    // pub fn double_drop_mic(
-    //     &mut self,
-    //     frame: usize,
-    //     mut cube: Cube,
-    //     simple: bool,
-    // ) -> Result<Cube, Ic3Error> {
-    //     self.share.statistic.lock().unwrap().average_mic_cube_len += cube.len();
-    //     let mut i = 0;
-    //     self.activity.sort_by_activity_ascending(&mut cube);
-    //     let mut keep = HashSet::new();
-    //     while i < cube.len() {
-    //         assert!(!keep.contains(&cube[i]));
-    //         let mut removed_cube = cube.clone();
-    //         if i + 1 < cube.len() {
-    //             assert!(!keep.contains(&cube[i + 1]));
-    //             let first = removed_cube.remove(i);
-    //             let second = removed_cube.remove(i);
-    //             let res = if simple {
-    //                 self.double_drop_down(frame, removed_cube, first, second)
-    //             } else {
-    //                 self.double_drop_ctg_down(frame, removed_cube, first, second, &keep)
-    //             };
-    //             match res {
-    //                 Ok(new_cube) => {
-    //                     self.share.statistic.lock().unwrap().test_a += 1;
-    //                     assert!(!new_cube.contains(&first));
-    //                     assert!(!new_cube.contains(&second));
-    //                     (cube, i) = self.handle_down_success(cube, i, new_cube);
-    //                 }
-    //                 Err(Some(fail)) => {
-    //                     self.share.statistic.lock().unwrap().test_b += 1;
-    //                     if fail != first {
-    //                         cube.swap(i, i + 1);
-    //                     }
-    //                     assert!(cube[i] == fail);
-    //                     keep.insert(cube[i]);
-    //                     i += 1;
-    //                 }
-    //                 Err(None) => {
-    //                     self.share.statistic.lock().unwrap().test_c += 1;
-    //                     assert!(cube[i] == first);
-    //                     let mut removed_cube = cube.clone();
-    //                     removed_cube.remove(i);
-    //                     match self.down(frame, removed_cube)? {
-    //                         Some(new_cube) => {
-    //                             (cube, i) = self.handle_down_success(cube, i, new_cube);
-    //                         }
-    //                         None => {
-    //                             keep.insert(cube[i]);
-    //                             i += 1;
-    //                         }
-    //                     }
-    //                 }
-    //             }
-    //         } else {
-    //             removed_cube.remove(i);
-    //             match self.down(frame, removed_cube)? {
-    //                 Some(new_cube) => {
-    //                     (cube, i) = self.handle_down_success(cube, i, new_cube);
-    //                 }
-    //                 None => {
-    //                     keep.insert(cube[i]);
-    //                     i += 1;
-    //                 }
-    //             }
-    //         }
-    //     }
-    //     cube.sort_by_key(|x| *x.var());
-    //     self.activity.pump_cube_activity(&cube);
-    //     Ok(cube)
-    // }
+    pub fn double_drop_mic(
+        &mut self,
+        frame: usize,
+        mut cube: Cube,
+        simple: bool,
+    ) -> Result<Cube, Ic3Error> {
+        self.share.statistic.lock().unwrap().average_mic_cube_len += cube.len();
+        self.activity.sort_by_activity(&mut cube, true);
+        let mut keep = HashSet::new();
+        let mut i = 0;
+        while i < cube.len() {
+            assert!(!keep.contains(&cube[i]));
+            let mut removed_cube = cube.clone();
+            if i + 1 < cube.len() {
+                assert!(!keep.contains(&cube[i + 1]));
+                let first = removed_cube.remove(i);
+                let second = removed_cube.remove(i);
+                let res = if simple {
+                    self.double_drop_down(frame, &removed_cube, first, second)
+                } else {
+                    todo!()
+                    // self.double_drop_ctg_down(frame, removed_cube, first, second, &keep)
+                };
+                match res {
+                    Ok(new_cube) => {
+                        self.share.statistic.lock().unwrap().test_a += 1;
+                        (cube, i) = self.handle_down_success(cube, i, new_cube);
+                    }
+                    Err(Some(fail)) => {
+                        self.share.statistic.lock().unwrap().test_b += 1;
+                        if fail != first {
+                            cube.swap(i, i + 1);
+                        }
+                        assert!(cube[i] == fail);
+                        keep.insert(cube[i]);
+                        i += 1;
+                    }
+                    Err(None) => {
+                        self.share.statistic.lock().unwrap().test_c += 1;
+                        assert!(cube[i] == first);
+                        let mut removed_cube = cube.clone();
+                        removed_cube.remove(i);
+                        match self.down(frame, &removed_cube)? {
+                            Some(new_cube) => {
+                                (cube, i) = self.handle_down_success(cube, i, new_cube);
+                            }
+                            None => {
+                                keep.insert(cube[i]);
+                                i += 1;
+                            }
+                        }
+                    }
+                }
+            } else {
+                removed_cube.remove(i);
+                match self.down(frame, &removed_cube)? {
+                    Some(new_cube) => {
+                        (cube, i) = self.handle_down_success(cube, i, new_cube);
+                    }
+                    None => {
+                        keep.insert(cube[i]);
+                        i += 1;
+                    }
+                }
+            }
+        }
+        cube.sort_by_key(|x| *x.var());
+        self.activity.pump_cube_activity(&cube);
+        Ok(cube)
+    }
 }

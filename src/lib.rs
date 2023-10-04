@@ -94,22 +94,6 @@ impl Ic3 {
         self.stop_block = false;
     }
 
-    // pub fn blocked_with_polarity<'a>(
-    //     &'a mut self,
-    //     frame: usize,
-    //     cube: &Cube,
-    //     polarity: &[Lit],
-    // ) -> BlockResult<'a> {
-    //     self.pic3_sync();
-    //     assert!(!cube_subsume_init(&self.share.init, cube));
-    //     assert!(frame > 0);
-    //     self.solvers[frame - 1].block_fetch(&self.frames);
-    //     for l in polarity {
-    //         self.solvers[frame - 1].set_polarity(*l)
-    //     }
-    //     self.solvers[frame - 1].blocked(cube, &mut self.lift, &self.activity)
-    // }
-
     fn generalize(
         &mut self,
         frame: usize,

@@ -85,15 +85,8 @@ impl Ic3 {
         None
     }
 
-    pub fn blocked<'a>(&'a mut self, frame: usize, cube: &Cube) -> BlockResult<'a> {
-        self.pic3_sync();
-        assert!(!cube_subsume_init(&self.share.init, cube));
-        let solver = &mut self.solvers[frame - 1];
-        solver.num_act += 1;
-        if solver.num_act > 300 {
-            solver.reset(&self.frames)
-        }
-        let solver = &mut solver.solver;
+    fn blocked_inner<'a>(&'a mut self, frame: usize, cube: &Cube) -> BlockResult<'a> {
+        let solver = &mut self.solvers[frame - 1].solver;
         let start = Instant::now();
         let mut assumption = self.share.state_transform.cube_next(cube);
         let act = solver.new_var().into();
@@ -128,6 +121,17 @@ impl Ic3 {
         res
     }
 
+    pub fn blocked<'a>(&'a mut self, frame: usize, cube: &Cube) -> BlockResult<'a> {
+        self.pic3_sync();
+        assert!(!cube_subsume_init(&self.share.init, cube));
+        let solver = &mut self.solvers[frame - 1];
+        solver.num_act += 1;
+        if solver.num_act > 300 {
+            solver.reset(&self.frames)
+        }
+        self.blocked_inner(frame, cube)
+    }
+
     pub fn blocked_with_ordered<'a>(
         &'a mut self,
         frame: usize,
@@ -137,6 +141,29 @@ impl Ic3 {
         let mut ordered_cube = cube.clone();
         self.activity.sort_by_activity(&mut ordered_cube, ascending);
         self.blocked(frame, &ordered_cube)
+    }
+
+    pub fn blocked_with_polarity_with_ordered<'a>(
+        &'a mut self,
+        frame: usize,
+        cube: &Cube,
+        polarity: &[Lit],
+        ascending: bool,
+    ) -> BlockResult<'a> {
+        self.pic3_sync();
+        assert!(!cube_subsume_init(&self.share.init, cube));
+        assert!(frame > 0);
+        let mut ordered_cube = cube.clone();
+        self.activity.sort_by_activity(&mut ordered_cube, ascending);
+        let solver = &mut self.solvers[frame - 1];
+        solver.num_act += 1;
+        if solver.num_act > 300 {
+            solver.reset(&self.frames)
+        }
+        for l in polarity {
+            solver.set_polarity(*l)
+        }
+        self.blocked_inner(frame, &ordered_cube)
     }
 }
 
@@ -155,7 +182,6 @@ pub struct BlockResultYes<'a> {
 impl BlockResultYes<'_> {
     pub fn get_conflict(self) -> Cube {
         let conflict = unsafe { self.solver.get_conflict() };
-        assert!(self.cube.len() == self.assumption.len());
         let mut ans = Cube::new();
         for i in 0..self.cube.len() {
             if conflict.has(!self.assumption[i]) {
