@@ -21,7 +21,9 @@ pub struct Ic3Solver {
 impl Ic3Solver {
     pub fn new(share: Arc<BasicShare>, frame: usize) -> Self {
         let mut solver = Solver::new();
-        solver.set_random_seed(share.args.random as f64);
+        if let Some(seed) = share.args.random {
+            solver.set_random_seed(seed as f64);
+        }
         solver.add_cnf(&share.as_ref().transition_cnf);
         solver.simplify();
         Self {
@@ -33,9 +35,7 @@ impl Ic3Solver {
     }
 
     pub fn reset(&mut self, frames: &Frames) {
-        self.num_act = 0;
-        self.solver = Solver::new();
-        self.solver.add_cnf(&self.share.transition_cnf);
+        *self = Self::new(self.share.clone(), self.frame);
         let frames_slice = if self.frame == 0 {
             &frames[0..1]
         } else {
@@ -248,7 +248,9 @@ pub struct Lift {
 impl Lift {
     pub fn new(share: Arc<BasicShare>) -> Self {
         let mut solver = Solver::new();
-        solver.set_random_seed(share.args.random as f64);
+        if let Some(seed) = share.args.random {
+            solver.set_random_seed(seed as f64);
+        }
         solver.add_cnf(&share.as_ref().transition_cnf);
         solver.simplify();
         Self {

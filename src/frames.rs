@@ -96,14 +96,14 @@ impl Ic3 {
                 }
             }
         }
-        self.frames[frame].push(cube.clone());
         if let Some(synchronizer) = &mut self.pic3_synchronizer {
             synchronizer.share_lemma(Lemma {
                 frame_idx: frame,
                 cube: cube.clone(),
             })
         }
-        let clause = !cube;
+        let clause = !&cube;
+        self.frames[frame].push(cube);
         for i in begin..=frame {
             self.solvers[i].add_clause(&clause);
         }

@@ -11,7 +11,7 @@ impl Ic3 {
         }
         self.share.statistic.lock().unwrap().num_down_blocked += 1;
         Ok(match self.blocked_with_ordered(frame, cube, false) {
-            BlockResult::Yes(conflict) => Some(conflict.get_conflict()),
+            BlockResult::Yes(_) => Some(cube.clone()),
             BlockResult::No(_) => None,
         })
     }
@@ -40,7 +40,7 @@ impl Ic3 {
             &[first_next, second_next],
             false,
         ) {
-            BlockResult::Yes(conflict) => Ok(conflict.get_conflict()),
+            BlockResult::Yes(_) => Ok(cube.clone()),
             BlockResult::No(mut model) => Err(
                 match (model.lit_value(first_next), model.lit_value(second_next)) {
                     (true, false) => Some(second),
@@ -55,7 +55,7 @@ impl Ic3 {
     fn ctg_down(
         &mut self,
         frame: usize,
-        mut cube: &Cube,
+        cube: &Cube,
         keep: &HashSet<Lit>,
     ) -> Result<Option<Cube>, Ic3Error> {
         let mut cube = cube.clone();
@@ -225,8 +225,8 @@ impl Ic3 {
             };
             match res {
                 Some(new_cube) => {
-                    // (cube, i) = self.handle_down_success(cube, i, new_cube);
-                    cube = removed_cube;
+                    (cube, i) = self.handle_down_success(cube, i, new_cube);
+                    // cube = removed_cube;
                     self.share.statistic.lock().unwrap().num_mic_drop_success += 1;
                 }
                 None => {
@@ -267,6 +267,9 @@ impl Ic3 {
             if i + 1 < cube.len() {
                 assert!(!keep.contains(&cube[i + 1]));
                 let first = removed_cube.remove(i);
+                // let second_idx = self.dd_activity.get_max(first, &removed_cube[i..]);
+                // removed_cube.swap(i, i + second_idx);
+                // cube.swap(i + 1, i + 1 + second_idx);
                 let second = removed_cube.remove(i);
                 let res = if simple {
                     self.double_drop_down(frame, &removed_cube, first, second)
@@ -276,11 +279,13 @@ impl Ic3 {
                 };
                 match res {
                     Ok(new_cube) => {
+                        self.dd_activity.pump_activity(first, second);
                         self.share.statistic.lock().unwrap().test_a += 1;
                         // (cube, i) = self.handle_down_success(cube, i, new_cube);
                         cube = removed_cube;
                     }
                     Err(Some(fail)) => {
+                        self.dd_activity.depump_activity(first, second);
                         self.share.statistic.lock().unwrap().test_b += 1;
                         if fail != first {
                             cube.swap(i, i + 1);
@@ -290,16 +295,19 @@ impl Ic3 {
                         i += 1;
                     }
                     Err(None) => {
+                        self.dd_activity.depump_activity(first, second);
                         self.share.statistic.lock().unwrap().test_c += 1;
                         assert!(cube[i] == first);
                         let mut removed_cube = cube.clone();
                         removed_cube.remove(i);
                         match self.down(frame, &removed_cube)? {
                             Some(new_cube) => {
+                                self.share.statistic.lock().unwrap().test_x += 1;
                                 // (cube, i) = self.handle_down_success(cube, i, new_cube);
                                 cube = removed_cube;
                             }
                             None => {
+                                self.share.statistic.lock().unwrap().test_y += 1;
                                 keep.insert(cube[i]);
                                 i += 1;
                             }
@@ -310,8 +318,8 @@ impl Ic3 {
                 removed_cube.remove(i);
                 match self.down(frame, &removed_cube)? {
                     Some(new_cube) => {
-                        cube = removed_cube;
                         // (cube, i) = self.handle_down_success(cube, i, new_cube);
+                        cube = removed_cube;
                     }
                     None => {
                         keep.insert(cube[i]);

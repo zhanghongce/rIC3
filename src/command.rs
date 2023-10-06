@@ -11,8 +11,8 @@ pub struct Args {
     pub verbose: bool,
 
     /// random seed
-    #[arg(short, long, default_value_t = 91648253)]
-    pub random: usize,
+    #[arg(short, long)]
+    pub random: Option<usize>,
 
     /// counter example to generalize
     #[arg(long, default_value_t = false, action = clap::ArgAction::Set)]

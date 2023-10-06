@@ -18,13 +18,12 @@ use crate::{
     solver::Lift,
     utils::relation::cube_subsume_init,
 };
-use activity::Activity;
+use activity::{Activity, TriActivity};
 use aig::Aig;
 pub use command::Args;
 use frames::Frames;
 use logic_form::{Cube, Lit};
 use pic3::Synchronizer;
-use rand::{rngs::StdRng, SeedableRng};
 use solver::{BlockResult, Ic3Solver};
 use std::collections::HashMap;
 use std::{
@@ -39,9 +38,9 @@ pub struct Ic3 {
     pub activity: Activity,
     pub pic3_synchronizer: Option<Synchronizer>,
     pub cav23_activity: Activity,
+    pub dd_activity: TriActivity,
     pub stop_block: bool,
     pub lift: Lift,
-    _rng: StdRng,
 }
 
 impl Ic3 {
@@ -67,10 +66,10 @@ impl Ic3 {
             activity: Activity::new(),
             cav23_activity: Activity::new(),
             pic3_synchronizer,
-            _rng: SeedableRng::seed_from_u64(share.args.random as _),
             lift: Lift::new(share.clone()),
             share,
             stop_block: false,
+            dd_activity: TriActivity::new(),
         };
         res.new_frame();
         for i in 0..res.share.aig.latchs.len() {
@@ -100,7 +99,7 @@ impl Ic3 {
         cube: Cube,
         simple: bool,
     ) -> Result<(usize, Cube), Ic3Error> {
-        let cube = self.double_drop_mic(frame, cube, simple)?;
+        let cube = self.mic(frame, cube, simple)?;
         for i in frame + 1..=self.depth() {
             if let BlockResult::No(_) = self.blocked(i, &cube) {
                 return Ok((i, cube));
@@ -252,6 +251,7 @@ impl Ic3 {
                 self.depth(),
                 blocked_time,
             );
+            dbg!(&self.dd_activity.activity.len());
             if let Some(pic3_synchronizer) = self.pic3_synchronizer.as_mut() {
                 pic3_synchronizer.sync();
             }
