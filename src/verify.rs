@@ -27,8 +27,7 @@ impl Ic3 {
         }
         for i in invariant..self.frames.len() {
             for cube in self.frames[i].iter() {
-                if let SatResult::Sat(_) =
-                    solver.solve(&self.share.state_transform.cube_next(&cube))
+                if let SatResult::Sat(_) = solver.solve(&self.share.state_transform.cube_next(cube))
                 {
                     return false;
                 }

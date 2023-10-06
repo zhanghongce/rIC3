@@ -18,7 +18,7 @@ use crate::{
     solver::Lift,
     utils::relation::cube_subsume_init,
 };
-use activity::{Activity, TriActivity};
+use activity::Activity;
 use aig::Aig;
 pub use command::Args;
 use frames::Frames;
@@ -38,7 +38,6 @@ pub struct Ic3 {
     pub activity: Activity,
     pub pic3_synchronizer: Option<Synchronizer>,
     pub cav23_activity: Activity,
-    pub dd_activity: TriActivity,
     pub stop_block: bool,
     pub lift: Lift,
 }
@@ -69,7 +68,6 @@ impl Ic3 {
             lift: Lift::new(share.clone()),
             share,
             stop_block: false,
-            dd_activity: TriActivity::new(),
         };
         res.new_frame();
         for i in 0..res.share.aig.latchs.len() {
@@ -193,7 +191,7 @@ impl Ic3 {
         let start = if trivial { self.depth() - 1 } else { 1 };
         for frame_idx in start..self.depth() {
             let mut frame = self.frames[frame_idx].clone();
-            frame.sort_by(|a, b| a.len().cmp(&b.len()));
+            frame.sort_by_key(|x| x.len());
             for cube in frame {
                 if !self.frames[frame_idx].contains(&cube) {
                     continue;
@@ -251,7 +249,6 @@ impl Ic3 {
                 self.depth(),
                 blocked_time,
             );
-            dbg!(&self.dd_activity.activity.len());
             if let Some(pic3_synchronizer) = self.pic3_synchronizer.as_mut() {
                 pic3_synchronizer.sync();
             }

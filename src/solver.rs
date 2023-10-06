@@ -100,7 +100,7 @@ impl Ic3 {
             SatResult::Sat(_) => {
                 solver.release_var(act);
                 BlockResult::No(BlockResultNo {
-                    solver: solver,
+                    solver,
                     share: self.share.clone(),
                     assumption,
                     lift: &mut self.lift,
@@ -141,29 +141,6 @@ impl Ic3 {
         let mut ordered_cube = cube.clone();
         self.activity.sort_by_activity(&mut ordered_cube, ascending);
         self.blocked(frame, &ordered_cube)
-    }
-
-    pub fn blocked_with_polarity_with_ordered<'a>(
-        &'a mut self,
-        frame: usize,
-        cube: &Cube,
-        polarity: &[Lit],
-        ascending: bool,
-    ) -> BlockResult<'a> {
-        self.pic3_sync();
-        assert!(!cube_subsume_init(&self.share.init, cube));
-        assert!(frame > 0);
-        let mut ordered_cube = cube.clone();
-        self.activity.sort_by_activity(&mut ordered_cube, ascending);
-        let solver = &mut self.solvers[frame - 1];
-        solver.num_act += 1;
-        if solver.num_act > 300 {
-            solver.reset(&self.frames)
-        }
-        for l in polarity {
-            solver.set_polarity(*l)
-        }
-        self.blocked_inner(frame, &ordered_cube)
     }
 }
 
