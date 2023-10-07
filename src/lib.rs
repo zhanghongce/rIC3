@@ -107,7 +107,8 @@ impl Ic3 {
         depth: usize,
         successor: Option<&Cube>,
     ) -> Result<(usize, Cube), Ic3Error> {
-        let cube = self.new_mic(frame, cube, !self.share.args.ctg, depth, successor)?;
+        let cube = self.new_mic(frame, cube, !self.share.args.ctg, Some(depth), successor)?;
+        // let cube = self.mic(frame, cube, !self.share.args.ctg)?;
         for i in frame + 1..=self.depth() {
             if let BlockResult::No(_) = self.blocked(i, &cube) {
                 return Ok((i, cube));
@@ -230,13 +231,13 @@ impl Ic3 {
             if let Some(pic3_synchronizer) = self.pic3_synchronizer.as_mut() {
                 pic3_synchronizer.frame_blocked(depth);
             }
-            println!(
-                "[{}:{}] frame: {}, time: {:?}",
-                file!(),
-                line!(),
-                self.depth(),
-                blocked_time,
-            );
+            // println!(
+            //     "[{}:{}] frame: {}, time: {:?}",
+            //     file!(),
+            //     line!(),
+            //     self.depth(),
+            //     blocked_time,
+            // );
             if let Some(pic3_synchronizer) = self.pic3_synchronizer.as_mut() {
                 pic3_synchronizer.sync();
             }

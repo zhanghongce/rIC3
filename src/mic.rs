@@ -73,6 +73,60 @@ impl Ic3 {
         }
     }
 
+    fn new_ctg_down(
+        &mut self,
+        frame: usize,
+        cube: &Cube,
+        keep: &HashSet<Lit>,
+    ) -> Result<Option<Cube>, Ic3Error> {
+        let mut cube = cube.clone();
+        self.share.statistic.lock().unwrap().num_ctg_down += 1;
+        let mut ctgs = 0;
+        loop {
+            self.check_stop_block()?;
+            if cube_subsume_init(&self.share.init, &cube) {
+                return Ok(None);
+            }
+            match self.blocked(frame, &cube) {
+                BlockResult::Yes(conflict) => return Ok(Some(conflict.get_conflict())),
+                BlockResult::No(model) => {
+                    let mut model = model.get_model();
+                    if ctgs < 3 && frame > 1 && !cube_subsume_init(&self.share.init, &model) {
+                        if self.share.args.cav23 {
+                            self.cav23_activity.sort_by_activity(&mut model, false);
+                        }
+                        if let BlockResult::Yes(conflict) = self.blocked(frame - 1, &model) {
+                            ctgs += 1;
+                            let conflict = conflict.get_conflict();
+                            let mut i = frame;
+                            while i <= self.depth() {
+                                if let BlockResult::No(_) = self.blocked(i, &conflict) {
+                                    break;
+                                }
+                                i += 1;
+                            }
+                            let conflict =
+                                self.new_mic(i - 1, conflict, true, None, Some(&cube))?;
+                            self.add_cube(i - 1, conflict);
+                            continue;
+                        }
+                    }
+                    ctgs = 0;
+                    let cex_set: HashSet<Lit> = HashSet::from_iter(model);
+                    let mut cube_new = Cube::new();
+                    for lit in cube {
+                        if cex_set.contains(&lit) {
+                            cube_new.push(lit);
+                        } else if keep.contains(&lit) {
+                            return Ok(None);
+                        }
+                    }
+                    cube = cube_new;
+                }
+            }
+        }
+    }
+
     fn add_temporary_cube(&mut self, mut frame: usize, cube: &Cube) {
         frame = frame.min(self.depth());
         for solver in self.solvers[1..=frame].iter_mut() {
@@ -170,7 +224,7 @@ impl Ic3 {
         frame: usize,
         mut cube: Cube,
         simple: bool,
-        depth: usize,
+        depth: Option<usize>,
         successor: Option<&Cube>,
     ) -> Result<Cube, Ic3Error> {
         let start = Instant::now();
@@ -195,19 +249,26 @@ impl Ic3 {
                         }
                         let model = model.get_model();
                         assert!(try_down.len() < cube.len());
-                        match self.ctg_down(frame, &try_down, &keep)? {
+                        let res = if simple {
+                            self.down(frame, &try_down)?
+                        } else {
+                            self.new_ctg_down(frame, &try_down, &keep)?
+                        };
+                        match res {
                             Some(new_cube) => {
                                 self.share.statistic.lock().unwrap().test_a += 1;
                                 cube = new_cube;
                             }
                             None => {
                                 self.share.statistic.lock().unwrap().test_b += 1;
-                                self.obligations.add(ProofObligation {
-                                    frame,
-                                    cube: model,
-                                    depth,
-                                    successor: Some(successor.clone()),
-                                });
+                                if let Some(depth) = depth {
+                                    self.obligations.add(ProofObligation {
+                                        frame,
+                                        cube: model,
+                                        depth,
+                                        successor: Some(successor.clone()),
+                                    });
+                                }
                                 break;
                             }
                         }
@@ -228,7 +289,12 @@ impl Ic3 {
                         &self.activity,
                     );
                     assert!(try_down.len() < cube.len());
-                    match self.ctg_down(frame, &try_down, &keep)? {
+                    let res = if simple {
+                        self.down(frame, &try_down)?
+                    } else {
+                        self.new_ctg_down(frame, &try_down, &keep)?
+                    };
+                    match res {
                         Some(new_cube) => {
                             self.share.statistic.lock().unwrap().test_a += 1;
                             cube = new_cube;
@@ -238,7 +304,7 @@ impl Ic3 {
                             self.obligations.add(ProofObligation {
                                 frame,
                                 cube: model,
-                                depth,
+                                depth: depth.unwrap(),
                                 successor: None,
                             });
                             break;
@@ -279,7 +345,7 @@ impl Ic3 {
             let res = if simple {
                 self.down(frame, &removed_cube)?
             } else {
-                self.ctg_down(frame, &removed_cube, &keep)?
+                self.new_ctg_down(frame, &removed_cube, &keep)?
             };
             match res {
                 Some(new_cube) => {
