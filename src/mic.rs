@@ -3,8 +3,8 @@ use crate::{
     basic::{Ic3Error, ProofObligation},
     utils::relation::cube_subsume_init,
 };
-use logic_form::Cube;
-use sat_solver::{SatModel, SatResult};
+use logic_form::{Cube, Lit};
+use sat_solver::SatResult;
 use std::{collections::HashSet, time::Instant};
 
 impl Ic3 {
@@ -20,60 +20,66 @@ impl Ic3 {
         })
     }
 
-    // fn ctg_down(
-    //     &mut self,
-    //     frame: usize,
-    //     cube: &Cube,
-    //     keep: &HashSet<Lit>,
-    // ) -> Result<Option<Cube>, Ic3Error> {
-    //     let mut cube = cube.clone();
-    //     self.share.statistic.lock().unwrap().num_ctg_down += 1;
-    //     let mut ctgs = 0;
-    //     loop {
-    //         self.check_stop_block()?;
-    //         if cube_subsume_init(&self.share.init, &cube) {
-    //             return Ok(None);
-    //         }
-    //         match self.blocked(frame, &cube) {
-    //             BlockResult::Yes(conflict) => return Ok(Some(conflict.get_conflict())),
-    //             BlockResult::No(model) => {
-    //                 let mut model = model.get_model();
-    //                 if ctgs < 3 && frame > 1 && !cube_subsume_init(&self.share.init, &model) {
-    //                     if self.share.args.cav23 {
-    //                         self.cav23_activity.sort_by_activity(&mut model, false);
-    //                     }
-    //                     if let BlockResult::Yes(conflict) = self.blocked(frame - 1, &model) {
-    //                         ctgs += 1;
-    //                         let conflict = conflict.get_conflict();
-    //                         let mut i = frame;
-    //                         while i <= self.depth() {
-    //                             if let BlockResult::No(_) = self.blocked(i, &conflict) {
-    //                                 break;
-    //                             }
-    //                             i += 1;
-    //                         }
-    //                         let conflict = self.mic(i - 1, conflict, true, todo!(), todo!())?;
-    //                         self.add_cube(i - 1, conflict);
-    //                         continue;
-    //                     }
-    //                 }
-    //                 ctgs = 0;
-    //                 let cex_set: HashSet<Lit> = HashSet::from_iter(model);
-    //                 let mut cube_new = Cube::new();
-    //                 for lit in cube {
-    //                     if cex_set.contains(&lit) {
-    //                         cube_new.push(lit);
-    //                     } else if keep.contains(&lit) {
-    //                         return Ok(None);
-    //                     }
-    //                 }
-    //                 cube = cube_new;
-    //             }
-    //         }
-    //     }
-    // }
+    fn ctg_down(
+        &mut self,
+        frame: usize,
+        cube: &Cube,
+        keep: &HashSet<Lit>,
+    ) -> Result<Option<Cube>, Ic3Error> {
+        let mut cube = cube.clone();
+        self.share.statistic.lock().unwrap().num_ctg_down += 1;
+        let mut ctgs = 0;
+        loop {
+            self.check_stop_block()?;
+            if cube_subsume_init(&self.share.init, &cube) {
+                return Ok(None);
+            }
+            match self.blocked(frame, &cube) {
+                BlockResult::Yes(conflict) => return Ok(Some(conflict.get_conflict())),
+                BlockResult::No(model) => {
+                    let mut model = model.get_model();
+                    if ctgs < 3 && frame > 1 && !cube_subsume_init(&self.share.init, &model) {
+                        if self.share.args.cav23 {
+                            self.cav23_activity.sort_by_activity(&mut model, false);
+                        }
+                        if let BlockResult::Yes(conflict) = self.blocked(frame - 1, &model) {
+                            ctgs += 1;
+                            let conflict = conflict.get_conflict();
+                            let mut i = frame;
+                            while i <= self.depth() {
+                                if let BlockResult::No(_) = self.blocked(i, &conflict) {
+                                    break;
+                                }
+                                i += 1;
+                            }
+                            let conflict = self.mic(i - 1, conflict, true)?;
+                            self.add_cube(i - 1, conflict);
+                            continue;
+                        }
+                    }
+                    ctgs = 0;
+                    let cex_set: HashSet<Lit> = HashSet::from_iter(model);
+                    let mut cube_new = Cube::new();
+                    for lit in cube {
+                        if cex_set.contains(&lit) {
+                            cube_new.push(lit);
+                        } else if keep.contains(&lit) {
+                            return Ok(None);
+                        }
+                    }
+                    cube = cube_new;
+                }
+            }
+        }
+    }
 
-    fn handle_down_success(&mut self, cube: Cube, i: usize, mut new_cube: Cube) -> (Cube, usize) {
+    fn handle_down_success(
+        &mut self,
+        frame: usize,
+        cube: Cube,
+        i: usize,
+        mut new_cube: Cube,
+    ) -> (Cube, usize) {
         new_cube = cube
             .iter()
             .filter(|l| new_cube.contains(l))
@@ -86,104 +92,18 @@ impl Ic3 {
         if new_i < new_cube.len() {
             assert!(!(cube[0..=i]).contains(&new_cube[new_i]))
         }
+        for solver in self.solvers[1..=frame].iter_mut() {
+            solver.add_temporary_clause(&!&new_cube);
+        }
         (new_cube, new_i)
     }
 
-    pub fn mic(
-        &mut self,
-        frame: usize,
-        mut cube: Cube,
-        simple: bool,
-        depth: usize,
-        successor: Option<&Cube>,
-    ) -> Result<Cube, Ic3Error> {
+    pub fn mic(&mut self, frame: usize, mut cube: Cube, simple: bool) -> Result<Cube, Ic3Error> {
         let start = Instant::now();
         self.share.statistic.lock().unwrap().average_mic_cube_len += cube.len();
-        loop {
-            if let Some(successor) = successor {
-                if self.blocked.contains_key(&(successor.clone(), frame + 1)) {
-                    self.share.statistic.lock().unwrap().test_c += 1;
-                    break;
-                }
-                match self.blocked_with_constraint(frame + 1, &successor, &!&cube) {
-                    BlockResult::Yes(conflict) => {
-                        let conflict = conflict.get_conflict();
-                        self.blocked
-                            .insert((successor.clone(), frame + 1), conflict.clone());
-                        self.share.statistic.lock().unwrap().test_c += 1;
-                        break;
-                    }
-                    BlockResult::No(mut model) => {
-                        let mut try_down = Cube::new();
-                        for l in cube.iter() {
-                            if model.lit_value(*l) {
-                                try_down.push(*l);
-                            }
-                        }
-                        let model = model.get_model();
-                        assert!(try_down.len() < cube.len());
-                        match self.down(frame, &try_down)? {
-                            Some(new_cube) => {
-                                self.share.statistic.lock().unwrap().test_a += 1;
-                                cube = new_cube;
-                            }
-                            None => {
-                                self.share.statistic.lock().unwrap().test_b += 1;
-                                self.obligations.add(ProofObligation {
-                                    frame,
-                                    cube: model,
-                                    depth,
-                                    successor: Some(successor.clone()),
-                                });
-                                break;
-                            }
-                        }
-                    }
-                }
-            } else {
-                self.solvers[frame].add_clause(&!&cube);
-                if self
-                    .blocked
-                    .contains_key(&(self.share.bad.clone(), frame + 1))
-                {
-                    self.share.statistic.lock().unwrap().test_c += 1;
-                    break;
-                }
-                if let SatResult::Sat(model) = self.solvers[frame].solve(&self.share.bad) {
-                    let mut try_down = Cube::new();
-                    for l in cube.iter() {
-                        if model.lit_value(*l) {
-                            try_down.push(*l);
-                        }
-                    }
-                    let model = self.lift.minimal_predecessor(
-                        self.share.bad.clone(),
-                        model,
-                        &self.activity,
-                    );
-                    assert!(try_down.len() < cube.len());
-                    match self.down(frame, &try_down)? {
-                        Some(new_cube) => {
-                            self.share.statistic.lock().unwrap().test_a += 1;
-                            cube = new_cube;
-                        }
-                        None => {
-                            self.share.statistic.lock().unwrap().test_b += 1;
-                            self.obligations.add(ProofObligation {
-                                frame,
-                                cube: model,
-                                depth,
-                                successor: None,
-                            });
-                            break;
-                        }
-                    }
-                } else {
-                    self.blocked
-                        .insert((self.share.bad.clone(), frame + 1), self.share.bad.clone());
-                    self.share.statistic.lock().unwrap().test_c += 1;
-                    break;
-                }
+        if !simple {
+            for solver in self.solvers[1..=frame].iter_mut() {
+                solver.add_temporary_clause(&!&cube);
             }
         }
         self.activity.sort_by_activity(&mut cube, true);
@@ -213,13 +133,155 @@ impl Ic3 {
             let res = if simple {
                 self.down(frame, &removed_cube)?
             } else {
-                todo!();
-                // self.ctg_down(frame, &removed_cube, &keep)?
+                self.ctg_down(frame, &removed_cube, &keep)?
             };
             match res {
                 Some(new_cube) => {
                     self.share.statistic.lock().unwrap().num_mic_drop_success += 1;
-                    (cube, i) = self.handle_down_success(cube, i, new_cube);
+                    (cube, i) = self.handle_down_success(frame, cube, i, new_cube);
+                }
+                None => {
+                    self.share.statistic.lock().unwrap().num_mic_drop_fail += 1;
+                    keep.insert(cube[i]);
+                    i += 1;
+                }
+            }
+        }
+        if let Some(Some(cav23)) = cav23_parent {
+            cube.sort_by_key(|x| *x.var());
+            if cube.ordered_subsume(&cav23) {
+                self.cav23_activity.pump_cube_activity(&cube);
+            }
+        }
+        self.activity.pump_cube_activity(&cube);
+        if simple {
+            self.share.statistic.lock().unwrap().simple_mic_time += start.elapsed()
+        } else {
+            self.share.statistic.lock().unwrap().mic_time += start.elapsed()
+        }
+        Ok(cube)
+    }
+
+    pub fn new_mic(
+        &mut self,
+        frame: usize,
+        mut cube: Cube,
+        simple: bool,
+        depth: usize,
+        successor: Option<&Cube>,
+    ) -> Result<Cube, Ic3Error> {
+        let start = Instant::now();
+        self.share.statistic.lock().unwrap().average_mic_cube_len += cube.len();
+        let mut keep = HashSet::new();
+        if !simple {
+            for solver in self.solvers[1..=frame].iter_mut() {
+                solver.add_temporary_clause(&!&cube);
+            }
+        }
+        loop {
+            self.solvers[frame].add_temporary_clause(&!&cube);
+            if let Some(successor) = successor {
+                match self.blocked(frame + 1, &successor) {
+                    BlockResult::Yes(_) => {
+                        self.share.statistic.lock().unwrap().test_c += 1;
+                        break;
+                    }
+                    BlockResult::No(model) => {
+                        let mut try_down = Cube::new();
+                        let model = model.get_model();
+                        for l in cube.iter() {
+                            if model.contains(l) {
+                                try_down.push(*l);
+                            }
+                        }
+                        assert!(try_down.len() < cube.len());
+                        match self.ctg_down(frame, &try_down, &keep)? {
+                            Some(new_cube) => {
+                                self.share.statistic.lock().unwrap().test_a += 1;
+                                cube = new_cube;
+                            }
+                            None => {
+                                self.share.statistic.lock().unwrap().test_b += 1;
+                                self.obligations.add(ProofObligation {
+                                    frame,
+                                    cube: model,
+                                    depth,
+                                    successor: Some(successor.clone()),
+                                });
+                                break;
+                            }
+                        }
+                    }
+                }
+            } else {
+                assert!(frame == self.depth());
+                if let SatResult::Sat(model) = self.solvers[frame].solve(&self.share.bad) {
+                    let mut try_down = Cube::new();
+                    let model = self.lift.minimal_predecessor(
+                        self.share.bad.clone(),
+                        model,
+                        &self.activity,
+                    );
+                    for l in cube.iter() {
+                        if model.contains(l) {
+                            try_down.push(*l);
+                        }
+                    }
+                    assert!(try_down.len() < cube.len());
+                    match self.ctg_down(frame, &try_down, &keep)? {
+                        Some(new_cube) => {
+                            self.share.statistic.lock().unwrap().test_a += 1;
+                            cube = new_cube;
+                        }
+                        None => {
+                            self.share.statistic.lock().unwrap().test_b += 1;
+                            self.obligations.add(ProofObligation {
+                                frame,
+                                cube: model,
+                                depth,
+                                successor: None,
+                            });
+                            break;
+                        }
+                    }
+                } else {
+                    self.share.statistic.lock().unwrap().test_c += 1;
+                    break;
+                }
+            }
+        }
+        self.activity.sort_by_activity(&mut cube, true);
+        let cav23_parent = self.share.args.cav23.then(|| {
+            self.cav23_activity.sort_by_activity(&mut cube, true);
+            let mut similar = self.frames.similar(&cube, frame);
+            similar.sort_by(|a, b| {
+                self.cav23_activity
+                    .cube_average_activity(b)
+                    .partial_cmp(&self.cav23_activity.cube_average_activity(a))
+                    .unwrap()
+            });
+            let similar = similar.into_iter().nth(0);
+            if let Some(similar) = &similar {
+                for l in similar.iter() {
+                    keep.insert(*l);
+                }
+            }
+            similar
+        });
+        let mut i = 0;
+        while i < cube.len() {
+            assert!(!keep.contains(&cube[i]));
+            let mut removed_cube = cube.clone();
+            removed_cube.remove(i);
+            let res = if simple {
+                self.down(frame, &removed_cube)?
+            } else {
+                self.ctg_down(frame, &removed_cube, &keep)?
+            };
+            match res {
+                Some(new_cube) => {
+                    self.share.statistic.lock().unwrap().num_mic_drop_success += 1;
+                    (cube, i) = self.handle_down_success(frame, cube, i, new_cube);
                 }
                 None => {
                     self.share.statistic.lock().unwrap().num_mic_drop_fail += 1;

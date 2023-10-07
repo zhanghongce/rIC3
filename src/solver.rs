@@ -9,13 +9,14 @@ use sat_solver::{
     minisat::{Conflict, Model, Solver},
     SatModel, SatResult, SatSolver, UnsatConflict,
 };
-use std::{sync::Arc, time::Instant};
+use std::{mem::take, sync::Arc, time::Instant};
 
 pub struct Ic3Solver {
     solver: Solver,
     num_act: usize,
     share: Arc<BasicShare>,
     frame: usize,
+    temporary: Vec<Cube>,
 }
 
 impl Ic3Solver {
@@ -32,11 +33,17 @@ impl Ic3Solver {
             frame,
             num_act: 0,
             share,
+            temporary: Vec::new(),
         }
     }
 
     pub fn reset(&mut self, frames: &Frames) {
+        let temporary = take(&mut self.temporary);
         *self = Self::new(self.share.clone(), self.frame);
+        for t in temporary {
+            self.solver.add_clause(&!&t);
+            self.temporary.push(t);
+        }
         let frames_slice = if self.frame == 0 {
             &frames[0..1]
         } else {
@@ -51,6 +58,14 @@ impl Ic3Solver {
     }
 
     pub fn add_clause(&mut self, clause: &Clause) {
+        let mut cube = !clause;
+        cube.sort_by_key(|x| x.var());
+        let temporary = take(&mut self.temporary);
+        for t in temporary {
+            if !cube.ordered_subsume(&t) {
+                self.temporary.push(t);
+            }
+        }
         self.solver.add_clause(clause);
     }
 
@@ -66,16 +81,28 @@ impl Ic3Solver {
     pub fn solve<'a>(&'a mut self, assumptions: &[Lit]) -> SatResult<Model<'a>, Conflict<'a>> {
         self.solver.solve(assumptions)
     }
+
+    pub fn add_temporary_clause(&mut self, clause: &Clause) {
+        let mut cube = !clause;
+        cube.sort_by_key(|x| x.var());
+        for t in self.temporary.iter() {
+            if t.ordered_subsume(&cube) {
+                return;
+            }
+        }
+        let temporary = take(&mut self.temporary);
+        for t in temporary {
+            if !cube.ordered_subsume(&t) {
+                self.temporary.push(t);
+            }
+        }
+        self.temporary.push(cube);
+        self.solver.add_clause(clause);
+    }
 }
 
 impl Ic3 {
     pub fn get_bad(&mut self) -> Option<Cube> {
-        if self
-            .blocked
-            .contains_key(&(self.share.bad.clone(), self.depth() + 1))
-        {
-            return None;
-        }
         let bad = if self.share.aig.bads.is_empty() {
             self.share.aig.outputs[0]
         } else {
@@ -136,23 +163,6 @@ impl Ic3 {
         if solver.num_act > 300 {
             solver.reset(&self.frames)
         }
-        self.blocked_inner(frame, cube)
-    }
-
-    pub fn blocked_with_constraint<'a>(
-        &'a mut self,
-        frame: usize,
-        cube: &Cube,
-        constraint: &Clause,
-    ) -> BlockResult<'a> {
-        self.pic3_sync();
-        assert!(!cube_subsume_init(&self.share.init, cube));
-        let solver = &mut self.solvers[frame - 1];
-        solver.num_act += 1;
-        if solver.num_act > 300 {
-            solver.reset(&self.frames)
-        }
-        solver.add_clause(constraint);
         self.blocked_inner(frame, cube)
     }
 
@@ -269,7 +279,7 @@ impl Lift {
         activity: &Activity,
     ) -> Cube {
         self.num_act += 1;
-        if self.num_act == 300 {
+        if self.num_act > 300 {
             *self = Self::new(self.share.clone())
         }
         let act: Lit = self.solver.new_var().into();

@@ -41,7 +41,6 @@ pub struct Ic3 {
     pub obligations: ProofObligationQueue,
     pub lift: Lift,
     pub stop_block: bool,
-    pub blocked: HashMap<(Cube, usize), Cube>,
 }
 
 impl Ic3 {
@@ -78,7 +77,6 @@ impl Ic3 {
             share,
             obligations: ProofObligationQueue::new(),
             stop_block: false,
-            blocked: HashMap::new(),
         };
         res.new_frame();
         for i in 0..res.share.aig.latchs.len() {
@@ -109,7 +107,7 @@ impl Ic3 {
         depth: usize,
         successor: Option<&Cube>,
     ) -> Result<(usize, Cube), Ic3Error> {
-        let cube = self.mic(frame, cube, !self.share.args.ctg, depth, successor)?;
+        let cube = self.new_mic(frame, cube, !self.share.args.ctg, depth, successor)?;
         for i in frame + 1..=self.depth() {
             if let BlockResult::No(_) = self.blocked(i, &cube) {
                 return Ok((i, cube));
@@ -157,10 +155,6 @@ impl Ic3 {
             // if self.sat_contained(po.frame, &po.cube) {
             //     continue;
             // }
-            if let Some(conflict) = self.blocked.get(&(po.cube.clone(), po.frame)) {
-                self.handle_blocked(po, conflict.clone());
-                continue;
-            }
             match self.blocked(po.frame, &po.cube) {
                 BlockResult::Yes(conflict) => {
                     let conflict = conflict.get_conflict();
