@@ -104,10 +104,9 @@ impl Ic3 {
         &mut self,
         frame: usize,
         cube: Cube,
-        depth: usize,
         successor: Option<&Cube>,
     ) -> Result<(usize, Cube), Ic3Error> {
-        let cube = self.new_mic(frame, cube, !self.share.args.ctg, Some(depth), successor)?;
+        let cube = self.new_mic(frame, cube, !self.share.args.ctg, successor, true)?;
         // let cube = self.mic(frame, cube, !self.share.args.ctg)?;
         for i in frame + 1..=self.depth() {
             if let BlockResult::No(_) = self.blocked(i, &cube) {
@@ -119,27 +118,19 @@ impl Ic3 {
 
     pub fn handle_blocked(&mut self, po: ProofObligation, conflict: Cube) {
         let (frame, core) = self
-            .generalize(po.frame, conflict, po.depth, po.successor.as_ref())
+            .generalize(po.frame, conflict, po.successor.as_ref())
             .unwrap();
         if frame <= self.depth() {
-            self.obligations.add(ProofObligation {
-                frame,
-                cube: po.cube,
-                depth: po.depth,
-                successor: po.successor,
-            });
+            self.obligations
+                .add(ProofObligation::new(frame, po.cube, po.successor));
         }
         self.add_cube(frame - 1, core);
     }
 
     pub fn block(&mut self, frame: usize, cube: Cube) -> Result<bool, Ic3Error> {
         assert!(self.obligations.is_empty());
-        self.obligations.add(ProofObligation {
-            frame,
-            cube,
-            depth: 0,
-            successor: None,
-        });
+        self.obligations
+            .add(ProofObligation::new(frame, cube, None));
         while let Some(po) = self.obligations.pop() {
             if po.frame == 0 {
                 return Ok(false);
@@ -163,12 +154,11 @@ impl Ic3 {
                 }
                 BlockResult::No(model) => {
                     let model = model.get_model();
-                    self.obligations.add(ProofObligation {
-                        frame: po.frame - 1,
-                        cube: model,
-                        depth: po.depth + 1,
-                        successor: Some(po.cube.clone()),
-                    });
+                    self.obligations.add(ProofObligation::new(
+                        po.frame - 1,
+                        model,
+                        Some(po.cube.clone()),
+                    ));
                     self.obligations.add(po);
                 }
             }

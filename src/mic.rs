@@ -106,7 +106,7 @@ impl Ic3 {
                                 i += 1;
                             }
                             let conflict =
-                                self.new_mic(i - 1, conflict, true, None, Some(&cube))?;
+                                self.new_mic(i - 1, conflict, true, Some(&cube), false)?;
                             self.add_cube(i - 1, conflict);
                             continue;
                         }
@@ -224,8 +224,8 @@ impl Ic3 {
         frame: usize,
         mut cube: Cube,
         simple: bool,
-        depth: Option<usize>,
         successor: Option<&Cube>,
+        must: bool,
     ) -> Result<Cube, Ic3Error> {
         let start = Instant::now();
         self.share.statistic.lock().unwrap().average_mic_cube_len += cube.len();
@@ -261,13 +261,12 @@ impl Ic3 {
                             }
                             None => {
                                 self.share.statistic.lock().unwrap().test_b += 1;
-                                if let Some(depth) = depth {
-                                    self.obligations.add(ProofObligation {
+                                if must {
+                                    self.obligations.add(ProofObligation::new(
                                         frame,
-                                        cube: model,
-                                        depth,
-                                        successor: Some(successor.clone()),
-                                    });
+                                        model,
+                                        Some(successor.clone()),
+                                    ));
                                 }
                                 break;
                             }
@@ -301,12 +300,9 @@ impl Ic3 {
                         }
                         None => {
                             self.share.statistic.lock().unwrap().test_b += 1;
-                            self.obligations.add(ProofObligation {
-                                frame,
-                                cube: model,
-                                depth: depth.unwrap(),
-                                successor: None,
-                            });
+                            assert!(must);
+                            self.obligations
+                                .add(ProofObligation::new(frame, model, None));
                             break;
                         }
                     }
