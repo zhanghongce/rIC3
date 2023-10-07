@@ -38,8 +38,10 @@ pub struct Ic3 {
     pub activity: Activity,
     pub pic3_synchronizer: Option<Synchronizer>,
     pub cav23_activity: Activity,
-    pub stop_block: bool,
+    pub obligations: ProofObligationQueue,
     pub lift: Lift,
+    pub stop_block: bool,
+    pub blocked: HashMap<(Cube, usize), Cube>,
 }
 
 impl Ic3 {
@@ -51,6 +53,12 @@ impl Ic3 {
             init.insert(l.var(), l.polarity());
         }
         let state_transform = StateTransform::new(&aig);
+        let bad = Cube::from([if aig.bads.is_empty() {
+            aig.outputs[0]
+        } else {
+            aig.bads[0]
+        }
+        .to_lit()]);
         let share = Arc::new(BasicShare {
             aig,
             transition_cnf,
@@ -58,6 +66,7 @@ impl Ic3 {
             args,
             init,
             statistic: Mutex::new(Statistic::default()),
+            bad,
         });
         let mut res = Self {
             solvers: Vec::new(),
@@ -67,7 +76,9 @@ impl Ic3 {
             pic3_synchronizer,
             lift: Lift::new(share.clone()),
             share,
+            obligations: ProofObligationQueue::new(),
             stop_block: false,
+            blocked: HashMap::new(),
         };
         res.new_frame();
         for i in 0..res.share.aig.latchs.len() {
@@ -95,9 +106,10 @@ impl Ic3 {
         &mut self,
         frame: usize,
         cube: Cube,
-        simple: bool,
+        depth: usize,
+        successor: Option<&Cube>,
     ) -> Result<(usize, Cube), Ic3Error> {
-        let cube = self.mic(frame, cube, simple)?;
+        let cube = self.mic(frame, cube, !self.share.args.ctg, depth, successor)?;
         for i in frame + 1..=self.depth() {
             if let BlockResult::No(_) = self.blocked(i, &cube) {
                 return Ok((i, cube));
@@ -106,21 +118,37 @@ impl Ic3 {
         Ok((self.depth() + 1, cube))
     }
 
+    pub fn handle_blocked(&mut self, po: ProofObligation, conflict: Cube) {
+        let (frame, core) = self
+            .generalize(po.frame, conflict, po.depth, po.successor.as_ref())
+            .unwrap();
+        if frame <= self.depth() {
+            self.obligations.add(ProofObligation {
+                frame,
+                cube: po.cube,
+                depth: po.depth,
+                successor: po.successor,
+            });
+        }
+        self.add_cube(frame - 1, core);
+    }
+
     pub fn block(&mut self, frame: usize, cube: Cube) -> Result<bool, Ic3Error> {
-        let mut obligations = ProofObligationQueue::new();
-        obligations.add(ProofObligation {
+        assert!(self.obligations.is_empty());
+        self.obligations.add(ProofObligation {
             frame,
             cube,
             depth: 0,
+            successor: None,
         });
-        while let Some(po) = obligations.get() {
+        while let Some(po) = self.obligations.pop() {
             if po.frame == 0 {
                 return Ok(false);
             }
             self.check_stop_block()?;
             assert!(!cube_subsume_init(&self.share.init, &po.cube));
             if self.share.args.verbose {
-                obligations.statistic();
+                self.obligations.statistic();
                 self.statistic();
             }
             if self.frames.trivial_contained(po.frame, &po.cube) {
@@ -129,62 +157,28 @@ impl Ic3 {
             // if self.sat_contained(po.frame, &po.cube) {
             //     continue;
             // }
+            if let Some(conflict) = self.blocked.get(&(po.cube.clone(), po.frame)) {
+                self.handle_blocked(po, conflict.clone());
+                continue;
+            }
             match self.blocked(po.frame, &po.cube) {
                 BlockResult::Yes(conflict) => {
                     let conflict = conflict.get_conflict();
-                    let (frame, core) =
-                        self.generalize(po.frame, conflict, !self.share.args.ctg)?;
-                    if frame <= self.depth() {
-                        obligations.add(ProofObligation {
-                            frame,
-                            cube: po.cube,
-                            depth: po.depth,
-                        });
-                    }
-                    self.add_cube(frame - 1, core);
+                    self.handle_blocked(po, conflict);
                 }
                 BlockResult::No(model) => {
-                    obligations.add(ProofObligation {
+                    let model = model.get_model();
+                    self.obligations.add(ProofObligation {
                         frame: po.frame - 1,
-                        cube: model.get_model(),
+                        cube: model,
                         depth: po.depth + 1,
+                        successor: Some(po.cube.clone()),
                     });
-                    obligations.add(po);
+                    self.obligations.add(po);
                 }
             }
         }
         Ok(true)
-    }
-
-    #[allow(dead_code)]
-    pub fn try_block(
-        &mut self,
-        frame: usize,
-        cube: &Cube,
-        mut max_try: usize,
-        simple: bool,
-    ) -> bool {
-        loop {
-            if max_try == 0 || frame == 0 || cube_subsume_init(&self.share.init, cube) {
-                return false;
-            }
-            assert!(!cube_subsume_init(&self.share.init, cube));
-            max_try -= 1;
-            match self.blocked(frame, cube) {
-                BlockResult::Yes(conflict) => {
-                    let conflict = conflict.get_conflict();
-                    let (frame, core) = self.generalize(frame, conflict, simple).unwrap();
-                    self.add_cube(frame - 1, core);
-                    return true;
-                }
-                BlockResult::No(cex) => {
-                    let cex = cex.get_model();
-                    if !self.try_block(frame - 1, &cex, max_try, true) {
-                        return false;
-                    }
-                }
-            }
-        }
     }
 
     pub fn propagate(&mut self, trivial: bool) -> bool {

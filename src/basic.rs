@@ -18,6 +18,7 @@ pub struct BasicShare {
     pub args: Args,
     pub init: HashMap<Var, bool>,
     pub statistic: Mutex<Statistic>,
+    pub bad: Cube,
 }
 
 #[derive(PartialEq, Eq, Clone)]
@@ -25,6 +26,7 @@ pub struct ProofObligation {
     pub frame: usize,
     pub cube: Cube,
     pub depth: usize,
+    pub successor: Option<Cube>,
 }
 
 impl PartialOrd for ProofObligation {
@@ -64,12 +66,16 @@ impl ProofObligationQueue {
         self.obligations.push(po)
     }
 
-    pub fn get(&mut self) -> Option<ProofObligation> {
+    pub fn pop(&mut self) -> Option<ProofObligation> {
         let po = self.obligations.pop();
         if let Some(po) = &po {
-            self.num[po.frame] -= 1
+            self.num[po.frame] -= 1;
         }
         po
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.obligations.is_empty()
     }
 
     pub fn statistic(&self) {

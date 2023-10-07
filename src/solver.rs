@@ -23,6 +23,7 @@ impl Ic3Solver {
         let mut solver = Solver::new();
         if let Some(seed) = share.args.random {
             solver.set_random_seed(seed as f64);
+            solver.set_rnd_init_act(true);
         }
         solver.add_cnf(&share.as_ref().transition_cnf);
         solver.simplify();
@@ -69,6 +70,12 @@ impl Ic3Solver {
 
 impl Ic3 {
     pub fn get_bad(&mut self) -> Option<Cube> {
+        if self
+            .blocked
+            .contains_key(&(self.share.bad.clone(), self.depth() + 1))
+        {
+            return None;
+        }
         let bad = if self.share.aig.bads.is_empty() {
             self.share.aig.outputs[0]
         } else {
@@ -129,6 +136,23 @@ impl Ic3 {
         if solver.num_act > 300 {
             solver.reset(&self.frames)
         }
+        self.blocked_inner(frame, cube)
+    }
+
+    pub fn blocked_with_constraint<'a>(
+        &'a mut self,
+        frame: usize,
+        cube: &Cube,
+        constraint: &Clause,
+    ) -> BlockResult<'a> {
+        self.pic3_sync();
+        assert!(!cube_subsume_init(&self.share.init, cube));
+        let solver = &mut self.solvers[frame - 1];
+        solver.num_act += 1;
+        if solver.num_act > 300 {
+            solver.reset(&self.frames)
+        }
+        solver.add_clause(constraint);
         self.blocked_inner(frame, cube)
     }
 
@@ -227,6 +251,7 @@ impl Lift {
         let mut solver = Solver::new();
         if let Some(seed) = share.args.random {
             solver.set_random_seed(seed as f64);
+            solver.set_rnd_init_act(true);
         }
         solver.add_cnf(&share.as_ref().transition_cnf);
         solver.simplify();

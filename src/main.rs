@@ -4,6 +4,7 @@ use std::time::Instant;
 
 fn main() {
     let mut args = Args::parse();
+    args.random = Some(55555);
     let aig = // Safe
     // 1000s vs 0.2s
     // "../MC-Benchmark/hwmcc20/aig/2019/beem/pgm_protocol.7.prop1-back-serstep.aag";
