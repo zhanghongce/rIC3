@@ -139,6 +139,7 @@ impl Ic3 {
                     assumption,
                     lift: &mut self.lift,
                     activity: &self.activity,
+                    cav23_activity: &self.cav23_activity,
                 })
             }
             SatResult::Unsat(_) => {
@@ -228,13 +229,14 @@ pub struct BlockResultNo<'a> {
     assumption: Cube,
     lift: &'a mut Lift,
     activity: &'a Activity,
+    cav23_activity: &'a Activity,
 }
 
 impl BlockResultNo<'_> {
     pub fn get_model(self) -> Cube {
         let model = unsafe { self.solver.get_model() };
         self.lift
-            .minimal_predecessor(self.assumption, model, self.activity)
+            .minimal_predecessor(self.assumption, model, self.activity, self.cav23_activity)
         // let res = generalize_by_ternary_simulation(
         //     &self.share.as_ref().aig,
         //     model,
@@ -277,6 +279,7 @@ impl Lift {
         successor: Cube,
         model: M,
         activity: &Activity,
+        cav23_activity: &Activity,
     ) -> Cube {
         self.num_act += 1;
         if self.num_act > 300 {
@@ -302,7 +305,10 @@ impl Lift {
             }
             latchs.push(lit);
         }
-        activity.sort_by_activity(&mut latchs, true);
+        activity.sort_by_activity(&mut latchs, false);
+        if self.share.args.cav23 {
+            cav23_activity.sort_by_activity(&mut latchs, false);
+        }
         assumption.extend_from_slice(&latchs);
         let res: Cube = match self.solver.solve(&assumption) {
             SatResult::Sat(_) => panic!(),
