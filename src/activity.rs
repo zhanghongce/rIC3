@@ -1,15 +1,14 @@
 use logic_form::{Cube, Lit, Var};
 use std::collections::HashMap;
 
+#[derive(Default)]
 pub struct Activity {
     activity: HashMap<Var, f64>,
 }
 
 impl Activity {
     pub fn new() -> Self {
-        Self {
-            activity: HashMap::new(),
-        }
+        Self::default()
     }
 
     fn decay(&mut self) {

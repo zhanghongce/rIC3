@@ -55,6 +55,7 @@ impl Ord for ProofObligation {
     }
 }
 
+#[derive(Default)]
 pub struct ProofObligationQueue {
     obligations: BinaryHeap<ProofObligation>,
     num: Vec<usize>,
@@ -62,10 +63,7 @@ pub struct ProofObligationQueue {
 
 impl ProofObligationQueue {
     pub fn new() -> Self {
-        Self {
-            obligations: BinaryHeap::new(),
-            num: Vec::new(),
-        }
+        Self::default()
     }
 
     pub fn add(&mut self, mut po: ProofObligation) {

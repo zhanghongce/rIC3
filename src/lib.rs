@@ -41,6 +41,7 @@ pub struct Ic3 {
     pub obligations: ProofObligationQueue,
     pub lift: Lift,
     pub stop_block: bool,
+    pub blocked: HashMap<(usize, Cube), Cube>,
 }
 
 impl Ic3 {
@@ -77,6 +78,7 @@ impl Ic3 {
             share,
             obligations: ProofObligationQueue::new(),
             stop_block: false,
+            blocked: HashMap::new(),
         };
         res.new_frame();
         for i in 0..res.share.aig.latchs.len() {
@@ -104,10 +106,11 @@ impl Ic3 {
         &mut self,
         frame: usize,
         cube: Cube,
+        depth: usize,
         successor: Option<&Cube>,
     ) -> Result<(usize, Cube), Ic3Error> {
-        // let cube = self.new_mic(frame, cube, !self.share.args.ctg, successor, true)?;
-        let cube = self.mic(frame, cube, !self.share.args.ctg)?;
+        let cube = self.new_mic(frame, cube, !self.share.args.ctg, depth, successor)?;
+        // let cube = self.mic(frame, cube, !self.share.args.ctg)?;
         for i in frame + 1..=self.depth() {
             if let BlockResult::No(_) = self.blocked(i, &cube) {
                 return Ok((i, cube));
@@ -118,7 +121,7 @@ impl Ic3 {
 
     pub fn handle_blocked(&mut self, po: ProofObligation, conflict: Cube) {
         let (frame, core) = self
-            .generalize(po.frame, conflict, po.successor.as_ref())
+            .generalize(po.frame, conflict, po.depth, po.successor.as_ref())
             .unwrap();
         if frame <= self.depth() {
             self.obligations
@@ -144,16 +147,21 @@ impl Ic3 {
             if self.frames.trivial_contained(po.frame, &po.cube) {
                 continue;
             }
+            if let Some(conflict) = self.blocked.get(&(po.frame, po.cube.clone())) {
+                self.handle_blocked(po, conflict.clone());
+                self.share.statistic.lock().unwrap().test_d += 1;
+                continue;
+            }
             // if self.sat_contained(po.frame, &po.cube) {
             //     continue;
             // }
             match self.blocked(po.frame, &po.cube) {
-                BlockResult::Yes(conflict) => {
-                    let conflict = conflict.get_conflict();
+                BlockResult::Yes(blocked) => {
+                    let conflict = self.blocked_get_conflict(&blocked);
                     self.handle_blocked(po, conflict);
                 }
-                BlockResult::No(model) => {
-                    let model = model.get_model();
+                BlockResult::No(unblocked) => {
+                    let model = self.unblocked_get_model(&unblocked);
                     self.obligations.add(ProofObligation::new(
                         po.frame - 1,
                         model,
@@ -176,8 +184,8 @@ impl Ic3 {
                 if !self.frames[frame_idx].contains(&cube) {
                     continue;
                 }
-                if let BlockResult::Yes(conflict) = self.blocked(frame_idx + 1, &cube) {
-                    let conflict = conflict.get_conflict();
+                if let BlockResult::Yes(blocked) = self.blocked(frame_idx + 1, &cube) {
+                    let conflict = self.blocked_get_conflict(&blocked);
                     self.add_cube(frame_idx + 1, conflict);
                     if self.share.args.cav23 {
                         self.cav23_activity.pump_cube_activity(&cube);

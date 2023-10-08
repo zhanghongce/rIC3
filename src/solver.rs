@@ -108,6 +108,13 @@ impl Ic3 {
         } else {
             self.share.aig.bads[0]
         };
+        if self
+            .blocked
+            .contains_key(&(self.depth() + 1, self.share.bad.clone()))
+        {
+            self.share.statistic.lock().unwrap().test_d += 1;
+            return None;
+        }
         if let SatResult::Sat(model) = self.solvers.last_mut().unwrap().solve(&[bad.to_lit()]) {
             self.share.statistic.lock().unwrap().num_get_bad_state += 1;
             // let cex = self
@@ -119,8 +126,9 @@ impl Ic3 {
         None
     }
 
-    fn blocked_inner<'a>(&'a mut self, frame: usize, cube: &Cube) -> BlockResult<'a> {
-        let solver = &mut self.solvers[frame - 1].solver;
+    fn blocked_inner(&mut self, frame: usize, cube: &Cube) -> BlockResult {
+        let solver_idx = frame - 1;
+        let solver = &mut self.solvers[solver_idx].solver;
         let start = Instant::now();
         let mut assumption = self.share.state_transform.cube_next(cube);
         let act = solver.new_var().into();
@@ -134,21 +142,16 @@ impl Ic3 {
             SatResult::Sat(_) => {
                 solver.release_var(act);
                 BlockResult::No(BlockResultNo {
-                    solver,
-                    share: self.share.clone(),
+                    solver_idx,
                     assumption,
-                    lift: &mut self.lift,
-                    activity: &self.activity,
-                    cav23_activity: &self.cav23_activity,
                 })
             }
             SatResult::Unsat(_) => {
                 solver.release_var(act);
                 BlockResult::Yes(BlockResultYes {
-                    solver,
+                    solver_idx,
                     cube: cube.clone(),
                     assumption,
-                    share: self.share.clone(),
                 })
             }
         };
@@ -156,7 +159,7 @@ impl Ic3 {
         res
     }
 
-    pub fn blocked<'a>(&'a mut self, frame: usize, cube: &Cube) -> BlockResult<'a> {
+    pub fn blocked(&mut self, frame: usize, cube: &Cube) -> BlockResult {
         self.pic3_sync();
         assert!(!cube_subsume_init(&self.share.init, cube));
         let solver = &mut self.solvers[frame - 1];
@@ -167,42 +170,48 @@ impl Ic3 {
         self.blocked_inner(frame, cube)
     }
 
-    pub fn blocked_with_ordered<'a>(
-        &'a mut self,
+    pub fn blocked_with_ordered(
+        &mut self,
         frame: usize,
         cube: &Cube,
         ascending: bool,
-    ) -> BlockResult<'a> {
+    ) -> BlockResult {
         let mut ordered_cube = cube.clone();
         self.activity.sort_by_activity(&mut ordered_cube, ascending);
         self.blocked(frame, &ordered_cube)
     }
 }
 
-pub enum BlockResult<'a> {
-    Yes(BlockResultYes<'a>),
-    No(BlockResultNo<'a>),
+pub enum BlockResult {
+    Yes(BlockResultYes),
+    No(BlockResultNo),
 }
 
-pub struct BlockResultYes<'a> {
-    solver: &'a mut Solver,
+#[derive(Debug)]
+pub struct BlockResultYes {
+    solver_idx: usize,
     cube: Cube,
     assumption: Cube,
-    share: Arc<BasicShare>,
 }
 
-impl BlockResultYes<'_> {
-    pub fn get_conflict(self) -> Cube {
-        let conflict = unsafe { self.solver.get_conflict() };
+#[derive(Debug)]
+pub struct BlockResultNo {
+    solver_idx: usize,
+    assumption: Cube,
+}
+
+impl Ic3 {
+    pub fn blocked_get_conflict(&mut self, block: &BlockResultYes) -> Cube {
+        let conflict = unsafe { self.solvers[block.solver_idx].solver.get_conflict() };
         let mut ans = Cube::new();
-        for i in 0..self.cube.len() {
-            if conflict.has(!self.assumption[i]) {
-                ans.push(self.cube[i]);
+        for i in 0..block.cube.len() {
+            if conflict.has(!block.assumption[i]) {
+                ans.push(block.cube[i]);
             }
         }
         if cube_subsume_init(&self.share.init, &ans) {
             ans = Cube::new();
-            let new = *self
+            let new = *block
                 .cube
                 .iter()
                 .find(|l| {
@@ -212,43 +221,28 @@ impl BlockResultYes<'_> {
                         .is_some_and(|i| *i != l.polarity())
                 })
                 .unwrap();
-            for i in 0..self.cube.len() {
-                if conflict.has(!self.assumption[i]) || self.cube[i] == new {
-                    ans.push(self.cube[i]);
+            for i in 0..block.cube.len() {
+                if conflict.has(!block.assumption[i]) || block.cube[i] == new {
+                    ans.push(block.cube[i]);
                 }
             }
             assert!(!cube_subsume_init(&self.share.init, &ans));
         }
         ans
     }
-}
 
-pub struct BlockResultNo<'a> {
-    solver: &'a mut Solver,
-    share: Arc<BasicShare>,
-    assumption: Cube,
-    lift: &'a mut Lift,
-    activity: &'a Activity,
-    cav23_activity: &'a Activity,
-}
-
-impl BlockResultNo<'_> {
-    pub fn get_model(self) -> Cube {
-        let model = unsafe { self.solver.get_model() };
-        self.lift
-            .minimal_predecessor(self.assumption, model, self.activity, self.cav23_activity)
-        // let res = generalize_by_ternary_simulation(
-        //     &self.share.as_ref().aig,
-        //     model,
-        //     &AigCube::from_cube(take(&mut self.assumption)),
-        // )
-        // .to_cube();
-        // res
+    pub fn unblocked_get_model(&mut self, unblock: &BlockResultNo) -> Cube {
+        let model = unsafe { self.solvers[unblock.solver_idx].solver.get_model() };
+        self.lift.minimal_predecessor(
+            &unblock.assumption,
+            model,
+            &self.activity,
+            &self.cav23_activity,
+        )
     }
 
-    pub fn lit_value(&mut self, lit: Lit) -> bool {
-        let model = unsafe { self.solver.get_model() };
-        model.lit_value(lit)
+    pub fn unblocked_model_lit_value(&mut self, unblock: &BlockResultNo, lit: Lit) -> bool {
+        unsafe { self.solvers[unblock.solver_idx].solver.get_model() }.lit_value(lit)
     }
 }
 
@@ -276,7 +270,7 @@ impl Lift {
 
     pub fn minimal_predecessor<'a, M: SatModel<'a>>(
         &mut self,
-        successor: Cube,
+        successor: &Cube,
         model: M,
         activity: &Activity,
         cav23_activity: &Activity,

@@ -9,14 +9,14 @@ use std::{
     sync::Arc,
 };
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct Frames {
     pub frames: Vec<Vec<Cube>>,
 }
 
 impl Frames {
     pub fn new() -> Self {
-        Self { frames: Vec::new() }
+        Self::default()
     }
 
     pub fn new_frame(&mut self) {
