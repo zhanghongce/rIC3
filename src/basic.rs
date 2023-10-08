@@ -25,16 +25,16 @@ pub struct BasicShare {
 pub struct ProofObligation {
     pub frame: usize,
     pub cube: Cube,
-    pub priority: usize,
+    pub depth: usize,
     pub successor: Option<Cube>,
 }
 
 impl ProofObligation {
-    pub fn new(frame: usize, cube: Cube, successor: Option<Cube>) -> Self {
+    pub fn new(frame: usize, cube: Cube, depth: usize, successor: Option<Cube>) -> Self {
         Self {
             frame,
             cube,
-            priority: 0,
+            depth,
             successor,
         }
     }
@@ -49,14 +49,13 @@ impl PartialOrd for ProofObligation {
 impl Ord for ProofObligation {
     fn cmp(&self, other: &Self) -> Ordering {
         match other.frame.cmp(&self.frame) {
-            Ordering::Equal => other.priority.cmp(&self.priority),
+            Ordering::Equal => other.depth.cmp(&self.depth),
             ord => ord,
         }
     }
 }
 
 pub struct ProofObligationQueue {
-    priority: usize,
     obligations: BinaryHeap<ProofObligation>,
     num: Vec<usize>,
 }
@@ -64,7 +63,6 @@ pub struct ProofObligationQueue {
 impl ProofObligationQueue {
     pub fn new() -> Self {
         Self {
-            priority: 0,
             obligations: BinaryHeap::new(),
             num: Vec::new(),
         }
@@ -72,8 +70,6 @@ impl ProofObligationQueue {
 
     pub fn add(&mut self, mut po: ProofObligation) {
         po.cube.sort_by_key(|x| x.var());
-        self.priority += 1;
-        po.priority = self.priority;
         if self.num.len() <= po.frame {
             self.num.resize(po.frame + 1, 0);
         }

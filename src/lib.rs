@@ -106,8 +106,8 @@ impl Ic3 {
         cube: Cube,
         successor: Option<&Cube>,
     ) -> Result<(usize, Cube), Ic3Error> {
-        let cube = self.new_mic(frame, cube, !self.share.args.ctg, successor, true)?;
-        // let cube = self.mic(frame, cube, !self.share.args.ctg)?;
+        // let cube = self.new_mic(frame, cube, !self.share.args.ctg, successor, true)?;
+        let cube = self.mic(frame, cube, !self.share.args.ctg)?;
         for i in frame + 1..=self.depth() {
             if let BlockResult::No(_) = self.blocked(i, &cube) {
                 return Ok((i, cube));
@@ -122,7 +122,7 @@ impl Ic3 {
             .unwrap();
         if frame <= self.depth() {
             self.obligations
-                .add(ProofObligation::new(frame, po.cube, po.successor));
+                .add(ProofObligation::new(frame, po.cube, po.depth, po.successor));
         }
         self.add_cube(frame - 1, core);
     }
@@ -130,7 +130,7 @@ impl Ic3 {
     pub fn block(&mut self, frame: usize, cube: Cube) -> Result<bool, Ic3Error> {
         assert!(self.obligations.is_empty());
         self.obligations
-            .add(ProofObligation::new(frame, cube, None));
+            .add(ProofObligation::new(frame, cube, 0, None));
         while let Some(po) = self.obligations.pop() {
             if po.frame == 0 {
                 return Ok(false);
@@ -157,6 +157,7 @@ impl Ic3 {
                     self.obligations.add(ProofObligation::new(
                         po.frame - 1,
                         model,
+                        po.depth + 1,
                         Some(po.cube.clone()),
                     ));
                     self.obligations.add(po);
