@@ -7,7 +7,7 @@ edition = "2021"
 
 [dependencies]
 aig = { path = "../aig-rs" }
-sat-solver = { path = "../sat-solver" }
+minisat = { path = "../minisat-rs" }
 logic-form = { path = "../logic-form" }
 clap = { version = "4.3.0" , features = ["derive"] }
 pic3 = { path = "../pic3/pic3" }

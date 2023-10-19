@@ -1,22 +1,17 @@
 use super::statistic::Statistic;
 use crate::command::Args;
-use crate::utils::state_transform::StateTransform;
+use crate::model::Model;
 use crate::Ic3;
 use aig::Aig;
-use logic_form::Cnf;
 use logic_form::Cube;
-use logic_form::Var;
 use std::cmp::Ordering;
 use std::collections::BinaryHeap;
-use std::collections::HashMap;
 use std::sync::Mutex;
 
 pub struct BasicShare {
     pub aig: Aig,
-    pub transition_cnf: Cnf,
-    pub state_transform: StateTransform,
     pub args: Args,
-    pub init: HashMap<Var, bool>,
+    pub model: Model,
     pub statistic: Mutex<Statistic>,
     pub bad: Cube,
 }

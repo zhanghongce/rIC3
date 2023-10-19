@@ -5,24 +5,24 @@ mod basic;
 mod command;
 mod frames;
 mod mic;
+mod model;
 mod solver;
 mod statistic;
 mod utils;
 mod verify;
 
 use crate::basic::ProofObligation;
-use crate::utils::state_transform::StateTransform;
 use crate::{basic::BasicShare, statistic::Statistic};
 use crate::{
     basic::{Ic3Error, ProofObligationQueue},
     solver::Lift,
-    utils::relation::cube_subsume_init,
 };
 use activity::Activity;
 use aig::Aig;
 pub use command::Args;
 use frames::Frames;
-use logic_form::{Cube, Lit};
+use logic_form::{Cube, Dnf, Lit};
+use model::Model;
 use pic3::Synchronizer;
 use solver::{BlockResult, Ic3Solver};
 use std::collections::HashMap;
@@ -41,18 +41,14 @@ pub struct Ic3 {
     pub obligations: ProofObligationQueue,
     pub lift: Lift,
     pub stop_block: bool,
-    pub blocked: HashMap<(usize, Cube), Cube>,
+    // pub blocked: HashMap<(usize, Cube), Cube>,
 }
 
 impl Ic3 {
     pub fn new(args: Args, pic3_synchronizer: Option<Synchronizer>) -> Self {
         let aig = Aig::from_file(args.model.as_ref().unwrap()).unwrap();
+        let model = Model::from_aig(&aig);
         let transition_cnf = aig.get_cnf();
-        let mut init = HashMap::new();
-        for l in aig.latch_init_cube().to_cube() {
-            init.insert(l.var(), l.polarity());
-        }
-        let state_transform = StateTransform::new(&aig);
         let bad = Cube::from([if aig.bads.is_empty() {
             aig.outputs[0]
         } else {
@@ -61,10 +57,8 @@ impl Ic3 {
         .to_lit()]);
         let share = Arc::new(BasicShare {
             aig,
-            transition_cnf,
-            state_transform,
             args,
-            init,
+            model,
             statistic: Mutex::new(Statistic::default()),
             bad,
         });
@@ -78,7 +72,7 @@ impl Ic3 {
             share,
             obligations: ProofObligationQueue::new(),
             stop_block: false,
-            blocked: HashMap::new(),
+            // blocked: HashMap::new(),
         };
         res.new_frame();
         for i in 0..res.share.aig.latchs.len() {
@@ -109,8 +103,8 @@ impl Ic3 {
         depth: usize,
         successor: Option<&Cube>,
     ) -> Result<(usize, Cube), Ic3Error> {
-        let cube = self.new_mic(frame, cube, !self.share.args.ctg, depth, successor)?;
-        // let cube = self.mic(frame, cube, !self.share.args.ctg)?;
+        // let cube = self.new_mic(frame, cube, !self.share.args.ctg, depth, successor)?;
+        let cube = self.mic(frame, cube, !self.share.args.ctg)?;
         for i in frame + 1..=self.depth() {
             if let BlockResult::No(_) = self.blocked(i, &cube) {
                 return Ok((i, cube));
@@ -139,7 +133,7 @@ impl Ic3 {
                 return Ok(false);
             }
             self.check_stop_block()?;
-            assert!(!cube_subsume_init(&self.share.init, &po.cube));
+            assert!(!self.share.model.cube_subsume_init(&po.cube));
             if self.share.args.verbose {
                 self.obligations.statistic();
                 self.statistic();
@@ -147,11 +141,11 @@ impl Ic3 {
             if self.frames.trivial_contained(po.frame, &po.cube) {
                 continue;
             }
-            if let Some(conflict) = self.blocked.get(&(po.frame, po.cube.clone())) {
-                self.handle_blocked(po, conflict.clone());
-                self.share.statistic.lock().unwrap().test_d += 1;
-                continue;
-            }
+            // if let Some(conflict) = self.blocked.get(&(po.frame, po.cube.clone())) {
+            //     self.handle_blocked(po, conflict.clone());
+            //     self.share.statistic.lock().unwrap().test_d += 1;
+            //     continue;
+            // }
             // if self.sat_contained(po.frame, &po.cube) {
             //     continue;
             // }
@@ -230,13 +224,13 @@ impl Ic3 {
             if let Some(pic3_synchronizer) = self.pic3_synchronizer.as_mut() {
                 pic3_synchronizer.frame_blocked(depth);
             }
-            // println!(
-            //     "[{}:{}] frame: {}, time: {:?}",
-            //     file!(),
-            //     line!(),
-            //     self.depth(),
-            //     blocked_time,
-            // );
+            println!(
+                "[{}:{}] frame: {}, time: {:?}",
+                file!(),
+                line!(),
+                self.depth(),
+                blocked_time,
+            );
             if let Some(pic3_synchronizer) = self.pic3_synchronizer.as_mut() {
                 pic3_synchronizer.sync();
             }

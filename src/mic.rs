@@ -1,16 +1,13 @@
 use super::{solver::BlockResult, Ic3};
-use crate::{
-    basic::{Ic3Error, ProofObligation},
-    utils::relation::cube_subsume_init,
-};
+use crate::basic::{Ic3Error, ProofObligation};
 use logic_form::{Cube, Lit};
-use sat_solver::{SatModel, SatResult};
+use minisat::SatResult;
 use std::{collections::HashSet, time::Instant};
 
 impl Ic3 {
     fn down(&mut self, frame: usize, cube: &Cube) -> Result<Option<Cube>, Ic3Error> {
         self.check_stop_block()?;
-        if cube_subsume_init(&self.share.init, cube) {
+        if self.share.model.cube_subsume_init(cube) {
             return Ok(None);
         }
         self.share.statistic.lock().unwrap().num_down_blocked += 1;
@@ -31,14 +28,14 @@ impl Ic3 {
         let mut ctgs = 0;
         loop {
             self.check_stop_block()?;
-            if cube_subsume_init(&self.share.init, &cube) {
+            if self.share.model.cube_subsume_init(&cube) {
                 return Ok(None);
             }
             match self.blocked(frame, &cube) {
                 BlockResult::Yes(blocked) => return Ok(Some(self.blocked_get_conflict(&blocked))),
                 BlockResult::No(unblocked) => {
                     let mut model = self.unblocked_get_model(&unblocked);
-                    if ctgs < 3 && frame > 1 && !cube_subsume_init(&self.share.init, &model) {
+                    if ctgs < 3 && frame > 1 && !self.share.model.cube_subsume_init(&model) {
                         if self.share.args.cav23 {
                             self.cav23_activity.sort_by_activity(&mut model, false);
                         }
@@ -239,8 +236,8 @@ impl Ic3 {
                         self.share.statistic.lock().unwrap().test_c += 1;
                         self.add_temporary_cube(frame + 1, &conflict);
                         assert!(successor.is_sorted_by_key(|l| l.var()));
-                        self.blocked
-                            .insert((frame + 1, successor.clone()), conflict);
+                        // self.blocked
+                        //     .insert((frame + 1, successor.clone()), conflict);
                         break;
                     }
                     BlockResult::No(unblocked) => {
@@ -309,8 +306,8 @@ impl Ic3 {
                         }
                     }
                 } else {
-                    self.blocked
-                        .insert((frame + 1, self.share.bad.clone()), self.share.bad.clone());
+                    // self.blocked
+                    //     .insert((frame + 1, self.share.bad.clone()), self.share.bad.clone());
                     self.share.statistic.lock().unwrap().test_c += 1;
                     break;
                 }

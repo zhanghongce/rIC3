@@ -1,14 +1,7 @@
 use super::{basic::BasicShare, frames::Frames};
-use crate::{
-    activity::Activity,
-    utils::{generalize::generalize_by_ternary_simulation, relation::cube_subsume_init},
-    Ic3,
-};
+use crate::{activity::Activity, utils::generalize::generalize_by_ternary_simulation, Ic3};
 use logic_form::{Clause, Cube, Lit, Var};
-use sat_solver::{
-    minisat::{Conflict, Model, Solver},
-    SatModel, SatResult, SatSolver, UnsatConflict,
-};
+use minisat::{SatResult, Solver};
 use std::{mem::take, sync::Arc, time::Instant};
 
 pub struct Ic3Solver {
@@ -26,8 +19,9 @@ impl Ic3Solver {
             solver.set_random_seed(seed as f64);
             solver.set_rnd_init_act(true);
         }
-        solver.add_cnf(&share.as_ref().transition_cnf);
-        solver.simplify();
+        let false_lit: Lit = solver.new_var().into();
+        solver.add_clause(&[!false_lit]);
+        share.model.load_trans(&mut solver);
         Self {
             solver,
             frame,
@@ -70,15 +64,15 @@ impl Ic3Solver {
     }
 
     pub fn simplify(&mut self) {
-        self.solver.simplify()
+        assert!(self.solver.simplify())
     }
 
-    pub fn set_polarity(&mut self, lit: Lit) {
-        self.solver.set_polarity(lit)
+    pub fn set_polarity(&mut self, var: Var, pol: Option<bool>) {
+        self.solver.set_polarity(var, pol)
     }
 
     #[allow(unused)]
-    pub fn solve<'a>(&'a mut self, assumptions: &[Lit]) -> SatResult<Model<'a>, Conflict<'a>> {
+    pub fn solve<'a>(&'a mut self, assumptions: &[Lit]) -> SatResult<'a> {
         self.solver.solve(assumptions)
     }
 
@@ -108,13 +102,13 @@ impl Ic3 {
         } else {
             self.share.aig.bads[0]
         };
-        if self
-            .blocked
-            .contains_key(&(self.depth() + 1, self.share.bad.clone()))
-        {
-            self.share.statistic.lock().unwrap().test_d += 1;
-            return None;
-        }
+        // if self
+        //     .blocked
+        //     .contains_key(&(self.depth() + 1, self.share.bad.clone()))
+        // {
+        //     self.share.statistic.lock().unwrap().test_d += 1;
+        //     return None;
+        // }
         if let SatResult::Sat(model) = self.solvers.last_mut().unwrap().solve(&[bad.to_lit()]) {
             self.share.statistic.lock().unwrap().num_get_bad_state += 1;
             // let cex = self
@@ -130,7 +124,7 @@ impl Ic3 {
         let solver_idx = frame - 1;
         let solver = &mut self.solvers[solver_idx].solver;
         let start = Instant::now();
-        let mut assumption = self.share.state_transform.cube_next(cube);
+        let mut assumption = self.share.model.cube_next(cube);
         let act = solver.new_var().into();
         assumption.push(act);
         let mut tmp_cls = !cube;
@@ -161,7 +155,7 @@ impl Ic3 {
 
     pub fn blocked(&mut self, frame: usize, cube: &Cube) -> BlockResult {
         self.pic3_sync();
-        assert!(!cube_subsume_init(&self.share.init, cube));
+        assert!(!self.share.model.cube_subsume_init(cube));
         let solver = &mut self.solvers[frame - 1];
         solver.num_act += 1;
         if solver.num_act > 300 {
@@ -209,13 +203,14 @@ impl Ic3 {
                 ans.push(block.cube[i]);
             }
         }
-        if cube_subsume_init(&self.share.init, &ans) {
+        if self.share.model.cube_subsume_init(&ans) {
             ans = Cube::new();
             let new = *block
                 .cube
                 .iter()
                 .find(|l| {
                     self.share
+                        .model
                         .init
                         .get(&l.var())
                         .is_some_and(|i| *i != l.polarity())
@@ -226,7 +221,7 @@ impl Ic3 {
                     ans.push(block.cube[i]);
                 }
             }
-            assert!(!cube_subsume_init(&self.share.init, &ans));
+            assert!(!self.share.model.cube_subsume_init(&ans));
         }
         ans
     }
@@ -259,8 +254,9 @@ impl Lift {
             solver.set_random_seed(seed as f64);
             solver.set_rnd_init_act(true);
         }
-        solver.add_cnf(&share.as_ref().transition_cnf);
-        solver.simplify();
+        let false_lit: Lit = solver.new_var().into();
+        solver.add_clause(&[!false_lit]);
+        share.model.load_trans(&mut solver);
         Self {
             solver,
             num_act: 0,
@@ -268,10 +264,10 @@ impl Lift {
         }
     }
 
-    pub fn minimal_predecessor<'a, M: SatModel<'a>>(
+    pub fn minimal_predecessor<'a>(
         &mut self,
         successor: &Cube,
-        model: M,
+        model: minisat::Model<'a>,
         activity: &Activity,
         cav23_activity: &Activity,
     ) -> Cube {

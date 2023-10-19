@@ -1,7 +1,7 @@
-use crate::{utils::relation::cube_subsume_init, Ic3};
+use crate::Ic3;
 use logic_form::Cube;
+use minisat::SatResult;
 use pic3::{Lemma, Message};
-use sat_solver::SatResult;
 use std::{
     fmt::Debug,
     mem::take,
@@ -83,7 +83,7 @@ impl Ic3 {
         if self.frames.trivial_contained(frame, &cube) {
             return;
         }
-        assert!(!cube_subsume_init(&self.share.init, &cube));
+        assert!(!self.share.model.cube_subsume_init(&cube));
         let mut begin = 1;
         for i in 1..=frame {
             let cubes = take(&mut self.frames[i]);
@@ -125,7 +125,7 @@ impl Ic3 {
                         if self.frames.trivial_contained(frame_idx, &cube) {
                             return;
                         }
-                        assert!(!cube_subsume_init(&self.share.init, &cube));
+                        assert!(!self.share.model.cube_subsume_init(&cube));
                         let mut begin = 1;
                         for i in 1..=frame_idx {
                             let cubes = take(&mut self.frames[i]);
