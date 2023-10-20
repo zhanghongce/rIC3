@@ -21,9 +21,8 @@ use activity::Activity;
 use aig::Aig;
 pub use command::Args;
 use frames::Frames;
-use logic_form::{Cube, Dnf, Lit};
+use logic_form::{Cube, Lit};
 use model::Model;
-use pic3::Synchronizer;
 use solver::{BlockResult, Ic3Solver};
 use std::collections::HashMap;
 use std::{
@@ -36,19 +35,16 @@ pub struct Ic3 {
     pub frames: Frames,
     pub share: Arc<BasicShare>,
     pub activity: Activity,
-    pub pic3_synchronizer: Option<Synchronizer>,
     pub cav23_activity: Activity,
     pub obligations: ProofObligationQueue,
     pub lift: Lift,
-    pub stop_block: bool,
-    // pub blocked: HashMap<(usize, Cube), Cube>,
+    pub blocked: HashMap<(usize, Cube), Cube>,
 }
 
 impl Ic3 {
-    pub fn new(args: Args, pic3_synchronizer: Option<Synchronizer>) -> Self {
+    pub fn new(args: Args) -> Self {
         let aig = Aig::from_file(args.model.as_ref().unwrap()).unwrap();
         let model = Model::from_aig(&aig);
-        let transition_cnf = aig.get_cnf();
         let bad = Cube::from([if aig.bads.is_empty() {
             aig.outputs[0]
         } else {
@@ -67,12 +63,10 @@ impl Ic3 {
             frames: Frames::new(),
             activity: Activity::new(),
             cav23_activity: Activity::new(),
-            pic3_synchronizer,
             lift: Lift::new(share.clone()),
             share,
             obligations: ProofObligationQueue::new(),
-            stop_block: false,
-            // blocked: HashMap::new(),
+            blocked: HashMap::new(),
         };
         res.new_frame();
         for i in 0..res.share.aig.latchs.len() {
@@ -93,7 +87,6 @@ impl Ic3 {
         self.frames.new_frame();
         self.solvers
             .push(Ic3Solver::new(self.share.clone(), self.solvers.len()));
-        self.stop_block = false;
     }
 
     fn generalize(
@@ -132,7 +125,6 @@ impl Ic3 {
             if po.frame == 0 {
                 return Ok(false);
             }
-            self.check_stop_block()?;
             assert!(!self.share.model.cube_subsume_init(&po.cube));
             if self.share.args.verbose {
                 self.obligations.statistic();
@@ -141,11 +133,11 @@ impl Ic3 {
             if self.frames.trivial_contained(po.frame, &po.cube) {
                 continue;
             }
-            // if let Some(conflict) = self.blocked.get(&(po.frame, po.cube.clone())) {
-            //     self.handle_blocked(po, conflict.clone());
-            //     self.share.statistic.lock().unwrap().test_d += 1;
-            //     continue;
-            // }
+            if let Some(conflict) = self.blocked.get(&(po.frame, po.cube.clone())) {
+                self.handle_blocked(po, conflict.clone());
+                self.share.statistic.lock().unwrap().test_d += 1;
+                continue;
+            }
             // if self.sat_contained(po.frame, &po.cube) {
             //     continue;
             // }
@@ -201,7 +193,6 @@ impl Ic3 {
             let start = Instant::now();
             let mut trivial = true;
             loop {
-                self.pic3_sync();
                 if let Some(cex) = self.get_bad() {
                     trivial = false;
                     match self.block(self.depth(), cex) {
@@ -211,7 +202,6 @@ impl Ic3 {
                         }
                         Ok(true) => (),
                         Err(Ic3Error::StopBlock) => {
-                            self.stop_block = false;
                             break;
                         }
                     }
@@ -220,20 +210,13 @@ impl Ic3 {
                 }
             }
             let blocked_time = start.elapsed();
-            let depth = self.depth();
-            if let Some(pic3_synchronizer) = self.pic3_synchronizer.as_mut() {
-                pic3_synchronizer.frame_blocked(depth);
-            }
-            println!(
-                "[{}:{}] frame: {}, time: {:?}",
-                file!(),
-                line!(),
-                self.depth(),
-                blocked_time,
-            );
-            if let Some(pic3_synchronizer) = self.pic3_synchronizer.as_mut() {
-                pic3_synchronizer.sync();
-            }
+            // println!(
+            //     "[{}:{}] frame: {}, time: {:?}",
+            //     file!(),
+            //     line!(),
+            //     self.depth(),
+            //     blocked_time,
+            // );
             self.share.statistic.lock().unwrap().overall_block_time += blocked_time;
             self.new_frame();
             let start = Instant::now();

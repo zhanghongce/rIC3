@@ -1,7 +1,6 @@
 use super::statistic::Statistic;
 use crate::command::Args;
 use crate::model::Model;
-use crate::Ic3;
 use aig::Aig;
 use logic_form::Cube;
 use std::cmp::Ordering;
@@ -90,10 +89,4 @@ impl ProofObligationQueue {
 #[derive(Debug)]
 pub enum Ic3Error {
     StopBlock,
-}
-
-impl Ic3 {
-    pub fn check_stop_block(&self) -> Result<(), Ic3Error> {
-        (!self.stop_block).then_some(()).ok_or(Ic3Error::StopBlock)
-    }
 }

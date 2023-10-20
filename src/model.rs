@@ -1,5 +1,5 @@
 use aig::Aig;
-use logic_form::{Clause, Cnf, Cube, Dnf, Lit, Var};
+use logic_form::{Clause, Cnf, Cube, Lit, Var};
 use minisat::{SimpSolver, Solver};
 use std::collections::HashMap;
 
@@ -53,7 +53,8 @@ impl Model {
             logic.push(*c);
         }
         logic.push(aig_bad);
-        let mut trans = aig.get_cnf();
+        let trans = aig.get_optimized_cnf(&logic);
+        // let trans = aig.get_cnf();
         for tran in trans.iter() {
             simp_solver.add_clause(tran);
         }
@@ -62,16 +63,12 @@ impl Model {
             let p = p.lit();
             simp_solver.add_clause(&Clause::from([l, !p]));
             simp_solver.add_clause(&Clause::from([!l, p]));
-            trans.push(Clause::from([l, !p]));
-            trans.push(Clause::from([!l, p]));
         }
         for c in constraints.iter() {
             simp_solver.add_clause(&Clause::from([*c]));
         }
-        dbg!(trans.len());
         simp_solver.eliminate(true);
         let trans = simp_solver.clauses();
-        dbg!(&trans.len());
 
         let mut next_map = HashMap::new();
         let mut previous_map = HashMap::new();

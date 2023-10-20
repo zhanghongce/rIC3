@@ -1,12 +1,10 @@
 use crate::Ic3;
 use logic_form::Cube;
 use minisat::SatResult;
-use pic3::{Lemma, Message};
 use std::{
     fmt::Debug,
     mem::take,
     ops::{Deref, DerefMut},
-    sync::Arc,
 };
 
 #[derive(Debug, Default)]
@@ -96,12 +94,6 @@ impl Ic3 {
                 }
             }
         }
-        if let Some(synchronizer) = &mut self.pic3_synchronizer {
-            synchronizer.share_lemma(Lemma {
-                frame_idx: frame,
-                cube: cube.clone(),
-            })
-        }
         let clause = !&cube;
         self.frames[frame].push(cube);
         for i in begin..=frame {
@@ -111,47 +103,5 @@ impl Ic3 {
 
     pub fn sat_contained(&mut self, frame: usize, cube: &Cube) -> bool {
         matches!(self.solvers[frame].solve(cube), SatResult::Unsat(_))
-    }
-
-    pub fn pic3_sync(&mut self) {
-        if let Some(synchronizer) = self.pic3_synchronizer.as_mut() {
-            while let Some(message) = synchronizer.receive_message() {
-                match message {
-                    Message::Lemma(Lemma {
-                        frame_idx,
-                        mut cube,
-                    }) => {
-                        cube.sort_by_key(|x| x.var());
-                        if self.frames.trivial_contained(frame_idx, &cube) {
-                            return;
-                        }
-                        assert!(!self.share.model.cube_subsume_init(&cube));
-                        let mut begin = 1;
-                        for i in 1..=frame_idx {
-                            let cubes = take(&mut self.frames[i]);
-                            for c in cubes {
-                                if c.ordered_subsume(&cube) {
-                                    begin = i + 1;
-                                }
-                                if !cube.ordered_subsume(&c) {
-                                    self.frames[i].push(c);
-                                }
-                            }
-                        }
-                        self.frames[frame_idx].push(cube.clone());
-                        let clause = Arc::new(!cube);
-                        for i in begin..=frame_idx {
-                            self.solvers[i].add_clause(&clause);
-                        }
-                    }
-                    Message::FrameBlocked(depth) => {
-                        assert!(self.solvers.len() > depth);
-                        if depth == self.solvers.len() - 1 {
-                            self.stop_block = true;
-                        }
-                    }
-                }
-            }
-        }
     }
 }

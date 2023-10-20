@@ -1,5 +1,5 @@
 use super::{basic::BasicShare, frames::Frames};
-use crate::{activity::Activity, utils::generalize::generalize_by_ternary_simulation, Ic3};
+use crate::{activity::Activity, Ic3};
 use logic_form::{Clause, Cube, Lit, Var};
 use minisat::{SatResult, Solver};
 use std::{mem::take, sync::Arc, time::Instant};
@@ -102,19 +102,22 @@ impl Ic3 {
         } else {
             self.share.aig.bads[0]
         };
-        // if self
-        //     .blocked
-        //     .contains_key(&(self.depth() + 1, self.share.bad.clone()))
-        // {
-        //     self.share.statistic.lock().unwrap().test_d += 1;
-        //     return None;
-        // }
+        if self
+            .blocked
+            .contains_key(&(self.depth() + 1, self.share.bad.clone()))
+        {
+            self.share.statistic.lock().unwrap().test_d += 1;
+            return None;
+        }
         if let SatResult::Sat(model) = self.solvers.last_mut().unwrap().solve(&[bad.to_lit()]) {
             self.share.statistic.lock().unwrap().num_get_bad_state += 1;
-            // let cex = self
-            //     .lift
-            //     .minimal_predecessor(Cube::from([bad]), model, &self.activity);
-            let cex = generalize_by_ternary_simulation(&self.share.aig, model, &[bad]).to_cube();
+            let cex = self.lift.minimal_predecessor(
+                &self.share.bad,
+                model,
+                &self.activity,
+                &self.cav23_activity,
+            );
+            // let cex = generalize_by_ternary_simulation(&self.share.aig, model, &[bad]).to_cube();
             return Some(cex);
         }
         None
@@ -133,32 +136,26 @@ impl Ic3 {
         let res = solver.solve(&assumption);
         let act = !assumption.pop().unwrap();
         let res = match res {
-            SatResult::Sat(_) => {
-                solver.release_var(act);
-                BlockResult::No(BlockResultNo {
-                    solver_idx,
-                    assumption,
-                })
-            }
-            SatResult::Unsat(_) => {
-                solver.release_var(act);
-                BlockResult::Yes(BlockResultYes {
-                    solver_idx,
-                    cube: cube.clone(),
-                    assumption,
-                })
-            }
+            SatResult::Sat(_) => BlockResult::No(BlockResultNo {
+                solver_idx,
+                assumption,
+            }),
+            SatResult::Unsat(_) => BlockResult::Yes(BlockResultYes {
+                solver_idx,
+                cube: cube.clone(),
+                assumption,
+            }),
         };
+        solver.release_var(act);
         self.share.statistic.lock().unwrap().blocked_check_time += start.elapsed();
         res
     }
 
     pub fn blocked(&mut self, frame: usize, cube: &Cube) -> BlockResult {
-        self.pic3_sync();
         assert!(!self.share.model.cube_subsume_init(cube));
         let solver = &mut self.solvers[frame - 1];
         solver.num_act += 1;
-        if solver.num_act > 300 {
+        if solver.num_act > 1000 {
             solver.reset(&self.frames)
         }
         self.blocked_inner(frame, cube)
@@ -272,7 +269,7 @@ impl Lift {
         cav23_activity: &Activity,
     ) -> Cube {
         self.num_act += 1;
-        if self.num_act > 300 {
+        if self.num_act > 1000 {
             *self = Self::new(self.share.clone())
         }
         let act: Lit = self.solver.new_var().into();

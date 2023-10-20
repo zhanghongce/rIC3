@@ -50,7 +50,7 @@ fn main() {
         args.model = Some(aig.to_string());
     }
 
-    let mut ic3 = Ic3::new(args, None);
+    let mut ic3 = Ic3::new(args);
     let start = Instant::now();
     dbg!(ic3.check(), start.elapsed());
 }

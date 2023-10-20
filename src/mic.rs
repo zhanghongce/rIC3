@@ -6,7 +6,6 @@ use std::{collections::HashSet, time::Instant};
 
 impl Ic3 {
     fn down(&mut self, frame: usize, cube: &Cube) -> Result<Option<Cube>, Ic3Error> {
-        self.check_stop_block()?;
         if self.share.model.cube_subsume_init(cube) {
             return Ok(None);
         }
@@ -27,7 +26,6 @@ impl Ic3 {
         self.share.statistic.lock().unwrap().num_ctg_down += 1;
         let mut ctgs = 0;
         loop {
-            self.check_stop_block()?;
             if self.share.model.cube_subsume_init(&cube) {
                 return Ok(None);
             }
@@ -236,8 +234,8 @@ impl Ic3 {
                         self.share.statistic.lock().unwrap().test_c += 1;
                         self.add_temporary_cube(frame + 1, &conflict);
                         assert!(successor.is_sorted_by_key(|l| l.var()));
-                        // self.blocked
-                        //     .insert((frame + 1, successor.clone()), conflict);
+                        self.blocked
+                            .insert((frame + 1, successor.clone()), conflict);
                         break;
                     }
                     BlockResult::No(unblocked) => {
@@ -306,8 +304,8 @@ impl Ic3 {
                         }
                     }
                 } else {
-                    // self.blocked
-                    //     .insert((frame + 1, self.share.bad.clone()), self.share.bad.clone());
+                    self.blocked
+                        .insert((frame + 1, self.share.bad.clone()), self.share.bad.clone());
                     self.share.statistic.lock().unwrap().test_c += 1;
                     break;
                 }
