@@ -11,8 +11,8 @@ minisat = { path = "../minisat-rs" }
 logic-form = { path = "../logic-form" }
 clap = { version = "4.3.0" , features = ["derive"] }
 rand = "0.8.5"
-cudd = { path = "../cudd-rs" }
 serde_json = "1.0.107"
+serde = { version = "1.0.189", features = ["derive"] }
 
 [profile.release]
 debug = true

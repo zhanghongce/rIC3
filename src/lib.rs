@@ -1,6 +1,7 @@
 #![feature(assert_matches, is_sorted, get_mut_unchecked, format_args_nl)]
 
 mod activity;
+#[allow(dead_code)]
 mod analysis;
 mod basic;
 mod command;
@@ -199,10 +200,6 @@ impl Ic3 {
                     blocked_time,
                 );
             }
-            // self.print_frames();
-            // if self.depth() >= 4 {
-            //     // todo!();
-            // }
             self.share.statistic.lock().unwrap().overall_block_time += blocked_time;
             self.new_frame();
             let start = Instant::now();
@@ -210,6 +207,7 @@ impl Ic3 {
             self.share.statistic.lock().unwrap().overall_propagate_time += start.elapsed();
             if propagate {
                 self.statistic();
+                self.print_frames();
                 if self.share.args.verify {
                     assert!(self.verify());
                 }

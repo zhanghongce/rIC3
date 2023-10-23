@@ -1,13 +1,14 @@
 use crate::Ic3;
 use logic_form::Cube;
 use minisat::SatResult;
+use serde::{Deserialize, Serialize};
 use std::{
     fmt::{self, Debug, Display},
     mem::take,
     ops::{Deref, DerefMut},
 };
 
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Serialize, Deserialize)]
 pub struct Frames {
     pub frames: Vec<Vec<Cube>>,
 }
