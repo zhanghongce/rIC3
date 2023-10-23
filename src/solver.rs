@@ -1,5 +1,5 @@
 use super::{basic::BasicShare, frames::Frames};
-use crate::{activity::Activity, Ic3};
+use crate::Ic3;
 use logic_form::{Clause, Cube, Lit, Var};
 use minisat::{SatResult, Solver};
 use std::{mem::take, sync::Arc, time::Instant};
@@ -109,14 +109,11 @@ impl Ic3 {
             self.share.statistic.lock().unwrap().test_d += 1;
             return None;
         }
-        if let SatResult::Sat(model) = self.solvers.last_mut().unwrap().solve(&[bad.to_lit()]) {
+        if let SatResult::Sat(_) = self.solvers.last_mut().unwrap().solve(&[bad.to_lit()]) {
             self.share.statistic.lock().unwrap().num_get_bad_state += 1;
-            let cex = self.lift.minimal_predecessor(
-                &self.share.bad,
-                model,
-                &self.activity,
-                &self.cav23_activity,
-            );
+            let model = unsafe { self.solvers.last().unwrap().solver.get_model() };
+            let bad = self.share.bad.clone();
+            let cex = self.minimal_predecessor(&bad, model);
             // let cex = generalize_by_ternary_simulation(&self.share.aig, model, &[bad]).to_cube();
             return Some(cex);
         }
@@ -225,12 +222,7 @@ impl Ic3 {
 
     pub fn unblocked_get_model(&mut self, unblock: &BlockResultNo) -> Cube {
         let model = unsafe { self.solvers[unblock.solver_idx].solver.get_model() };
-        self.lift.minimal_predecessor(
-            &unblock.assumption,
-            model,
-            &self.activity,
-            &self.cav23_activity,
-        )
+        self.minimal_predecessor(&unblock.assumption, model)
     }
 
     pub fn unblocked_model_lit_value(&mut self, unblock: &BlockResultNo, lit: Lit) -> bool {
@@ -241,7 +233,6 @@ impl Ic3 {
 pub struct Lift {
     solver: Solver,
     num_act: usize,
-    share: Arc<BasicShare>,
 }
 
 impl Lift {
@@ -254,29 +245,21 @@ impl Lift {
         let false_lit: Lit = solver.new_var().into();
         solver.add_clause(&[!false_lit]);
         share.model.load_trans(&mut solver);
-        Self {
-            solver,
-            num_act: 0,
-            share,
-        }
+        Self { solver, num_act: 0 }
     }
+}
 
-    pub fn minimal_predecessor<'a>(
-        &mut self,
-        successor: &Cube,
-        model: minisat::Model<'a>,
-        activity: &Activity,
-        cav23_activity: &Activity,
-    ) -> Cube {
-        self.num_act += 1;
-        if self.num_act > 1000 {
-            *self = Self::new(self.share.clone())
+impl Ic3 {
+    pub fn minimal_predecessor<'a>(&mut self, successor: &Cube, model: minisat::Model<'a>) -> Cube {
+        self.lift.num_act += 1;
+        if self.lift.num_act > 1000 {
+            self.lift = Lift::new(self.share.clone())
         }
-        let act: Lit = self.solver.new_var().into();
+        let act: Lit = self.lift.solver.new_var().into();
         let mut assumption = Cube::from([act]);
         let mut cls = !successor;
         cls.push(!act);
-        self.solver.add_clause(&cls);
+        self.lift.solver.add_clause(&cls);
         for input in self.share.aig.inputs.iter() {
             let mut lit: Lit = Var::from(*input).into();
             if !model.lit_value(lit) {
@@ -292,18 +275,18 @@ impl Lift {
             }
             latchs.push(lit);
         }
-        activity.sort_by_activity(&mut latchs, false);
+        self.activity.sort_by_activity(&mut latchs, false);
         if self.share.args.cav23 {
-            cav23_activity.sort_by_activity(&mut latchs, false);
+            self.cav23_activity.sort_by_activity(&mut latchs, false);
         }
         assumption.extend_from_slice(&latchs);
-        let res: Cube = match self.solver.solve(&assumption) {
+        let res: Cube = match self.lift.solver.solve(&assumption) {
             SatResult::Sat(_) => panic!(),
             SatResult::Unsat(conflict) => {
                 latchs.into_iter().filter(|l| conflict.has(!*l)).collect()
             }
         };
-        self.solver.release_var(!act);
+        self.lift.solver.release_var(!act);
         res
     }
 }

@@ -1,6 +1,7 @@
-#![feature(assert_matches, is_sorted, get_mut_unchecked)]
+#![feature(assert_matches, is_sorted, get_mut_unchecked, format_args_nl)]
 
 mod activity;
+mod analysis;
 mod basic;
 mod command;
 mod frames;
@@ -13,10 +14,7 @@ mod verify;
 
 use crate::basic::ProofObligation;
 use crate::{basic::BasicShare, statistic::Statistic};
-use crate::{
-    basic::{Ic3Error, ProofObligationQueue},
-    solver::Lift,
-};
+use crate::{basic::ProofObligationQueue, solver::Lift};
 use activity::Activity;
 use aig::Aig;
 pub use command::Args;
@@ -89,27 +87,18 @@ impl Ic3 {
             .push(Ic3Solver::new(self.share.clone(), self.solvers.len()));
     }
 
-    fn generalize(
-        &mut self,
-        frame: usize,
-        cube: Cube,
-        depth: usize,
-        successor: Option<&Cube>,
-    ) -> Result<(usize, Cube), Ic3Error> {
-        // let cube = self.new_mic(frame, cube, !self.share.args.ctg, depth, successor)?;
-        let cube = self.mic(frame, cube, !self.share.args.ctg)?;
+    fn generalize(&mut self, frame: usize, cube: Cube) -> (usize, Cube) {
+        let cube = self.mic(frame, cube, !self.share.args.ctg).unwrap();
         for i in frame + 1..=self.depth() {
             if let BlockResult::No(_) = self.blocked(i, &cube) {
-                return Ok((i, cube));
+                return (i, cube);
             }
         }
-        Ok((self.depth() + 1, cube))
+        (self.depth() + 1, cube)
     }
 
     pub fn handle_blocked(&mut self, po: ProofObligation, conflict: Cube) {
-        let (frame, core) = self
-            .generalize(po.frame, conflict, po.depth, po.successor.as_ref())
-            .unwrap();
+        let (frame, core) = self.generalize(po.frame, conflict);
         if frame <= self.depth() {
             self.obligations
                 .add(ProofObligation::new(frame, po.cube, po.depth, po.successor));
@@ -117,19 +106,16 @@ impl Ic3 {
         self.add_cube(frame - 1, core);
     }
 
-    pub fn block(&mut self, frame: usize, cube: Cube) -> Result<bool, Ic3Error> {
+    pub fn block(&mut self, frame: usize, cube: Cube) -> bool {
         assert!(self.obligations.is_empty());
         self.obligations
             .add(ProofObligation::new(frame, cube, 0, None));
         while let Some(po) = self.obligations.pop() {
             if po.frame == 0 {
-                return Ok(false);
+                return false;
             }
             assert!(!self.share.model.cube_subsume_init(&po.cube));
-            if self.share.args.verbose {
-                self.obligations.statistic();
-                self.statistic();
-            }
+            self.statistic();
             if self.frames.trivial_contained(po.frame, &po.cube) {
                 continue;
             }
@@ -158,11 +144,15 @@ impl Ic3 {
                 }
             }
         }
-        Ok(true)
+        true
     }
 
     pub fn propagate(&mut self, trivial: bool) -> bool {
-        let start = if trivial { self.depth() - 1 } else { 1 };
+        let start = if trivial {
+            (self.depth() - 1).max(1)
+        } else {
+            1
+        };
         for frame_idx in start..self.depth() {
             let mut frame = self.frames[frame_idx].clone();
             frame.sort_by_key(|x| x.len());
@@ -195,28 +185,28 @@ impl Ic3 {
             loop {
                 if let Some(cex) = self.get_bad() {
                     trivial = false;
-                    match self.block(self.depth(), cex) {
-                        Ok(false) => {
-                            self.statistic();
-                            return false;
-                        }
-                        Ok(true) => (),
-                        Err(Ic3Error::StopBlock) => {
-                            break;
-                        }
+                    if !self.block(self.depth(), cex) {
+                        self.statistic();
+                        return false;
                     }
                 } else {
                     break;
                 }
             }
             let blocked_time = start.elapsed();
-            // println!(
-            //     "[{}:{}] frame: {}, time: {:?}",
-            //     file!(),
-            //     line!(),
-            //     self.depth(),
-            //     blocked_time,
-            // );
+            if self.share.args.verbose {
+                println!(
+                    "[{}:{}] frame: {}, time: {:?}",
+                    file!(),
+                    line!(),
+                    self.depth(),
+                    blocked_time,
+                );
+            }
+            // self.print_frames();
+            // if self.depth() >= 4 {
+            //     // todo!();
+            // }
             self.share.statistic.lock().unwrap().overall_block_time += blocked_time;
             self.new_frame();
             let start = Instant::now();

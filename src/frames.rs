@@ -2,7 +2,7 @@ use crate::Ic3;
 use logic_form::Cube;
 use minisat::SatResult;
 use std::{
-    fmt::Debug,
+    fmt::{self, Debug, Display},
     mem::take,
     ops::{Deref, DerefMut},
 };
@@ -103,5 +103,19 @@ impl Ic3 {
 
     pub fn sat_contained(&mut self, frame: usize, cube: &Cube) -> bool {
         matches!(self.solvers[frame].solve(cube), SatResult::Unsat(_))
+    }
+}
+
+impl Display for Frames {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        for i in 1..self.frames.len() {
+            f.write_fmt(format_args_nl!("frame {}", i))?;
+            let mut frame = self.frames[i].clone();
+            frame.sort();
+            for c in frame.iter() {
+                f.write_fmt(format_args_nl!("{:?}", c))?;
+            }
+        }
+        Ok(())
     }
 }

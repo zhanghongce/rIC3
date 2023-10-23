@@ -26,6 +26,7 @@ pub struct Statistic {
     pub test_c: usize,
     pub test_d: usize,
     pub test_e: usize,
+    pub test_time: Duration,
 }
 
 #[derive(Default)]
@@ -56,7 +57,10 @@ impl AddAssign<f64> for StatisticAverage {
 
 impl Ic3 {
     pub fn statistic(&self) {
-        self.frames.statistic();
-        println!("{:?}", self.share.statistic.lock().unwrap());
+        if self.share.args.verbose {
+            self.obligations.statistic();
+            self.frames.statistic();
+            println!("{:?}", self.share.statistic.lock().unwrap());
+        }
     }
 }
