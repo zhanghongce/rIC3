@@ -250,7 +250,7 @@ impl Lift {
 }
 
 impl Ic3 {
-    pub fn minimal_predecessor<'a>(&mut self, successor: &Cube, model: minisat::Model<'a>) -> Cube {
+    pub fn minimal_predecessor(&mut self, successor: &Cube, model: minisat::Model) -> Cube {
         self.lift.num_act += 1;
         if self.lift.num_act > 1000 {
             self.lift = Lift::new(self.share.clone())

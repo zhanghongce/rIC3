@@ -3,9 +3,9 @@ use logic_form::Var;
 use std::assert_matches::assert_matches;
 
 #[allow(dead_code)]
-pub fn generalize_by_ternary_simulation<'a>(
+pub fn generalize_by_ternary_simulation(
     aig: &Aig,
-    model: minisat::Model<'a>,
+    model: minisat::Model,
     assumptions: &[AigEdge],
 ) -> AigCube {
     let mut primary_inputs = Vec::new();

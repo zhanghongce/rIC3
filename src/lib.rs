@@ -182,15 +182,11 @@ impl Ic3 {
         loop {
             let start = Instant::now();
             let mut trivial = true;
-            loop {
-                if let Some(cex) = self.get_bad() {
-                    trivial = false;
-                    if !self.block(self.depth(), cex) {
-                        self.statistic();
-                        return false;
-                    }
-                } else {
-                    break;
+            while let Some(cex) = self.get_bad() {
+                trivial = false;
+                if !self.block(self.depth(), cex) {
+                    self.statistic();
+                    return false;
                 }
             }
             let blocked_time = start.elapsed();
