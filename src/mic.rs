@@ -1,44 +1,38 @@
 use super::{solver::BlockResult, Ic3};
-use crate::basic::Ic3Error;
 use logic_form::{Cube, Lit};
 use std::{collections::HashSet, time::Instant};
 
 impl Ic3 {
-    fn down(&mut self, frame: usize, cube: &Cube) -> Result<Option<Cube>, Ic3Error> {
+    fn down(&mut self, frame: usize, cube: &Cube) -> Option<Cube> {
         if self.share.model.cube_subsume_init(cube) {
-            return Ok(None);
+            return None;
         }
         self.share.statistic.lock().unwrap().num_down_blocked += 1;
-        Ok(match self.blocked_with_ordered(frame, cube, false) {
-            BlockResult::Yes(blocked) => Some(self.blocked_get_conflict(&blocked)),
+        match self.blocked_with_ordered(frame, cube, false) {
+            BlockResult::Yes(blocked) => Some(self.blocked_conflict(&blocked)),
             BlockResult::No(_) => None,
-        })
+        }
     }
 
-    fn ctg_down(
-        &mut self,
-        frame: usize,
-        cube: &Cube,
-        keep: &HashSet<Lit>,
-    ) -> Result<Option<Cube>, Ic3Error> {
+    fn ctg_down(&mut self, frame: usize, cube: &Cube, keep: &HashSet<Lit>) -> Option<Cube> {
         let mut cube = cube.clone();
         self.share.statistic.lock().unwrap().num_ctg_down += 1;
         let mut ctgs = 0;
         loop {
             if self.share.model.cube_subsume_init(&cube) {
-                return Ok(None);
+                return None;
             }
             match self.blocked(frame, &cube) {
-                BlockResult::Yes(blocked) => return Ok(Some(self.blocked_get_conflict(&blocked))),
+                BlockResult::Yes(blocked) => return Some(self.blocked_conflict(&blocked)),
                 BlockResult::No(unblocked) => {
-                    let mut model = self.unblocked_get_model(&unblocked);
+                    let mut model = self.unblocked_model(&unblocked);
                     if ctgs < 3 && frame > 1 && !self.share.model.cube_subsume_init(&model) {
                         if self.share.args.cav23 {
                             self.cav23_activity.sort_by_activity(&mut model, false);
                         }
                         if let BlockResult::Yes(blocked) = self.blocked(frame - 1, &model) {
                             ctgs += 1;
-                            let conflict = self.blocked_get_conflict(&blocked);
+                            let conflict = self.blocked_conflict(&blocked);
                             let mut i = frame;
                             while i <= self.depth() {
                                 if let BlockResult::No(_) = self.blocked(i, &conflict) {
@@ -46,7 +40,7 @@ impl Ic3 {
                                 }
                                 i += 1;
                             }
-                            let conflict = self.mic(i - 1, conflict, true)?;
+                            let conflict = self.mic(i - 1, conflict, true);
                             self.add_cube(i - 1, conflict);
                             continue;
                         }
@@ -58,7 +52,7 @@ impl Ic3 {
                         if cex_set.contains(&lit) {
                             cube_new.push(lit);
                         } else if keep.contains(&lit) {
-                            return Ok(None);
+                            return None;
                         }
                     }
                     cube = cube_new;
@@ -97,9 +91,10 @@ impl Ic3 {
         (new_cube, new_i)
     }
 
-    pub fn mic(&mut self, frame: usize, mut cube: Cube, simple: bool) -> Result<Cube, Ic3Error> {
+    pub fn mic(&mut self, frame: usize, mut cube: Cube, simple: bool) -> Cube {
         let start = Instant::now();
         self.share.statistic.lock().unwrap().average_mic_cube_len += cube.len();
+        self.share.statistic.lock().unwrap().num_mic += 1;
         if !simple {
             self.add_temporary_cube(frame, &cube);
         }
@@ -107,29 +102,29 @@ impl Ic3 {
         let mut keep = HashSet::new();
         let cav23_parent = self.share.args.cav23.then(|| {
             self.cav23_activity.sort_by_activity(&mut cube, true);
-            let mut similar = self.frames.similar(&cube, frame);
-            similar.sort_by(|a, b| {
+            let mut parent = self.frames.parent(&cube, frame);
+            parent.sort_by(|a, b| {
                 self.cav23_activity
                     .cube_average_activity(b)
                     .partial_cmp(&self.cav23_activity.cube_average_activity(a))
                     .unwrap()
             });
-            let similar = similar.into_iter().nth(0);
-            if let Some(similar) = &similar {
-                for l in similar.iter() {
+            let parent = parent.into_iter().nth(0);
+            if let Some(parent) = &parent {
+                for l in parent.iter() {
                     keep.insert(*l);
                 }
             }
-            similar
+            parent
         });
         let mut i = 0;
         while i < cube.len() {
             let mut removed_cube = cube.clone();
             removed_cube.remove(i);
             let res = if simple {
-                self.down(frame, &removed_cube)?
+                self.down(frame, &removed_cube)
             } else {
-                self.ctg_down(frame, &removed_cube, &keep)?
+                self.ctg_down(frame, &removed_cube, &keep)
             };
             match res {
                 Some(new_cube) => {
@@ -155,6 +150,6 @@ impl Ic3 {
         } else {
             self.share.statistic.lock().unwrap().mic_time += start.elapsed()
         }
-        Ok(cube)
+        cube
     }
 }

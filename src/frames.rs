@@ -10,7 +10,7 @@ use std::{
 
 #[derive(Debug, Default, Serialize, Deserialize)]
 pub struct Frames {
-    pub frames: Vec<Vec<Cube>>,
+    frames: Vec<Vec<Cube>>,
 }
 
 impl Frames {
@@ -40,7 +40,7 @@ impl Frames {
         println!();
     }
 
-    pub fn similar(&self, cube: &Cube, frame: usize) -> Vec<Cube> {
+    pub fn parent(&self, cube: &Cube, frame: usize) -> Vec<Cube> {
         let mut cube = cube.clone();
         cube.sort_by_key(|l| l.var());
         let mut res = Vec::new();

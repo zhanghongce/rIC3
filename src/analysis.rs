@@ -5,7 +5,7 @@ use std::{collections::HashSet, io::Read};
 use std::{fs::File, io::Write};
 
 impl Ic3 {
-    pub fn print_frames(&mut self) {
+    pub fn save_frames(&mut self) {
         let json = serde_json::to_string(&self.frames).unwrap();
         let mut file = File::create("frames.json").unwrap();
         file.write_all(json.as_bytes()).unwrap();

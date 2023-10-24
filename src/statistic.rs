@@ -4,6 +4,7 @@ use std::{fmt::Debug, ops::AddAssign, time::Duration};
 #[derive(Debug, Default)]
 pub struct Statistic {
     pub num_blocked: usize,
+    pub num_mic: usize,
     pub num_solver_restart: usize,
     pub num_down_blocked: usize,
     pub num_mic_drop_success: usize,

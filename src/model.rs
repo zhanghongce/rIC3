@@ -100,6 +100,10 @@ impl Model {
         Lit::new(self.next_map[&lit.var()], lit.polarity())
     }
 
+    pub fn cube_previous(&self, cube: &Cube) -> Cube {
+        cube.iter().map(|l| self.lit_previous(*l)).collect()
+    }
+
     pub fn cube_next(&self, cube: &Cube) -> Cube {
         cube.iter().map(|l| self.lit_next(*l)).collect()
     }

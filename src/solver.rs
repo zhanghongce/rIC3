@@ -184,7 +184,7 @@ pub struct BlockResultNo {
 }
 
 impl Ic3 {
-    pub fn blocked_get_conflict(&mut self, block: &BlockResultYes) -> Cube {
+    pub fn blocked_conflict(&mut self, block: &BlockResultYes) -> Cube {
         let conflict = unsafe { self.solvers[block.solver_idx].solver.get_conflict() };
         let mut ans = Cube::new();
         for i in 0..block.cube.len() {
@@ -215,12 +215,12 @@ impl Ic3 {
         ans
     }
 
-    pub fn unblocked_get_model(&mut self, unblock: &BlockResultNo) -> Cube {
+    pub fn unblocked_model(&mut self, unblock: &BlockResultNo) -> Cube {
         let model = unsafe { self.solvers[unblock.solver_idx].solver.get_model() };
         self.minimal_predecessor(&unblock.assumption, model)
     }
 
-    pub fn unblocked_model_lit_value(&mut self, unblock: &BlockResultNo, lit: Lit) -> bool {
+    pub fn unblocked_model_lit_value(&self, unblock: &BlockResultNo, lit: Lit) -> bool {
         unsafe { self.solvers[unblock.solver_idx].solver.get_model() }.lit_value(lit)
     }
 }

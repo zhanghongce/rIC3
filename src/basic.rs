@@ -85,8 +85,3 @@ impl ProofObligationQueue {
         println!("{:?}", self.num);
     }
 }
-
-#[derive(Debug)]
-pub enum Ic3Error {
-    StopBlock,
-}

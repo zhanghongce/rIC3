@@ -86,7 +86,7 @@ impl Ic3 {
     }
 
     fn generalize(&mut self, frame: usize, cube: Cube) -> (usize, Cube) {
-        let cube = self.mic(frame, cube, !self.share.args.ctg).unwrap();
+        let cube = self.mic(frame, cube, !self.share.args.ctg);
         for i in frame + 1..=self.depth() {
             if let BlockResult::No(_) = self.blocked(i, &cube) {
                 return (i, cube);
@@ -124,11 +124,11 @@ impl Ic3 {
             // }
             match self.blocked(po.frame, &po.cube) {
                 BlockResult::Yes(blocked) => {
-                    let conflict = self.blocked_get_conflict(&blocked);
+                    let conflict = self.blocked_conflict(&blocked);
                     self.handle_blocked(po, conflict);
                 }
                 BlockResult::No(unblocked) => {
-                    let model = self.unblocked_get_model(&unblocked);
+                    let model = self.unblocked_model(&unblocked);
                     self.obligations.add(ProofObligation::new(
                         po.frame - 1,
                         model,
@@ -155,12 +155,15 @@ impl Ic3 {
                 if !self.frames[frame_idx].contains(&cube) {
                     continue;
                 }
-                if let BlockResult::Yes(blocked) = self.blocked(frame_idx + 1, &cube) {
-                    let conflict = self.blocked_get_conflict(&blocked);
+                match self.blocked(frame_idx + 1, &cube) {
+                    BlockResult::Yes(blocked) => {
+                        let conflict = self.blocked_conflict(&blocked);
                     self.add_cube(frame_idx + 1, conflict);
                     if self.share.args.cav23 {
                         self.cav23_activity.pump_cube_activity(&cube);
                     }
+                    }
+                    BlockResult::No(_) => {}
                 }
             }
             self.solvers[frame_idx + 1].simplify();
@@ -201,7 +204,9 @@ impl Ic3 {
             self.share.statistic.lock().unwrap().overall_propagate_time += start.elapsed();
             if propagate {
                 self.statistic();
-                self.print_frames();
+                if self.share.args.save_frames {
+                    self.save_frames();
+                }
                 if self.share.args.verify {
                     assert!(self.verify());
                 }

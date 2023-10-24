@@ -2,4 +2,4 @@
 perf.data
 perf.data.old
 flamegraph.svg
-cexs.json
+frames.json
