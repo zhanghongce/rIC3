@@ -23,7 +23,6 @@ use frames::Frames;
 use logic_form::{Cube, Lit};
 use model::Model;
 use solver::{BlockResult, Ic3Solver};
-use std::collections::HashMap;
 use std::{
     sync::{Arc, Mutex},
     time::Instant,
@@ -37,7 +36,6 @@ pub struct Ic3 {
     pub cav23_activity: Activity,
     pub obligations: ProofObligationQueue,
     pub lift: Lift,
-    pub blocked: HashMap<(usize, Cube), Cube>,
 }
 
 impl Ic3 {
@@ -65,7 +63,6 @@ impl Ic3 {
             lift: Lift::new(share.clone()),
             share,
             obligations: ProofObligationQueue::new(),
-            blocked: HashMap::new(),
         };
         res.new_frame();
         for i in 0..res.share.aig.latchs.len() {
@@ -116,13 +113,10 @@ impl Ic3 {
                 return false;
             }
             assert!(!self.share.model.cube_subsume_init(&po.cube));
-            self.statistic();
-            if self.frames.trivial_contained(po.frame, &po.cube) {
-                continue;
+            if self.share.args.verbose_all {
+                self.statistic();
             }
-            if let Some(conflict) = self.blocked.get(&(po.frame, po.cube.clone())) {
-                self.handle_blocked(po, conflict.clone());
-                self.share.statistic.lock().unwrap().test_d += 1;
+            if self.frames.trivial_contained(po.frame, &po.cube) {
                 continue;
             }
             // if self.sat_contained(po.frame, &po.cube) {

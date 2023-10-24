@@ -102,13 +102,6 @@ impl Ic3 {
         } else {
             self.share.aig.bads[0]
         };
-        if self
-            .blocked
-            .contains_key(&(self.depth() + 1, self.share.bad.clone()))
-        {
-            self.share.statistic.lock().unwrap().test_d += 1;
-            return None;
-        }
         if let SatResult::Sat(_) = self.solvers.last_mut().unwrap().solve(&[bad.to_lit()]) {
             self.share.statistic.lock().unwrap().num_get_bad_state += 1;
             let model = unsafe { self.solvers.last().unwrap().solver.get_model() };
@@ -121,6 +114,7 @@ impl Ic3 {
     }
 
     fn blocked_inner(&mut self, frame: usize, cube: &Cube) -> BlockResult {
+        self.share.statistic.lock().unwrap().num_blocked += 1;
         let solver_idx = frame - 1;
         let solver = &mut self.solvers[solver_idx].solver;
         let start = Instant::now();
@@ -153,6 +147,7 @@ impl Ic3 {
         let solver = &mut self.solvers[frame - 1];
         solver.num_act += 1;
         if solver.num_act > 1000 {
+            self.share.statistic.lock().unwrap().num_solver_restart += 1;
             solver.reset(&self.frames)
         }
         self.blocked_inner(frame, cube)

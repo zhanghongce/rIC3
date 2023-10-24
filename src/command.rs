@@ -7,8 +7,12 @@ pub struct Args {
     pub model: Option<String>,
 
     /// verbose
-    #[arg(short, long, default_value_t = false)]
+    #[arg(short, default_value_t = false)]
     pub verbose: bool,
+
+    /// verbose all
+    #[arg(short = 'V', default_value_t = false, requires("verbose"))]
+    pub verbose_all: bool,
 
     /// random seed
     #[arg(short, long)]
