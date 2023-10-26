@@ -1,29 +1,38 @@
 use super::{solver::BlockResult, Ic3};
+use crate::solver::BlockResultNo;
 use logic_form::{Cube, Lit};
 use std::{collections::HashSet, time::Instant};
+#[derive(Debug)]
+enum DownResult {
+    Success(Cube),
+    Fail(BlockResultNo),
+    IncludeInit,
+}
 
 impl Ic3 {
-    fn down(&mut self, frame: usize, cube: &Cube) -> Option<Cube> {
+    fn down(&mut self, frame: usize, cube: &Cube) -> DownResult {
         if self.share.model.cube_subsume_init(cube) {
-            return None;
+            return DownResult::IncludeInit;
         }
         self.share.statistic.lock().unwrap().num_down_blocked += 1;
         match self.blocked_with_ordered(frame, cube, false) {
-            BlockResult::Yes(blocked) => Some(self.blocked_conflict(&blocked)),
-            BlockResult::No(_) => None,
+            BlockResult::Yes(blocked) => DownResult::Success(self.blocked_conflict(&blocked)),
+            BlockResult::No(unblock) => DownResult::Fail(unblock),
         }
     }
 
-    fn ctg_down(&mut self, frame: usize, cube: &Cube, keep: &HashSet<Lit>) -> Option<Cube> {
+    fn ctg_down(&mut self, frame: usize, cube: &Cube, keep: &HashSet<Lit>) -> DownResult {
         let mut cube = cube.clone();
         self.share.statistic.lock().unwrap().num_ctg_down += 1;
         let mut ctgs = 0;
         loop {
             if self.share.model.cube_subsume_init(&cube) {
-                return None;
+                return DownResult::IncludeInit;
             }
             match self.blocked(frame, &cube) {
-                BlockResult::Yes(blocked) => return Some(self.blocked_conflict(&blocked)),
+                BlockResult::Yes(blocked) => {
+                    return DownResult::Success(self.blocked_conflict(&blocked))
+                }
                 BlockResult::No(unblocked) => {
                     let mut model = self.unblocked_model(&unblocked);
                     if ctgs < 3 && frame > 1 && !self.share.model.cube_subsume_init(&model) {
@@ -52,7 +61,7 @@ impl Ic3 {
                         if cex_set.contains(&lit) {
                             cube_new.push(lit);
                         } else if keep.contains(&lit) {
-                            return None;
+                            return DownResult::Fail(unblocked);
                         }
                     }
                     cube = cube_new;
@@ -127,11 +136,11 @@ impl Ic3 {
                 self.ctg_down(frame, &removed_cube, &keep)
             };
             match res {
-                Some(new_cube) => {
+                DownResult::Success(new_cube) => {
                     self.share.statistic.lock().unwrap().mic_drop.success();
                     (cube, i) = self.handle_down_success(frame, cube, i, new_cube);
                 }
-                None => {
+                _ => {
                     self.share.statistic.lock().unwrap().mic_drop.fail();
                     keep.insert(cube[i]);
                     i += 1;
