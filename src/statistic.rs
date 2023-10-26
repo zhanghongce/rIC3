@@ -60,6 +60,14 @@ impl SuccessRate {
     pub fn fail(&mut self) {
         self.fail += 1;
     }
+
+    pub fn statistic(&mut self, success: bool) {
+        if success {
+            self.success()
+        } else {
+            self.fail()
+        }
+    }
 }
 
 impl Debug for SuccessRate {
