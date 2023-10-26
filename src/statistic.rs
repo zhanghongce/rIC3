@@ -7,8 +7,7 @@ pub struct Statistic {
     pub num_mic: usize,
     pub num_solver_restart: usize,
     pub num_down_blocked: usize,
-    pub num_mic_drop_success: usize,
-    pub num_mic_drop_fail: usize,
+    pub mic_drop: SuccessRate,
     pub num_ctg_down: usize,
     pub num_get_bad_state: usize,
     pub average_mic_cube_len: StatisticAverage,
@@ -16,6 +15,7 @@ pub struct Statistic {
     pub simple_mic_time: Duration,
     pub mic_time: Duration,
     pub blocked_check_time: Duration,
+
     pub overall_block_time: Duration,
     pub overall_propagate_time: Duration,
 }
@@ -28,7 +28,7 @@ pub struct StatisticAverage {
 
 impl Debug for StatisticAverage {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.sum as f32 / self.num as f32)
+        write!(f, "{:.2}", self.sum as f32 / self.num as f32)
     }
 }
 
@@ -43,6 +43,34 @@ impl AddAssign<f64> for StatisticAverage {
     fn add_assign(&mut self, rhs: f64) {
         self.sum += rhs;
         self.num += 1;
+    }
+}
+
+#[derive(Default)]
+pub struct SuccessRate {
+    succ: usize,
+    fail: usize,
+}
+
+impl SuccessRate {
+    pub fn success(&mut self) {
+        self.succ += 1;
+    }
+
+    pub fn fail(&mut self) {
+        self.fail += 1;
+    }
+}
+
+impl Debug for SuccessRate {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "success: {}, fail: {}, success rate: {:.2}",
+            self.succ,
+            self.fail,
+            self.succ as f64 / (self.succ + self.fail) as f64
+        )
     }
 }
 

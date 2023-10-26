@@ -128,11 +128,11 @@ impl Ic3 {
             };
             match res {
                 Some(new_cube) => {
-                    self.share.statistic.lock().unwrap().num_mic_drop_success += 1;
+                    self.share.statistic.lock().unwrap().mic_drop.success();
                     (cube, i) = self.handle_down_success(frame, cube, i, new_cube);
                 }
                 None => {
-                    self.share.statistic.lock().unwrap().num_mic_drop_fail += 1;
+                    self.share.statistic.lock().unwrap().mic_drop.fail();
                     keep.insert(cube[i]);
                     i += 1;
                 }
