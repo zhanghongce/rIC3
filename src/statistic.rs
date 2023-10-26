@@ -28,7 +28,7 @@ pub struct StatisticAverage {
 
 impl Debug for StatisticAverage {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{:.2}", self.sum as f32 / self.num as f32)
+        write!(f, "{:.2}", self.sum / self.num as f64)
     }
 }
 
@@ -74,10 +74,10 @@ impl Debug for SuccessRate {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            "success: {}, fail: {}, success rate: {:.2}",
+            "success: {}, fail: {}, success rate: {:.2}%",
             self.succ,
             self.fail,
-            self.succ as f64 / (self.succ + self.fail) as f64
+            (self.succ as f64 / (self.succ + self.fail) as f64) * 100_f64
         )
     }
 }
