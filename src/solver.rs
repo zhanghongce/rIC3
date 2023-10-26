@@ -107,7 +107,7 @@ impl Ic3 {
             let model = unsafe { self.solvers.last().unwrap().solver.get_model() };
             let bad = self.share.bad.clone();
             let cex = self.minimal_predecessor(&bad, model);
-            // let cex = generalize_by_ternary_simulation(&self.share.aig, model, &[bad]).to_cube();
+            // let cex = self.generalize_by_ternary_simulation(model, &bad);
             return Some(cex);
         }
         None
@@ -218,6 +218,7 @@ impl Ic3 {
     pub fn unblocked_model(&mut self, unblock: &BlockResultNo) -> Cube {
         let model = unsafe { self.solvers[unblock.solver_idx].solver.get_model() };
         self.minimal_predecessor(&unblock.assumption, model)
+        // self.generalize_by_ternary_simulation(model, &unblock.assumption)
     }
 
     pub fn unblocked_model_lit_value(&self, unblock: &BlockResultNo, lit: Lit) -> bool {

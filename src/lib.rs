@@ -8,9 +8,9 @@ mod command;
 mod frames;
 mod mic;
 mod model;
+mod simulate;
 mod solver;
 mod statistic;
-mod utils;
 mod verify;
 
 use crate::basic::ProofObligation;
