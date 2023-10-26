@@ -1,17 +1,14 @@
-use super::statistic::Statistic;
 use crate::command::Args;
 use crate::model::Model;
 use aig::Aig;
 use logic_form::Cube;
 use std::cmp::Ordering;
 use std::collections::BinaryHeap;
-use std::sync::Mutex;
 
 pub struct BasicShare {
     pub aig: Aig,
     pub args: Args,
     pub model: Model,
-    pub statistic: Mutex<Statistic>,
     pub bad: Cube,
 }
 

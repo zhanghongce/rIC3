@@ -14,7 +14,7 @@ impl Ic3 {
         if self.share.model.cube_subsume_init(cube) {
             return DownResult::IncludeInit;
         }
-        self.share.statistic.lock().unwrap().num_down_blocked += 1;
+        self.statistic.num_down_blocked += 1;
         match self.blocked_with_ordered(frame, cube, false) {
             BlockResult::Yes(blocked) => DownResult::Success(self.blocked_conflict(&blocked)),
             BlockResult::No(unblock) => DownResult::Fail(unblock),
@@ -23,7 +23,7 @@ impl Ic3 {
 
     fn ctg_down(&mut self, frame: usize, cube: &Cube, keep: &HashSet<Lit>) -> DownResult {
         let mut cube = cube.clone();
-        self.share.statistic.lock().unwrap().num_ctg_down += 1;
+        self.statistic.num_ctg_down += 1;
         let mut ctgs = 0;
         loop {
             if self.share.model.cube_subsume_init(&cube) {
@@ -102,8 +102,8 @@ impl Ic3 {
 
     pub fn mic(&mut self, frame: usize, mut cube: Cube, simple: bool) -> Cube {
         let start = Instant::now();
-        self.share.statistic.lock().unwrap().average_mic_cube_len += cube.len();
-        self.share.statistic.lock().unwrap().num_mic += 1;
+        self.statistic.average_mic_cube_len += cube.len();
+        self.statistic.num_mic += 1;
         if !simple {
             self.add_temporary_cube(frame, &cube);
         }
@@ -137,11 +137,11 @@ impl Ic3 {
             };
             match res {
                 DownResult::Success(new_cube) => {
-                    self.share.statistic.lock().unwrap().mic_drop.success();
+                    self.statistic.mic_drop.success();
                     (cube, i) = self.handle_down_success(frame, cube, i, new_cube);
                 }
                 _ => {
-                    self.share.statistic.lock().unwrap().mic_drop.fail();
+                    self.statistic.mic_drop.fail();
                     keep.insert(cube[i]);
                     i += 1;
                 }
@@ -155,9 +155,9 @@ impl Ic3 {
         }
         self.activity.pump_cube_activity(&cube);
         if simple {
-            self.share.statistic.lock().unwrap().simple_mic_time += start.elapsed()
+            self.statistic.simple_mic_time += start.elapsed()
         } else {
-            self.share.statistic.lock().unwrap().mic_time += start.elapsed()
+            self.statistic.mic_time += start.elapsed()
         }
         cube
     }

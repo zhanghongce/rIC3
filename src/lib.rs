@@ -23,10 +23,7 @@ use frames::Frames;
 use logic_form::{Cube, Lit};
 use model::Model;
 use solver::{BlockResult, Ic3Solver};
-use std::{
-    sync::{Arc, Mutex},
-    time::Instant,
-};
+use std::{sync::Arc, time::Instant};
 
 pub struct Ic3 {
     pub solvers: Vec<Ic3Solver>,
@@ -36,6 +33,7 @@ pub struct Ic3 {
     pub cav23_activity: Activity,
     pub obligations: ProofObligationQueue,
     pub lift: Lift,
+    pub statistic: Statistic,
 }
 
 impl Ic3 {
@@ -52,7 +50,6 @@ impl Ic3 {
             aig,
             args,
             model,
-            statistic: Mutex::new(Statistic::default()),
             bad,
         });
         let mut res = Self {
@@ -63,6 +60,7 @@ impl Ic3 {
             lift: Lift::new(share.clone()),
             share,
             obligations: ProofObligationQueue::new(),
+            statistic: Statistic::default(),
         };
         res.new_frame();
         for i in 0..res.share.aig.latchs.len() {
@@ -198,11 +196,11 @@ impl Ic3 {
                     blocked_time,
                 );
             }
-            self.share.statistic.lock().unwrap().overall_block_time += blocked_time;
+            self.statistic.overall_block_time += blocked_time;
             self.new_frame();
             let start = Instant::now();
             let propagate = self.propagate(trivial);
-            self.share.statistic.lock().unwrap().overall_propagate_time += start.elapsed();
+            self.statistic.overall_propagate_time += start.elapsed();
             if propagate {
                 self.statistic();
                 if self.share.args.save_frames {

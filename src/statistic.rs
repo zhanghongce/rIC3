@@ -86,6 +86,6 @@ impl Ic3 {
     pub fn statistic(&self) {
         self.obligations.statistic();
         self.frames.statistic();
-        println!("{:#?}", self.share.statistic.lock().unwrap());
+        println!("{:#?}", self.statistic);
     }
 }
