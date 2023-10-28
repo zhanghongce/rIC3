@@ -1,6 +1,5 @@
 use clap::Parser;
 use ic3::{Args, Ic3};
-use std::time::Instant;
 
 fn main() {
     let mut args = Args::parse();
@@ -16,6 +15,5 @@ fn main() {
     }
 
     let mut ic3 = Ic3::new(args);
-    let start = Instant::now();
-    dbg!(ic3.check(), start.elapsed());
+    println!("result: {}", ic3.check());
 }
