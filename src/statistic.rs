@@ -1,8 +1,13 @@
 use crate::Ic3;
-use std::{fmt::Debug, ops::AddAssign, time::Duration};
+use std::{
+    fmt::Debug,
+    ops::AddAssign,
+    time::{Duration, Instant},
+};
 
 #[derive(Debug, Default)]
 pub struct Statistic {
+    pub time: RunningTime,
     pub num_blocked: usize,
     pub num_mic: usize,
     pub num_solver_restart: usize,
@@ -79,6 +84,24 @@ impl Debug for SuccessRate {
             self.fail,
             (self.succ as f64 / (self.succ + self.fail) as f64) * 100_f64
         )
+    }
+}
+
+pub struct RunningTime {
+    start: Instant,
+}
+
+impl Default for RunningTime {
+    fn default() -> Self {
+        Self {
+            start: Instant::now(),
+        }
+    }
+}
+
+impl Debug for RunningTime {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{:.2}s", self.start.elapsed().as_secs_f64())
     }
 }
 
