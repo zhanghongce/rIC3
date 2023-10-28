@@ -23,6 +23,8 @@ use frames::Frames;
 use logic_form::{Cube, Lit};
 use model::Model;
 use solver::{BlockResult, Ic3Solver};
+use std::panic::{self, AssertUnwindSafe};
+use std::process::exit;
 use std::{sync::Arc, time::Instant};
 
 pub struct Ic3 {
@@ -175,7 +177,7 @@ impl Ic3 {
         res
     }
 
-    pub fn check(&mut self) -> bool {
+    fn check_inner(&mut self) -> bool {
         loop {
             let start = Instant::now();
             let mut trivial = true;
@@ -212,5 +214,19 @@ impl Ic3 {
                 return true;
             }
         }
+    }
+
+    pub fn check(&mut self) -> bool {
+        let ic3 = self as *mut Ic3 as usize;
+        ctrlc::set_handler(move || {
+            let ic3 = unsafe { &mut *(ic3 as *mut Ic3) };
+            ic3.statistic();
+            exit(130);
+        })
+        .unwrap();
+        panic::catch_unwind(AssertUnwindSafe(|| self.check_inner())).unwrap_or_else(|_| {
+            self.statistic();
+            panic!();
+        })
     }
 }
