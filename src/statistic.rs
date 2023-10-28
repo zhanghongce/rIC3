@@ -1,13 +1,15 @@
 use crate::Ic3;
 use std::{
-    fmt::Debug,
+    fmt::{self, Debug},
     ops::AddAssign,
     time::{Duration, Instant},
 };
 
+#[allow(unused)]
 #[derive(Debug, Default)]
 pub struct Statistic {
-    pub time: RunningTime,
+    case: Case,
+    time: RunningTime,
     pub num_blocked: usize,
     pub num_mic: usize,
     pub num_solver_restart: usize,
@@ -25,6 +27,18 @@ pub struct Statistic {
     pub overall_propagate_time: Duration,
 }
 
+impl Statistic {
+    pub fn new(mut case: &str) -> Self {
+        if let Some((_, c)) = case.rsplit_once('/') {
+            case = c;
+        }
+        Self {
+            case: Case(case.to_string()),
+            ..Default::default()
+        }
+    }
+}
+
 #[derive(Default)]
 pub struct StatisticAverage {
     sum: f64,
@@ -32,7 +46,7 @@ pub struct StatisticAverage {
 }
 
 impl Debug for StatisticAverage {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{:.2}", self.sum / self.num as f64)
     }
 }
@@ -76,7 +90,7 @@ impl SuccessRate {
 }
 
 impl Debug for SuccessRate {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
             "success: {}, fail: {}, success rate: {:.2}%",
@@ -87,7 +101,16 @@ impl Debug for SuccessRate {
     }
 }
 
-pub struct RunningTime {
+#[derive(Default)]
+pub struct Case(String);
+
+impl Debug for Case {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
+
+struct RunningTime {
     start: Instant,
 }
 
@@ -100,7 +123,7 @@ impl Default for RunningTime {
 }
 
 impl Debug for RunningTime {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{:.2}s", self.start.elapsed().as_secs_f64())
     }
 }

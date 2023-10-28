@@ -37,42 +37,6 @@ pub struct Ic3 {
 }
 
 impl Ic3 {
-    pub fn new(args: Args) -> Self {
-        let aig = Aig::from_file(args.model.as_ref().unwrap()).unwrap();
-        let model = Model::from_aig(&aig);
-        let bad = Cube::from([if aig.bads.is_empty() {
-            aig.outputs[0]
-        } else {
-            aig.bads[0]
-        }
-        .to_lit()]);
-        let share = Arc::new(BasicShare {
-            aig,
-            args,
-            model,
-            bad,
-        });
-        let mut res = Self {
-            solvers: Vec::new(),
-            frames: Frames::new(),
-            activity: Activity::new(),
-            cav23_activity: Activity::new(),
-            lift: Lift::new(share.clone()),
-            share,
-            obligations: ProofObligationQueue::new(),
-            statistic: Statistic::default(),
-        };
-        res.new_frame();
-        for i in 0..res.share.aig.latchs.len() {
-            let l = &res.share.aig.latchs[i];
-            if let Some(init) = l.init {
-                let cube = Cube::from([Lit::new(l.input.into(), !init)]);
-                res.add_cube(0, cube)
-            }
-        }
-        res
-    }
-
     pub fn depth(&self) -> usize {
         self.solvers.len() - 1
     }
@@ -175,6 +139,42 @@ impl Ic3 {
 }
 
 impl Ic3 {
+    pub fn new(args: Args) -> Self {
+        let aig = Aig::from_file(args.model.as_ref().unwrap()).unwrap();
+        let model = Model::from_aig(&aig);
+        let bad = Cube::from([if aig.bads.is_empty() {
+            aig.outputs[0]
+        } else {
+            aig.bads[0]
+        }
+        .to_lit()]);
+        let share = Arc::new(BasicShare {
+            aig,
+            args,
+            model,
+            bad,
+        });
+        let mut res = Self {
+            solvers: Vec::new(),
+            frames: Frames::new(),
+            activity: Activity::new(),
+            cav23_activity: Activity::new(),
+            lift: Lift::new(share.clone()),
+            statistic: Statistic::new(share.args.model.as_ref().unwrap()),
+            share,
+            obligations: ProofObligationQueue::new(),
+        };
+        res.new_frame();
+        for i in 0..res.share.aig.latchs.len() {
+            let l = &res.share.aig.latchs[i];
+            if let Some(init) = l.init {
+                let cube = Cube::from([Lit::new(l.input.into(), !init)]);
+                res.add_cube(0, cube)
+            }
+        }
+        res
+    }
+
     pub fn check(&mut self) -> bool {
         loop {
             let start = Instant::now();
