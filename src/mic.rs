@@ -127,7 +127,9 @@ impl Ic3 {
             }
         }
         self.activity.pump_cube_activity(&cube);
-        self.statistic.mic_time += start.elapsed();
+        if !simple || !self.share.args.ctg {
+            self.statistic.mic_time += start.elapsed();
+        }
         cube
     }
 }
