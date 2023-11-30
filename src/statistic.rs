@@ -10,18 +10,17 @@ use std::{
 pub struct Statistic {
     case: Case,
     time: RunningTime,
-    pub num_blocked: usize,
-    pub num_mic: usize,
+    pub num_get_bad_state: usize,
+
+    pub num_sat_inductive: usize,
+    pub sat_inductive_time: Duration,
     pub num_solver_restart: usize,
-    pub num_down_blocked: usize,
+
+    pub num_mic: usize,
+    pub mic_time: Duration,
+    pub average_mic_cube_len: StatisticAverage,
     pub mic_drop: SuccessRate,
     pub num_ctg_down: usize,
-    pub num_get_bad_state: usize,
-    pub average_mic_cube_len: StatisticAverage,
-
-    pub simple_mic_time: Duration,
-    pub mic_time: Duration,
-    pub blocked_check_time: Duration,
 
     pub overall_block_time: Duration,
     pub overall_propagate_time: Duration,

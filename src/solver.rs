@@ -114,7 +114,7 @@ impl Ic3 {
     }
 
     fn blocked_inner(&mut self, frame: usize, cube: &Cube) -> BlockResult {
-        self.statistic.num_blocked += 1;
+        self.statistic.num_sat_inductive += 1;
         let solver_idx = frame - 1;
         let solver = &mut self.solvers[solver_idx].solver;
         let start = Instant::now();
@@ -138,7 +138,7 @@ impl Ic3 {
             }),
         };
         solver.release_var(act);
-        self.statistic.blocked_check_time += start.elapsed();
+        self.statistic.sat_inductive_time += start.elapsed();
         res
     }
 

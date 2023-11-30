@@ -14,7 +14,6 @@ impl Ic3 {
         if self.share.model.cube_subsume_init(cube) {
             return DownResult::IncludeInit;
         }
-        self.statistic.num_down_blocked += 1;
         match self.blocked_with_ordered(frame, cube, false) {
             BlockResult::Yes(blocked) => DownResult::Success(self.blocked_conflict(&blocked)),
             BlockResult::No(unblock) => DownResult::Fail(unblock),
@@ -128,11 +127,7 @@ impl Ic3 {
             }
         }
         self.activity.pump_cube_activity(&cube);
-        if simple {
-            self.statistic.simple_mic_time += start.elapsed()
-        } else {
-            self.statistic.mic_time += start.elapsed()
-        }
+        self.statistic.mic_time += start.elapsed();
         cube
     }
 }
