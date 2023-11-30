@@ -34,11 +34,8 @@ impl Ic3 {
                     return DownResult::Success(self.blocked_conflict(&blocked))
                 }
                 BlockResult::No(unblocked) => {
-                    let mut model = self.unblocked_model(&unblocked);
+                    let model = self.unblocked_model(&unblocked);
                     if ctgs < 3 && frame > 1 && !self.share.model.cube_subsume_init(&model) {
-                        if self.share.args.cav23 {
-                            self.cav23_activity.sort_by_activity(&mut model, false);
-                        }
                         if let BlockResult::Yes(blocked) = self.blocked(frame - 1, &model) {
                             ctgs += 1;
                             let conflict = self.blocked_conflict(&blocked);
@@ -109,23 +106,6 @@ impl Ic3 {
         }
         self.activity.sort_by_activity(&mut cube, true);
         let mut keep = HashSet::new();
-        let cav23_parent = self.share.args.cav23.then(|| {
-            self.cav23_activity.sort_by_activity(&mut cube, true);
-            let mut parent = self.frames.parent(&cube, frame);
-            parent.sort_by(|a, b| {
-                self.cav23_activity
-                    .cube_average_activity(b)
-                    .partial_cmp(&self.cav23_activity.cube_average_activity(a))
-                    .unwrap()
-            });
-            let parent = parent.into_iter().nth(0);
-            if let Some(parent) = &parent {
-                for l in parent.iter() {
-                    keep.insert(*l);
-                }
-            }
-            parent
-        });
         let mut i = 0;
         while i < cube.len() {
             let mut removed_cube = cube.clone();
@@ -145,12 +125,6 @@ impl Ic3 {
                     keep.insert(cube[i]);
                     i += 1;
                 }
-            }
-        }
-        if let Some(Some(cav23)) = cav23_parent {
-            cube.sort_by_key(|x| *x.var());
-            if cube.ordered_subsume(&cav23) {
-                self.cav23_activity.pump_cube_activity(&cube);
             }
         }
         self.activity.pump_cube_activity(&cube);

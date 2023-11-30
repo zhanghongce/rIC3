@@ -124,9 +124,6 @@ impl Ic3 {
                     BlockResult::Yes(blocked) => {
                         let conflict = self.blocked_conflict(&blocked);
                         self.add_cube(frame_idx + 1, conflict);
-                        if self.share.args.cav23 {
-                            self.cav23_activity.pump_cube_activity(&cube);
-                        }
                     }
                     BlockResult::No(_) => {}
                 }

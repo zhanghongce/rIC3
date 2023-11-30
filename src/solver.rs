@@ -272,9 +272,6 @@ impl Ic3 {
             latchs.push(lit);
         }
         self.activity.sort_by_activity(&mut latchs, false);
-        if self.share.args.cav23 {
-            self.cav23_activity.sort_by_activity(&mut latchs, false);
-        }
         assumption.extend_from_slice(&latchs);
         let res: Cube = match self.lift.solver.solve(&assumption) {
             SatResult::Sat(_) => panic!(),

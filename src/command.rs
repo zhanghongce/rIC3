@@ -26,10 +26,6 @@ pub struct Args {
     #[arg(long, default_value_t = false)]
     pub verify: bool,
 
-    /// cav23
-    #[arg(long, default_value_t = false)]
-    pub cav23: bool,
-
     /// save frames
     #[arg(long, default_value_t = false)]
     pub save_frames: bool,
