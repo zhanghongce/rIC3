@@ -39,21 +39,6 @@ impl Frames {
         }
         println!();
     }
-
-    pub fn parent(&self, cube: &Cube, frame: usize) -> Vec<Cube> {
-        let mut cube = cube.clone();
-        cube.sort_by_key(|l| l.var());
-        let mut res = Vec::new();
-        if frame == 1 {
-            return res;
-        }
-        for c in self.frames[frame - 1].iter() {
-            if c.ordered_subsume(&cube) {
-                res.push(c.clone());
-            }
-        }
-        res
-    }
 }
 
 impl Deref for Frames {
