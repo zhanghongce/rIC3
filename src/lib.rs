@@ -106,13 +106,13 @@ impl Ic3 {
         true
     }
 
-    pub fn propagate(&mut self, trivial: bool) -> bool {
-        let start = if trivial {
-            (self.depth() - 1).max(1)
-        } else {
-            1
-        };
-        for frame_idx in start..self.depth() {
+    pub fn propagate(&mut self) -> bool {
+        // let start = if trivial {
+        //     (self.depth() - 1).max(1)
+        // } else {
+        //     1
+        // };
+        for frame_idx in self.frames.early()..self.depth() {
             let mut frame = self.frames[frame_idx].clone();
             frame.sort_by_key(|x| x.len());
             for cube in frame {
@@ -132,6 +132,7 @@ impl Ic3 {
                 return true;
             }
         }
+        self.frames.reset_early();
         false
     }
 }
@@ -175,9 +176,7 @@ impl Ic3 {
     fn check_inner(&mut self) -> bool {
         loop {
             let start = Instant::now();
-            let mut trivial = true;
             while let Some(cex) = self.get_bad() {
-                trivial = false;
                 if !self.block(self.depth(), cex) {
                     self.statistic();
                     return false;
@@ -196,7 +195,7 @@ impl Ic3 {
             self.statistic.overall_block_time += blocked_time;
             self.new_frame();
             let start = Instant::now();
-            let propagate = self.propagate(trivial);
+            let propagate = self.propagate();
             self.statistic.overall_propagate_time += start.elapsed();
             if propagate {
                 self.statistic();

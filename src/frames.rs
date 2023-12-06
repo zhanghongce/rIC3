@@ -8,14 +8,18 @@ use std::{
     ops::{Deref, DerefMut},
 };
 
-#[derive(Debug, Default, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Default, Deserialize)]
 pub struct Frames {
     frames: Vec<Vec<Cube>>,
+    early: usize,
 }
 
 impl Frames {
     pub fn new() -> Self {
-        Self::default()
+        Self {
+            frames: Vec::new(),
+            early: 1,
+        }
     }
 
     pub fn new_frame(&mut self) {
@@ -31,6 +35,14 @@ impl Frames {
             }
         }
         false
+    }
+
+    pub fn early(&self) -> usize {
+        self.early
+    }
+
+    pub fn reset_early(&mut self) {
+        self.early = self.frames.len() - 1
     }
 
     pub fn statistic(&self) {
@@ -85,6 +97,7 @@ impl Ic3 {
         for i in begin..=frame {
             self.solvers[i].add_clause(&clause);
         }
+        self.frames.early = self.frames.early.min(begin);
     }
 
     pub fn sat_contained(&mut self, frame: usize, cube: &Cube) -> bool {
