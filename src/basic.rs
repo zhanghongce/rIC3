@@ -1,4 +1,5 @@
 use crate::command::Args;
+use crate::frames::Lemma;
 use crate::model::Model;
 use aig::Aig;
 use logic_form::Cube;
@@ -15,18 +16,16 @@ pub struct BasicShare {
 #[derive(PartialEq, Eq, Clone)]
 pub struct ProofObligation {
     pub frame: usize,
-    pub cube: Cube,
+    pub lemma: Lemma,
     pub depth: usize,
-    pub successor: Option<Cube>,
 }
 
 impl ProofObligation {
-    pub fn new(frame: usize, cube: Cube, depth: usize, successor: Option<Cube>) -> Self {
+    pub fn new(frame: usize, lemma: Lemma, depth: usize) -> Self {
         Self {
             frame,
-            cube,
+            lemma,
             depth,
-            successor,
         }
     }
 }
@@ -57,8 +56,7 @@ impl ProofObligationQueue {
         Self::default()
     }
 
-    pub fn add(&mut self, mut po: ProofObligation) {
-        po.cube.sort_by_key(|x| x.var());
+    pub fn add(&mut self, po: ProofObligation) {
         if self.num.len() <= po.frame {
             self.num.resize(po.frame + 1, 0);
         }

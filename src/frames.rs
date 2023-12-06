@@ -8,9 +8,50 @@ use std::{
     ops::{Deref, DerefMut},
 };
 
+#[derive(Debug, Serialize, Default, Deserialize, Clone, PartialEq, Eq, PartialOrd, Ord)]
+pub struct Lemma {
+    cube: Cube,
+    sign: u64,
+}
+
+impl Deref for Lemma {
+    type Target = Cube;
+
+    fn deref(&self) -> &Self::Target {
+        &self.cube
+    }
+}
+
+impl DerefMut for Lemma {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.cube
+    }
+}
+
+impl Lemma {
+    pub fn new(mut cube: Cube) -> Self {
+        cube.sort();
+        let mut sign = 0;
+        for l in cube.iter() {
+            sign |= 1 << (Into::<u32>::into(*l) % 63);
+        }
+        Self { cube, sign }
+    }
+
+    pub fn subsume(&self, other: &Lemma) -> bool {
+        if self.cube.len() > other.cube.len() {
+            return false;
+        }
+        if self.sign & other.sign != self.sign {
+            return false;
+        }
+        self.cube.ordered_subsume(&other.cube)
+    }
+}
+
 #[derive(Debug, Serialize, Default, Deserialize)]
 pub struct Frames {
-    frames: Vec<Vec<Cube>>,
+    frames: Vec<Vec<Lemma>>,
     early: usize,
 }
 
@@ -26,10 +67,10 @@ impl Frames {
         self.frames.push(Vec::new());
     }
 
-    pub fn trivial_contained(&self, frame: usize, cube: &Cube) -> bool {
+    pub fn trivial_contained(&self, frame: usize, lemma: &Lemma) -> bool {
         for i in frame..self.frames.len() {
-            for c in self.frames[i].iter() {
-                if c.ordered_subsume(cube) {
+            for l in self.frames[i].iter() {
+                if l.subsume(lemma) {
                     return true;
                 }
             }
@@ -54,7 +95,7 @@ impl Frames {
 }
 
 impl Deref for Frames {
-    type Target = Vec<Vec<Cube>>;
+    type Target = Vec<Vec<Lemma>>;
 
     fn deref(&self) -> &Self::Target {
         &self.frames
@@ -68,32 +109,32 @@ impl DerefMut for Frames {
 }
 
 impl Ic3 {
-    pub fn add_cube(&mut self, frame: usize, mut cube: Cube) {
+    pub fn add_cube(&mut self, frame: usize, cube: Cube) {
+        let lemma = Lemma::new(cube);
         if frame == 0 {
             assert!(self.frames.len() == 1);
-            self.solvers[0].add_clause(&!&cube);
-            self.frames[0].push(cube);
+            self.solvers[0].add_clause(&!&lemma.cube);
+            self.frames[0].push(lemma);
             return;
         }
-        cube.sort_by_key(|x| x.var());
-        if self.frames.trivial_contained(frame, &cube) {
+        if self.frames.trivial_contained(frame, &lemma) {
             return;
         }
-        assert!(!self.share.model.cube_subsume_init(&cube));
+        assert!(!self.share.model.cube_subsume_init(&lemma.cube));
         let mut begin = 1;
         for i in 1..=frame {
             let cubes = take(&mut self.frames[i]);
-            for c in cubes {
-                if c.ordered_subsume(&cube) {
+            for l in cubes {
+                if l.subsume(&lemma) {
                     begin = i + 1;
                 }
-                if !cube.ordered_subsume(&c) {
-                    self.frames[i].push(c);
+                if !lemma.subsume(&l) {
+                    self.frames[i].push(l);
                 }
             }
         }
-        let clause = !&cube;
-        self.frames[frame].push(cube);
+        let clause = !&lemma.cube;
+        self.frames[frame].push(lemma);
         for i in begin..=frame {
             self.solvers[i].add_clause(&clause);
         }

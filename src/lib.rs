@@ -14,6 +14,7 @@ mod statistic;
 mod verify;
 
 use crate::basic::ProofObligation;
+use crate::frames::Lemma;
 use crate::{basic::BasicShare, statistic::Statistic};
 use crate::{basic::ProofObligationQueue, solver::Lift};
 use activity::Activity;
@@ -63,7 +64,7 @@ impl Ic3 {
         let (frame, core) = self.generalize(po.frame, conflict);
         if frame <= self.depth() {
             self.obligations
-                .add(ProofObligation::new(frame, po.cube, po.depth, po.successor));
+                .add(ProofObligation::new(frame, po.lemma, po.depth));
         }
         self.add_cube(frame - 1, core);
     }
@@ -71,22 +72,22 @@ impl Ic3 {
     pub fn block(&mut self, frame: usize, cube: Cube) -> bool {
         assert!(self.obligations.is_empty());
         self.obligations
-            .add(ProofObligation::new(frame, cube, 0, None));
+            .add(ProofObligation::new(frame, Lemma::new(cube), 0));
         while let Some(po) = self.obligations.pop() {
             if po.frame == 0 {
                 return false;
             }
-            assert!(!self.share.model.cube_subsume_init(&po.cube));
+            assert!(!self.share.model.cube_subsume_init(&po.lemma));
             if self.share.args.verbose_all {
                 self.statistic();
             }
-            if self.frames.trivial_contained(po.frame, &po.cube) {
+            if self.frames.trivial_contained(po.frame, &po.lemma) {
                 continue;
             }
             // if self.sat_contained(po.frame, &po.cube) {
             //     continue;
             // }
-            match self.blocked(po.frame, &po.cube) {
+            match self.blocked(po.frame, &po.lemma) {
                 BlockResult::Yes(blocked) => {
                     let conflict = self.blocked_conflict(&blocked);
                     self.handle_blocked(po, conflict);
@@ -95,9 +96,8 @@ impl Ic3 {
                     let model = self.unblocked_model(&unblocked);
                     self.obligations.add(ProofObligation::new(
                         po.frame - 1,
-                        model,
+                        Lemma::new(model),
                         po.depth + 1,
-                        Some(po.cube.clone()),
                     ));
                     self.obligations.add(po);
                 }

@@ -2,7 +2,7 @@ use super::{basic::BasicShare, frames::Frames};
 use crate::Ic3;
 use logic_form::{Clause, Cube, Lit, Var};
 use minisat::{SatResult, Solver};
-use std::{mem::take, sync::Arc, time::Instant};
+use std::{mem::take, ops::Deref, sync::Arc, time::Instant};
 
 pub struct Ic3Solver {
     solver: Solver,
@@ -45,7 +45,7 @@ impl Ic3Solver {
         };
         for dnf in frames_slice.iter() {
             for cube in dnf {
-                self.add_clause(&!cube);
+                self.add_clause(&!cube.deref());
             }
         }
         self.simplify()

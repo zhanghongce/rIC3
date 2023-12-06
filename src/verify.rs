@@ -1,3 +1,5 @@
+use std::ops::Deref;
+
 use crate::{solver::Ic3Solver, Ic3};
 use minisat::SatResult;
 
@@ -13,7 +15,7 @@ impl Ic3 {
         for i in invariant..self.frames.len() {
             for cube in self.frames[i].iter() {
                 num += 1;
-                solver.add_clause(&!cube);
+                solver.add_clause(&!cube.deref());
             }
         }
         if let SatResult::Sat(_) = solver.solve(&self.share.bad) {
