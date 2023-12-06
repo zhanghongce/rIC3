@@ -107,11 +107,6 @@ impl Ic3 {
     }
 
     pub fn propagate(&mut self) -> bool {
-        // let start = if trivial {
-        //     (self.depth() - 1).max(1)
-        // } else {
-        //     1
-        // };
         for frame_idx in self.frames.early()..self.depth() {
             let mut frame = self.frames[frame_idx].clone();
             frame.sort_by_key(|x| x.len());
