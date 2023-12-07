@@ -62,18 +62,15 @@ impl Ic3 {
 
     pub fn handle_blocked(&mut self, po: ProofObligation, conflict: Cube) {
         let (frame, core) = self.generalize(po.frame, conflict);
-        if frame <= self.depth() {
-            self.obligations
-                .add(ProofObligation::new(frame, po.lemma, po.depth));
-        }
+        self.obligations
+            .add(ProofObligation::new(frame, po.lemma, po.depth));
         self.add_cube(frame - 1, core);
     }
 
     pub fn block(&mut self, frame: usize, cube: Cube) -> bool {
-        assert!(self.obligations.is_empty());
         self.obligations
             .add(ProofObligation::new(frame, Lemma::new(cube), 0));
-        while let Some(po) = self.obligations.pop() {
+        while let Some(po) = self.obligations.pop(self.depth()) {
             if po.frame == 0 {
                 return false;
             }

@@ -64,8 +64,8 @@ impl ProofObligationQueue {
         self.obligations.push(po)
     }
 
-    pub fn pop(&mut self) -> Option<ProofObligation> {
-        let po = self.obligations.pop();
+    pub fn pop(&mut self, depth: usize) -> Option<ProofObligation> {
+        let po = self.obligations.pop().filter(|po| po.frame <= depth);
         if let Some(po) = &po {
             self.num[po.frame] -= 1;
         }
