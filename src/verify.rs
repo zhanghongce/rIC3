@@ -1,34 +1,44 @@
+use crate::{frames::Lemma, solver::Ic3Solver, Ic3};
+use minisat::SatResult;
 use std::ops::Deref;
 
-use crate::{solver::Ic3Solver, Ic3};
-use minisat::SatResult;
-
 impl Ic3 {
+    fn verify_invariant(&mut self, invariants: &[Lemma]) -> bool {
+        let mut solver = Ic3Solver::new(self.share.clone(), 1);
+        for lemma in invariants {
+            solver.add_clause(&!lemma.deref());
+        }
+        if let SatResult::Sat(_) = solver.solve(&self.share.bad) {
+            return false;
+        }
+        for lemma in invariants {
+            if let SatResult::Sat(_) = solver.solve(&self.share.model.cube_next(lemma)) {
+                return false;
+            }
+        }
+        true
+    }
+
     pub fn verify(&mut self) -> bool {
         let invariant = self
             .frames
             .iter()
             .position(|frame| frame.is_empty())
             .unwrap();
-        let mut solver = Ic3Solver::new(self.share.clone(), invariant);
-        let mut num = 0;
+        let mut invariants = Vec::new();
         for i in invariant..self.frames.len() {
             for cube in self.frames[i].iter() {
-                num += 1;
-                solver.add_clause(&!cube.deref());
+                invariants.push(cube.clone());
             }
         }
-        if let SatResult::Sat(_) = solver.solve(&self.share.bad) {
+        if !self.verify_invariant(&invariants) {
+            println!("invariant varify failed");
             return false;
         }
-        for i in invariant..self.frames.len() {
-            for cube in self.frames[i].iter() {
-                if let SatResult::Sat(_) = solver.solve(&self.share.model.cube_next(cube)) {
-                    return false;
-                }
-            }
-        }
-        println!("inductive invariant verified with {num} lemmas!");
+        println!(
+            "inductive invariant verified with {} lemmas!",
+            invariants.len()
+        );
         true
     }
 }
