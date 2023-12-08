@@ -65,11 +65,12 @@ impl ProofObligationQueue {
     }
 
     pub fn pop(&mut self, depth: usize) -> Option<ProofObligation> {
-        let po = self.obligations.pop().filter(|po| po.frame <= depth);
-        if let Some(po) = &po {
+        if let Some(po) = self.obligations.peek().filter(|po| po.frame <= depth) {
             self.num[po.frame] -= 1;
+            self.obligations.pop()
+        } else {
+            None
         }
-        po
     }
 
     pub fn is_empty(&self) -> bool {
