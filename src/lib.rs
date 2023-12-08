@@ -79,10 +79,8 @@ impl Ic3 {
                 self.statistic();
             }
             if self.frames.trivial_contained(po.frame, &po.lemma) {
-                if po.frame + 1 < self.depth() {
-                    self.obligations
-                        .add(ProofObligation::new(po.frame + 1, po.lemma, po.depth));
-                }
+                self.obligations
+                    .add(ProofObligation::new(po.frame + 1, po.lemma, po.depth));
                 continue;
             }
             // if self.sat_contained(po.frame, &po.cube) {
