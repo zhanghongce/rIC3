@@ -28,14 +28,16 @@ impl Ic3 {
             if self.share.model.cube_subsume_init(&cube) {
                 return DownResult::IncludeInit;
             }
-            match self.blocked(frame, &cube) {
+            match self.blocked_with_ordered(frame, &cube, false) {
                 BlockResult::Yes(blocked) => {
                     return DownResult::Success(self.blocked_conflict(&blocked))
                 }
                 BlockResult::No(unblocked) => {
                     let model = self.unblocked_model(&unblocked);
                     if ctgs < 3 && frame > 1 && !self.share.model.cube_subsume_init(&model) {
-                        if let BlockResult::Yes(blocked) = self.blocked(frame - 1, &model) {
+                        if let BlockResult::Yes(blocked) =
+                            self.blocked_with_ordered(frame - 1, &model, false)
+                        {
                             ctgs += 1;
                             let conflict = self.blocked_conflict(&blocked);
                             let mut i = frame;
