@@ -68,9 +68,7 @@ impl Ic3 {
         self.add_cube(frame - 1, core);
     }
 
-    pub fn block(&mut self, frame: usize, cube: Cube) -> bool {
-        self.obligations
-            .add(ProofObligation::new(frame, Lemma::new(cube), 0));
+    pub fn block(&mut self) -> bool {
         while let Some(po) = self.obligations.pop(self.depth()) {
             if po.frame == 0 {
                 return false;
@@ -171,10 +169,16 @@ impl Ic3 {
     fn check_inner(&mut self) -> bool {
         loop {
             let start = Instant::now();
-            while let Some(cex) = self.get_bad() {
-                if !self.block(self.depth(), cex) {
+            loop {
+                if !self.block() {
                     self.statistic();
                     return false;
+                }
+                if let Some(cex) = self.get_bad() {
+                    self.obligations
+                        .add(ProofObligation::new(self.depth(), Lemma::new(cex), 0));
+                } else {
+                    break;
                 }
             }
             let blocked_time = start.elapsed();

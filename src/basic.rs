@@ -4,7 +4,7 @@ use crate::model::Model;
 use aig::Aig;
 use logic_form::Cube;
 use std::cmp::Ordering;
-use std::collections::BinaryHeap;
+use std::collections::BTreeSet;
 
 pub struct BasicShare {
     pub aig: Aig,
@@ -13,7 +13,7 @@ pub struct BasicShare {
     pub bad: Cube,
 }
 
-#[derive(PartialEq, Eq, Clone)]
+#[derive(PartialEq, Eq, Clone, Debug)]
 pub struct ProofObligation {
     pub frame: usize,
     pub lemma: Lemma,
@@ -39,15 +39,21 @@ impl PartialOrd for ProofObligation {
 impl Ord for ProofObligation {
     fn cmp(&self, other: &Self) -> Ordering {
         match other.frame.cmp(&self.frame) {
-            Ordering::Equal => other.depth.cmp(&self.depth),
+            Ordering::Equal => match other.depth.cmp(&self.depth) {
+                Ordering::Equal => match other.lemma.len().cmp(&self.lemma.len()) {
+                    Ordering::Equal => other.lemma.cmp(&self.lemma),
+                    ord => ord,
+                },
+                ord => ord,
+            },
             ord => ord,
         }
     }
 }
 
-#[derive(Default)]
+#[derive(Default, Debug)]
 pub struct ProofObligationQueue {
-    obligations: BinaryHeap<ProofObligation>,
+    obligations: BTreeSet<ProofObligation>,
     num: Vec<usize>,
 }
 
@@ -61,13 +67,13 @@ impl ProofObligationQueue {
             self.num.resize(po.frame + 1, 0);
         }
         self.num[po.frame] += 1;
-        self.obligations.push(po)
+        assert!(self.obligations.insert(po.clone()));
     }
 
     pub fn pop(&mut self, depth: usize) -> Option<ProofObligation> {
-        if let Some(po) = self.obligations.peek().filter(|po| po.frame <= depth) {
+        if let Some(po) = self.obligations.last().filter(|po| po.frame <= depth) {
             self.num[po.frame] -= 1;
-            self.obligations.pop()
+            self.obligations.pop_last()
         } else {
             None
         }
