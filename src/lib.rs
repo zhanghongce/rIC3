@@ -23,7 +23,7 @@ pub use command::Args;
 use frames::Frames;
 use logic_form::{Cube, Lit};
 use model::Model;
-use solver::{BlockResult, Ic3Solver};
+use solver::{BlockResult, BlockResultYes, Ic3Solver};
 use std::panic::{self, AssertUnwindSafe};
 use std::process::exit;
 use std::{sync::Arc, time::Instant};
@@ -61,7 +61,8 @@ impl Ic3 {
         (self.depth() + 1, cube)
     }
 
-    pub fn handle_blocked(&mut self, po: ProofObligation, conflict: Cube) {
+    pub fn handle_blocked(&mut self, po: ProofObligation, blocked: BlockResultYes) {
+        let conflict = self.blocked_conflict(&blocked);
         let (frame, core) = self.generalize(po.frame, conflict);
         self.obligations
             .add(ProofObligation::new(frame, po.lemma, po.depth));
@@ -87,8 +88,7 @@ impl Ic3 {
             // }
             match self.blocked(po.frame, &po.lemma) {
                 BlockResult::Yes(blocked) => {
-                    let conflict = self.blocked_conflict(&blocked);
-                    self.handle_blocked(po, conflict);
+                    self.handle_blocked(po, blocked);
                 }
                 BlockResult::No(unblocked) => {
                     let model = self.unblocked_model(&unblocked);
