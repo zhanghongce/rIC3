@@ -79,10 +79,6 @@ impl ProofObligationQueue {
         }
     }
 
-    pub fn is_empty(&self) -> bool {
-        self.obligations.is_empty()
-    }
-
     pub fn statistic(&self) {
         println!("{:?}", self.num);
     }
