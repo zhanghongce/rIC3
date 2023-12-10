@@ -113,8 +113,7 @@ impl Ic3 {
             }
             let mut removed_cube = cube.clone();
             removed_cube.remove(i);
-            let res = self.ctg_down(frame, &removed_cube, &keep, level);
-            match res {
+            match self.ctg_down(frame, &removed_cube, &keep, level) {
                 DownResult::Success(new_cube) => {
                     self.statistic.mic_drop.success();
                     (cube, i) = self.handle_down_success(frame, cube, i, new_cube);
