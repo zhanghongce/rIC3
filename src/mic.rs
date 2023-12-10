@@ -1,7 +1,7 @@
 use super::{solver::BlockResult, Ic3};
 use crate::solver::BlockResultNo;
 use logic_form::{Cube, Lit};
-use std::{collections::HashSet, time::Instant};
+use std::collections::HashSet;
 #[derive(Debug)]
 enum DownResult {
     Success(Cube),
@@ -10,19 +10,15 @@ enum DownResult {
 }
 
 impl Ic3 {
-    fn down(&mut self, frame: usize, cube: &Cube) -> DownResult {
-        if self.share.model.cube_subsume_init(cube) {
-            return DownResult::IncludeInit;
-        }
-        match self.blocked_with_ordered(frame, cube, false) {
-            BlockResult::Yes(blocked) => DownResult::Success(self.blocked_conflict(&blocked)),
-            BlockResult::No(unblock) => DownResult::Fail(unblock),
-        }
-    }
-
-    fn ctg_down(&mut self, frame: usize, cube: &Cube, keep: &HashSet<Lit>) -> DownResult {
+    fn ctg_down(
+        &mut self,
+        frame: usize,
+        cube: &Cube,
+        keep: &HashSet<Lit>,
+        level: usize,
+    ) -> DownResult {
         let mut cube = cube.clone();
-        self.statistic.num_ctg_down += 1;
+        self.statistic.num_down += 1;
         let mut ctgs = 0;
         loop {
             if self.share.model.cube_subsume_init(&cube) {
@@ -33,6 +29,9 @@ impl Ic3 {
                     return DownResult::Success(self.blocked_conflict(&blocked))
                 }
                 BlockResult::No(unblocked) => {
+                    if level == 0 {
+                        return DownResult::Fail(unblocked);
+                    }
                     let model = self.unblocked_model(&unblocked);
                     if ctgs < 3 && frame > 1 && !self.share.model.cube_subsume_init(&model) {
                         if let BlockResult::Yes(blocked) =
@@ -47,7 +46,7 @@ impl Ic3 {
                                 }
                                 i += 1;
                             }
-                            let conflict = self.mic(i - 1, conflict, true);
+                            let conflict = self.mic(i - 1, conflict, level - 1);
                             self.add_cube(i - 1, conflict);
                             continue;
                         }
@@ -98,11 +97,10 @@ impl Ic3 {
         (new_cube, new_i)
     }
 
-    pub fn mic(&mut self, frame: usize, mut cube: Cube, simple: bool) -> Cube {
-        let start = Instant::now();
+    pub fn mic(&mut self, frame: usize, mut cube: Cube, level: usize) -> Cube {
         self.statistic.average_mic_cube_len += cube.len();
         self.statistic.num_mic += 1;
-        if !simple {
+        if level > 0 {
             self.add_temporary_cube(frame, &cube);
         }
         self.activity.sort_by_activity(&mut cube, true);
@@ -115,11 +113,7 @@ impl Ic3 {
             }
             let mut removed_cube = cube.clone();
             removed_cube.remove(i);
-            let res = if simple {
-                self.down(frame, &removed_cube)
-            } else {
-                self.ctg_down(frame, &removed_cube, &keep)
-            };
+            let res = self.ctg_down(frame, &removed_cube, &keep, level);
             match res {
                 DownResult::Success(new_cube) => {
                     self.statistic.mic_drop.success();
@@ -133,9 +127,6 @@ impl Ic3 {
             }
         }
         self.activity.pump_cube_activity(&cube);
-        if !simple || !self.share.args.ctg {
-            self.statistic.mic_time += start.elapsed();
-        }
         cube
     }
 }

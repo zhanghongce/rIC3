@@ -17,10 +17,9 @@ pub struct Statistic {
     pub num_solver_restart: usize,
 
     pub num_mic: usize,
-    pub mic_time: Duration,
     pub average_mic_cube_len: StatisticAverage,
     pub mic_drop: SuccessRate,
-    pub num_ctg_down: usize,
+    pub num_down: usize,
 
     pub overall_block_time: Duration,
     pub overall_propagate_time: Duration,
