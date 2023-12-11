@@ -171,6 +171,7 @@ impl Ic3 {
             let start = Instant::now();
             loop {
                 if !self.block() {
+                    self.statistic.overall_block_time += start.elapsed();
                     self.statistic();
                     return false;
                 }

@@ -1,8 +1,9 @@
 use crate::Ic3;
-use logic_form::Cube;
+use logic_form::{Cube, Lit};
 use minisat::SatResult;
 use serde::{Deserialize, Serialize};
 use std::{
+    collections::HashSet,
     fmt::{self, Debug, Display},
     mem::take,
     ops::{Deref, DerefMut},
@@ -47,6 +48,21 @@ impl Lemma {
         }
         self.cube.ordered_subsume(&other.cube)
     }
+
+    pub fn subsume_set(&self, other: &Lemma, other_lits: &HashSet<Lit>) -> bool {
+        if self.cube.len() > other.cube.len() {
+            return false;
+        }
+        if self.sign & other.sign != self.sign {
+            return false;
+        }
+        for l in self.iter() {
+            if !other_lits.contains(l) {
+                return false;
+            }
+        }
+        true
+    }
 }
 
 #[derive(Debug, Serialize, Default, Deserialize)]
@@ -68,9 +84,13 @@ impl Frames {
     }
 
     pub fn trivial_contained(&self, frame: usize, lemma: &Lemma) -> bool {
+        let mut lit_set: HashSet<Lit> = HashSet::with_capacity(lemma.len());
+        for l in lemma.iter() {
+            lit_set.insert(*l);
+        }
         for i in frame..self.frames.len() {
             for l in self.frames[i].iter() {
-                if l.subsume(lemma) {
+                if l.subsume_set(lemma, &lit_set) {
                     return true;
                 }
             }
