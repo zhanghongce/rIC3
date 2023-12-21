@@ -64,8 +64,8 @@ impl Ic3 {
     pub fn handle_blocked(&mut self, po: ProofObligation, blocked: BlockResultYes) {
         let conflict = self.blocked_conflict(&blocked);
         let (frame, core) = self.generalize(po.frame, conflict);
-        self.obligations
-            .add(ProofObligation::new(frame, po.lemma, po.depth));
+        self.statistic.average_po_cube_len += po.lemma.len();
+        self.add_obligation(ProofObligation::new(frame, po.lemma, po.depth));
         self.add_cube(frame - 1, core);
     }
 
@@ -79,8 +79,7 @@ impl Ic3 {
                 self.statistic();
             }
             if self.frames.trivial_contained(po.frame, &po.lemma) {
-                self.obligations
-                    .add(ProofObligation::new(po.frame + 1, po.lemma, po.depth));
+                self.add_obligation(ProofObligation::new(po.frame + 1, po.lemma, po.depth));
                 continue;
             }
             // if self.sat_contained(po.frame, &po.cube) {
@@ -92,12 +91,12 @@ impl Ic3 {
                 }
                 BlockResult::No(unblocked) => {
                     let model = self.unblocked_model(&unblocked);
-                    self.obligations.add(ProofObligation::new(
+                    self.add_obligation(ProofObligation::new(
                         po.frame - 1,
                         Lemma::new(model),
                         po.depth + 1,
                     ));
-                    self.obligations.add(po);
+                    self.add_obligation(po);
                 }
             }
         }
@@ -176,8 +175,7 @@ impl Ic3 {
                     return false;
                 }
                 if let Some(cex) = self.get_bad() {
-                    self.obligations
-                        .add(ProofObligation::new(self.depth(), Lemma::new(cex), 0));
+                    self.add_obligation(ProofObligation::new(self.depth(), Lemma::new(cex), 0));
                 } else {
                     break;
                 }

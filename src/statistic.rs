@@ -18,8 +18,11 @@ pub struct Statistic {
 
     pub num_mic: usize,
     pub average_mic_cube_len: StatisticAverage,
+    pub average_po_cube_len: StatisticAverage,
     pub mic_drop: SuccessRate,
     pub num_down: usize,
+
+    pub minimal_predecessor_time: Duration,
 
     pub overall_block_time: Duration,
     pub overall_propagate_time: Duration,

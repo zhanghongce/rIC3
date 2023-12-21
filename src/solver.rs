@@ -247,6 +247,7 @@ impl Lift {
 
 impl Ic3 {
     pub fn minimal_predecessor(&mut self, successor: &Cube, model: minisat::Model) -> Cube {
+        let start = Instant::now();
         self.lift.num_act += 1;
         if self.lift.num_act > 1000 {
             self.lift = Lift::new(self.share.clone())
@@ -280,6 +281,7 @@ impl Ic3 {
             }
         };
         self.lift.solver.release_var(!act);
+        self.statistic.minimal_predecessor_time += start.elapsed();
         res
     }
 }

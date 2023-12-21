@@ -1,6 +1,7 @@
 use crate::command::Args;
 use crate::frames::Lemma;
 use crate::model::Model;
+use crate::Ic3;
 use aig::Aig;
 use logic_form::Cube;
 use std::cmp::Ordering;
@@ -62,7 +63,7 @@ impl ProofObligationQueue {
         Self::default()
     }
 
-    pub fn add(&mut self, po: ProofObligation) {
+    fn add(&mut self, po: ProofObligation) {
         if self.num.len() <= po.frame {
             self.num.resize(po.frame + 1, 0);
         }
@@ -81,5 +82,12 @@ impl ProofObligationQueue {
 
     pub fn statistic(&self) {
         println!("{:?}", self.num);
+    }
+}
+
+impl Ic3 {
+    pub fn add_obligation(&mut self, po: ProofObligation) {
+        self.statistic.average_po_cube_len += po.lemma.len();
+        self.obligations.add(po)
     }
 }
