@@ -27,9 +27,6 @@ impl Model {
         let primes = self.latchs.clone();
         let next_map = self.previous_map.clone();
         let previous_map = self.next_map.clone();
-        let mut init_sat = Solver::new();
-        self.load_trans(&mut init_sat);
-        init_sat.add_clause(&Clause::from([init[0]]));
         let mut init_map = HashMap::new();
         init_map.insert(init[0].var(), true);
         Self {
