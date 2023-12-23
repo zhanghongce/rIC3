@@ -131,7 +131,7 @@ impl Ic3 {
 impl Ic3 {
     pub fn new(args: Args) -> Self {
         let aig = Aig::from_file(args.model.as_ref().unwrap()).unwrap();
-        let model = Model::from_aig(&aig);
+        let model = Model::from_aig(&aig, !args.backward);
         let share = Arc::new(BasicShare { args, model });
         let mut res = Self {
             solvers: Vec::new(),

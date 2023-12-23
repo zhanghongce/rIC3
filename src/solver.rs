@@ -199,7 +199,7 @@ impl Ic3 {
                 .find(|l| {
                     self.share
                         .model
-                        .init
+                        .init_map
                         .get(&l.var())
                         .is_some_and(|i| *i != l.polarity())
                 })
@@ -217,7 +217,6 @@ impl Ic3 {
     pub fn unblocked_model(&mut self, unblock: &BlockResultNo) -> Cube {
         let model = unsafe { self.solvers[unblock.solver_idx].solver.get_model() };
         self.minimal_predecessor(&unblock.assumption, model)
-        // self.generalize_by_ternary_simulation(model, &unblock.assumption)
     }
 
     pub fn unblocked_model_lit_value(&self, unblock: &BlockResultNo, lit: Lit) -> bool {
@@ -246,41 +245,53 @@ impl Lift {
 
 impl Ic3 {
     pub fn minimal_predecessor(&mut self, successor: &Cube, model: minisat::Model) -> Cube {
-        let start = Instant::now();
-        self.lift.num_act += 1;
-        if self.lift.num_act > 1000 {
-            self.lift = Lift::new(self.share.clone())
-        }
-        let act: Lit = self.lift.solver.new_var().into();
-        let mut assumption = Cube::from([act]);
-        let mut cls = !successor;
-        cls.push(!act);
-        self.lift.solver.add_clause(&cls);
-        for input in self.share.model.inputs.iter() {
-            let mut lit = input.lit();
-            if !model.lit_value(lit) {
-                lit = !lit;
+        if !self.share.args.backward {
+            let start = Instant::now();
+            self.lift.num_act += 1;
+            if self.lift.num_act > 1000 {
+                self.lift = Lift::new(self.share.clone())
             }
-            assumption.push(lit);
-        }
-        let mut latchs = Cube::new();
-        for latch in self.share.model.latchs.iter() {
-            let mut lit = latch.lit();
-            if !model.lit_value(lit) {
-                lit = !lit;
+            let act: Lit = self.lift.solver.new_var().into();
+            let mut assumption = Cube::from([act]);
+            let mut cls = !successor;
+            cls.push(!act);
+            self.lift.solver.add_clause(&cls);
+            for input in self.share.model.inputs.iter() {
+                let mut lit = input.lit();
+                if !model.lit_value(lit) {
+                    lit = !lit;
+                }
+                assumption.push(lit);
             }
-            latchs.push(lit);
-        }
-        self.activity.sort_by_activity(&mut latchs, false);
-        assumption.extend_from_slice(&latchs);
-        let res: Cube = match self.lift.solver.solve(&assumption) {
-            SatResult::Sat(_) => panic!(),
-            SatResult::Unsat(conflict) => {
-                latchs.into_iter().filter(|l| conflict.has(!*l)).collect()
+            let mut latchs = Cube::new();
+            for latch in self.share.model.latchs.iter() {
+                let mut lit = latch.lit();
+                if !model.lit_value(lit) {
+                    lit = !lit;
+                }
+                latchs.push(lit);
             }
-        };
-        self.lift.solver.release_var(!act);
-        self.statistic.minimal_predecessor_time += start.elapsed();
-        res
+            self.activity.sort_by_activity(&mut latchs, false);
+            assumption.extend_from_slice(&latchs);
+            let res: Cube = match self.lift.solver.solve(&assumption) {
+                SatResult::Sat(_) => panic!(),
+                SatResult::Unsat(conflict) => {
+                    latchs.into_iter().filter(|l| conflict.has(!*l)).collect()
+                }
+            };
+            self.lift.solver.release_var(!act);
+            self.statistic.minimal_predecessor_time += start.elapsed();
+            res
+        } else {
+            let mut latchs = Cube::new();
+            for latch in self.share.model.latchs.iter() {
+                let mut lit = latch.lit();
+                if !model.lit_value(lit) {
+                    lit = !lit;
+                }
+                latchs.push(lit);
+            }
+            latchs
+        }
     }
 }

@@ -4,12 +4,14 @@ use minisat::{SimpSolver, Solver};
 use std::collections::HashMap;
 
 pub struct Model {
+    forward: bool,
     pub inputs: Vec<Var>,
     pub latchs: Vec<Var>,
     pub primes: Vec<Var>,
-    pub init: HashMap<Var, bool>,
-    pub constraints: Vec<Lit>,
+    pub init: Cube,
     pub bad: Cube,
+    pub init_map: HashMap<Var, bool>,
+    pub constraints: Vec<Lit>,
     pub trans: Cnf,
     num_var: usize,
     next_map: HashMap<Var, Var>,
@@ -17,7 +19,36 @@ pub struct Model {
 }
 
 impl Model {
-    pub fn from_aig(aig: &Aig) -> Self {
+    fn backward(&self) -> Self {
+        assert!(self.forward);
+        let init = self.bad.clone();
+        let bad = self.init.clone();
+        let latchs = self.primes.clone();
+        let primes = self.latchs.clone();
+        let next_map = self.previous_map.clone();
+        let previous_map = self.next_map.clone();
+        let mut init_sat = Solver::new();
+        self.load_trans(&mut init_sat);
+        init_sat.add_clause(&Clause::from([init[0]]));
+        let mut init_map = HashMap::new();
+        init_map.insert(init[0].var(), true);
+        Self {
+            forward: false,
+            inputs: self.inputs.clone(),
+            latchs,
+            primes,
+            init,
+            bad,
+            init_map,
+            constraints: self.constraints.clone(),
+            trans: self.trans.clone(),
+            num_var: self.num_var,
+            next_map,
+            previous_map,
+        }
+    }
+
+    pub fn from_aig(aig: &Aig, forward: bool) -> Self {
         let mut simp_solver = SimpSolver::new();
         let false_lit: Lit = simp_solver.new_var().into();
         simp_solver.add_clause(&[!false_lit]);
@@ -25,26 +56,28 @@ impl Model {
             assert_eq!(Var::new(node.node_id()), simp_solver.new_var());
         }
         let inputs: Vec<Var> = aig.inputs.iter().map(|x| Var::new(*x)).collect();
-        let latchs: Vec<Var> = aig.latchs.iter().map(|x| Var::new(x.input)).collect();
+        let mut latchs: Vec<Var> = aig.latchs.iter().map(|x| Var::new(x.input)).collect();
+        latchs.push(simp_solver.new_var());
         let primes: Vec<Var> = latchs.iter().map(|_| simp_solver.new_var()).collect();
-        let mut init = HashMap::new();
-        for l in aig.latch_init_cube().to_cube() {
-            init.insert(l.var(), l.polarity());
+        let bad_var_prime_lit = primes.last().unwrap().lit();
+        let init = aig.latch_init_cube().to_cube();
+        let mut init_map = HashMap::new();
+        for l in init.iter() {
+            init_map.insert(l.var(), l.polarity());
         }
         let constraints: Vec<Lit> = aig.constraints.iter().map(|c| c.to_lit()).collect();
+        assert!(constraints.is_empty());
         let aig_bad = if aig.bads.is_empty() {
             aig.outputs[0]
         } else {
             aig.bads[0]
         };
-        let bad = Cube::from([aig_bad.to_lit()]);
         for v in inputs.iter().chain(latchs.iter()).chain(primes.iter()) {
             simp_solver.set_frozen(*v, true);
         }
         for l in constraints.iter() {
             simp_solver.set_frozen(l.var(), true);
         }
-        simp_solver.set_frozen(bad[0].var(), true);
         let mut logic = Vec::new();
         for l in aig.latchs.iter() {
             logic.push(l.next);
@@ -53,8 +86,12 @@ impl Model {
             logic.push(*c);
         }
         logic.push(aig_bad);
-        let trans = aig.get_optimized_cnf(&logic);
+        let mut trans = aig.get_optimized_cnf(&logic);
         // let trans = aig.get_cnf();
+        let bad_lit = aig_bad.to_lit();
+        trans.push(Clause::from([!bad_lit, bad_var_prime_lit]));
+        trans.push(Clause::from([bad_lit, !bad_var_prime_lit]));
+        let bad = Cube::from([bad_var_prime_lit]);
         for tran in trans.iter() {
             simp_solver.add_clause(tran);
         }
@@ -68,26 +105,32 @@ impl Model {
             simp_solver.add_clause(&Clause::from([*c]));
         }
         simp_solver.eliminate(true);
+        let num_var = simp_solver.num_var();
         let trans = simp_solver.clauses();
-
         let mut next_map = HashMap::new();
         let mut previous_map = HashMap::new();
         for (l, p) in latchs.iter().zip(primes.iter()) {
             next_map.insert(*l, *p);
             previous_map.insert(*p, *l);
         }
-        Self {
+        let mut res = Self {
+            forward: true,
             inputs,
             latchs,
             primes,
             init,
-            constraints,
             bad,
+            init_map,
+            constraints,
             trans,
-            num_var: simp_solver.num_var(),
+            num_var,
             next_map,
             previous_map,
+        };
+        if !forward {
+            res = res.backward();
         }
+        res
     }
 
     #[inline]
@@ -110,7 +153,7 @@ impl Model {
 
     pub fn cube_subsume_init(&self, x: &Cube) -> bool {
         for i in 0..x.len() {
-            if let Some(init) = self.init.get(&x[i].var()) {
+            if let Some(init) = self.init_map.get(&x[i].var()) {
                 if *init != x[i].polarity() {
                     return false;
                 }
@@ -129,7 +172,7 @@ impl Model {
     }
 
     pub fn inits(&self) -> Vec<Cube> {
-        self.init
+        self.init_map
             .iter()
             .map(|(latch, init)| Cube::from([Lit::new(*latch, !init)]))
             .collect()
