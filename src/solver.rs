@@ -97,17 +97,16 @@ impl Ic3Solver {
 
 impl Ic3 {
     pub fn get_bad(&mut self) -> Option<Cube> {
-        let bad = if self.share.aig.bads.is_empty() {
-            self.share.aig.outputs[0]
-        } else {
-            self.share.aig.bads[0]
-        };
-        if let SatResult::Sat(_) = self.solvers.last_mut().unwrap().solve(&[bad.to_lit()]) {
+        if let SatResult::Sat(_) = self
+            .solvers
+            .last_mut()
+            .unwrap()
+            .solve(&self.share.model.bad)
+        {
             self.statistic.num_get_bad_state += 1;
             let model = unsafe { self.solvers.last().unwrap().solver.get_model() };
-            let bad = self.share.bad.clone();
+            let bad = self.share.model.bad.clone();
             let cex = self.minimal_predecessor(&bad, model);
-            // let cex = self.generalize_by_ternary_simulation(model, &bad);
             return Some(cex);
         }
         None
@@ -257,16 +256,16 @@ impl Ic3 {
         let mut cls = !successor;
         cls.push(!act);
         self.lift.solver.add_clause(&cls);
-        for input in self.share.aig.inputs.iter() {
-            let mut lit: Lit = Var::from(*input).into();
+        for input in self.share.model.inputs.iter() {
+            let mut lit = input.lit();
             if !model.lit_value(lit) {
                 lit = !lit;
             }
             assumption.push(lit);
         }
         let mut latchs = Cube::new();
-        for latch in &self.share.aig.latchs {
-            let mut lit: Lit = Var::from(latch.input).into();
+        for latch in self.share.model.latchs.iter() {
+            let mut lit = latch.lit();
             if !model.lit_value(lit) {
                 lit = !lit;
             }

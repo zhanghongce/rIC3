@@ -2,16 +2,12 @@ use crate::command::Args;
 use crate::frames::Lemma;
 use crate::model::Model;
 use crate::Ic3;
-use aig::Aig;
-use logic_form::Cube;
 use std::cmp::Ordering;
 use std::collections::BTreeSet;
 
 pub struct BasicShare {
-    pub aig: Aig,
     pub args: Args,
     pub model: Model,
-    pub bad: Cube,
 }
 
 #[derive(PartialEq, Eq, Clone, Debug)]

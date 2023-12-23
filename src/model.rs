@@ -9,7 +9,7 @@ pub struct Model {
     pub primes: Vec<Var>,
     pub init: HashMap<Var, bool>,
     pub constraints: Vec<Lit>,
-    pub bad: Lit,
+    pub bad: Cube,
     pub trans: Cnf,
     num_var: usize,
     next_map: HashMap<Var, Var>,
@@ -37,14 +37,14 @@ impl Model {
         } else {
             aig.bads[0]
         };
-        let bad = aig_bad.to_lit();
+        let bad = Cube::from([aig_bad.to_lit()]);
         for v in inputs.iter().chain(latchs.iter()).chain(primes.iter()) {
             simp_solver.set_frozen(*v, true);
         }
         for l in constraints.iter() {
             simp_solver.set_frozen(l.var(), true);
         }
-        simp_solver.set_frozen(bad.var(), true);
+        simp_solver.set_frozen(bad[0].var(), true);
         let mut logic = Vec::new();
         for l in aig.latchs.iter() {
             logic.push(l.next);
@@ -126,5 +126,12 @@ impl Model {
         for cls in self.trans.iter() {
             solver.add_clause(cls)
         }
+    }
+
+    pub fn inits(&self) -> Vec<Cube> {
+        self.init
+            .iter()
+            .map(|(latch, init)| Cube::from([Lit::new(*latch, !init)]))
+            .collect()
     }
 }

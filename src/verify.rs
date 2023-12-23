@@ -8,7 +8,7 @@ impl Ic3 {
         for lemma in invariants {
             solver.add_clause(&!lemma.deref());
         }
-        if let SatResult::Sat(_) = solver.solve(&self.share.bad) {
+        if let SatResult::Sat(_) = solver.solve(&self.share.model.bad) {
             return false;
         }
         for lemma in invariants {

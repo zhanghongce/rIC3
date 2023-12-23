@@ -8,7 +8,6 @@ mod command;
 mod frames;
 mod mic;
 mod model;
-mod simulate;
 mod solver;
 mod statistic;
 mod verify;
@@ -21,7 +20,7 @@ use activity::Activity;
 use aig::Aig;
 pub use command::Args;
 use frames::Frames;
-use logic_form::{Cube, Lit};
+use logic_form::Cube;
 use model::Model;
 use solver::{BlockResult, BlockResultYes, Ic3Solver};
 use std::panic::{self, AssertUnwindSafe};
@@ -133,18 +132,7 @@ impl Ic3 {
     pub fn new(args: Args) -> Self {
         let aig = Aig::from_file(args.model.as_ref().unwrap()).unwrap();
         let model = Model::from_aig(&aig);
-        let bad = Cube::from([if aig.bads.is_empty() {
-            aig.outputs[0]
-        } else {
-            aig.bads[0]
-        }
-        .to_lit()]);
-        let share = Arc::new(BasicShare {
-            aig,
-            args,
-            model,
-            bad,
-        });
+        let share = Arc::new(BasicShare { args, model });
         let mut res = Self {
             solvers: Vec::new(),
             frames: Frames::new(),
@@ -155,12 +143,8 @@ impl Ic3 {
             obligations: ProofObligationQueue::new(),
         };
         res.new_frame();
-        for i in 0..res.share.aig.latchs.len() {
-            let l = &res.share.aig.latchs[i];
-            if let Some(init) = l.init {
-                let cube = Cube::from([Lit::new(l.input.into(), !init)]);
-                res.add_cube(0, cube)
-            }
+        for cube in res.share.model.inits() {
+            res.add_cube(0, cube)
         }
         res
     }
