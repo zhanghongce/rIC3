@@ -64,7 +64,7 @@ impl Ic3Solver {
     }
 
     pub fn simplify(&mut self) {
-        assert!(self.solver.simplify())
+        self.solver.simplify()
     }
 
     pub fn set_polarity(&mut self, var: Var, pol: Option<bool>) {
