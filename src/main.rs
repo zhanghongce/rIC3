@@ -15,5 +15,5 @@ fn main() {
     }
 
     let mut ic3 = Ic3::new(args);
-    println!("result: {}", ic3.check());
+    println!("result: {}", ic3.check_with_int_hanlder());
 }

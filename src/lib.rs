@@ -42,7 +42,7 @@ impl Ic3 {
         self.solvers.len() - 1
     }
 
-    pub fn new_frame(&mut self) {
+    pub(crate) fn new_frame(&mut self) {
         self.frames.new_frame();
         self.solvers
             .push(Ic3Solver::new(self.share.clone(), self.solvers.len()));
@@ -68,7 +68,7 @@ impl Ic3 {
         self.add_cube(frame - 1, core);
     }
 
-    pub fn block(&mut self) -> bool {
+    pub(crate) fn block(&mut self) -> bool {
         while let Some(po) = self.obligations.pop(self.depth()) {
             if po.frame == 0 {
                 return false;
@@ -102,7 +102,7 @@ impl Ic3 {
         true
     }
 
-    pub fn propagate(&mut self) -> bool {
+    pub(crate) fn propagate(&mut self) -> bool {
         for frame_idx in self.frames.early()..self.depth() {
             let mut frame = self.frames[frame_idx].clone();
             frame.sort_by_key(|x| x.len());
@@ -149,7 +149,7 @@ impl Ic3 {
         res
     }
 
-    fn check_inner(&mut self) -> bool {
+    pub fn check(&mut self) -> bool {
         loop {
             let start = Instant::now();
             loop {
@@ -192,7 +192,7 @@ impl Ic3 {
         }
     }
 
-    pub fn check(&mut self) -> bool {
+    pub fn check_with_int_hanlder(&mut self) -> bool {
         let ic3 = self as *mut Ic3 as usize;
         ctrlc::set_handler(move || {
             let ic3 = unsafe { &mut *(ic3 as *mut Ic3) };
@@ -200,7 +200,7 @@ impl Ic3 {
             exit(130);
         })
         .unwrap();
-        panic::catch_unwind(AssertUnwindSafe(|| self.check_inner())).unwrap_or_else(|_| {
+        panic::catch_unwind(AssertUnwindSafe(|| self.check())).unwrap_or_else(|_| {
             self.statistic();
             panic!();
         })
