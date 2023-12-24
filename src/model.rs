@@ -56,7 +56,6 @@ impl Model {
         let mut latchs: Vec<Var> = aig.latchs.iter().map(|x| Var::new(x.input)).collect();
         latchs.push(simp_solver.new_var());
         let primes: Vec<Var> = latchs.iter().map(|_| simp_solver.new_var()).collect();
-        let bad_var_lit = latchs.last().unwrap().lit();
         let bad_var_prime_lit = primes.last().unwrap().lit();
         let init = aig.latch_init_cube().to_cube();
         let mut init_map = HashMap::new();
@@ -86,9 +85,8 @@ impl Model {
         logic.push(aig_bad);
         let mut trans = aig.get_optimized_cnf(&logic);
         let bad_lit = aig_bad.to_lit();
+        trans.push(Clause::from([!bad_lit, bad_var_prime_lit]));
         trans.push(Clause::from([bad_lit, !bad_var_prime_lit]));
-        trans.push(Clause::from([bad_lit, !bad_var_lit]));
-        trans.push(Clause::from([!bad_lit, bad_var_prime_lit, bad_var_lit]));
         let bad = Cube::from([bad_var_prime_lit]);
         for tran in trans.iter() {
             simp_solver.add_clause(tran);
