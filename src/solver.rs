@@ -187,7 +187,7 @@ impl Ic3 {
         let conflict = unsafe { self.solvers[block.solver_idx].solver.get_conflict() };
         let mut ans = Cube::new();
         for i in 0..block.cube.len() {
-            if conflict.has(!block.assumption[i]) {
+            if conflict.has(block.assumption[i]) {
                 ans.push(block.cube[i]);
             }
         }
@@ -205,7 +205,7 @@ impl Ic3 {
                 })
                 .unwrap();
             for i in 0..block.cube.len() {
-                if conflict.has(!block.assumption[i]) || block.cube[i] == new {
+                if conflict.has(block.assumption[i]) || block.cube[i] == new {
                     ans.push(block.cube[i]);
                 }
             }
@@ -276,7 +276,7 @@ impl Ic3 {
             let res: Cube = match self.lift.solver.solve(&assumption) {
                 SatResult::Sat(_) => panic!(),
                 SatResult::Unsat(conflict) => {
-                    latchs.into_iter().filter(|l| conflict.has(!*l)).collect()
+                    latchs.into_iter().filter(|l| conflict.has(*l)).collect()
                 }
             };
             self.lift.solver.release_var(!act);
