@@ -104,8 +104,8 @@ impl Ic3 {
 
     pub(crate) fn propagate(&mut self) -> bool {
         for frame_idx in self.frames.early()..self.depth() {
-            let mut frame = self.frames[frame_idx].clone();
-            frame.sort_by_key(|x| x.len());
+            self.frames[frame_idx].sort_by_key(|x| x.len());
+            let frame = self.frames[frame_idx].clone();
             for cube in frame {
                 if !self.frames[frame_idx].contains(&cube) {
                     continue;
