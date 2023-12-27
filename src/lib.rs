@@ -81,7 +81,7 @@ impl Ic3 {
                 self.add_obligation(ProofObligation::new(po.frame + 1, po.lemma, po.depth));
                 continue;
             }
-            match self.blocked(po.frame, &po.lemma) {
+            match self.blocked_with_ordered(po.frame, &po.lemma, false) {
                 BlockResult::Yes(blocked) => {
                     self.handle_blocked(po, blocked);
                 }
