@@ -2,6 +2,7 @@ use super::{solver::BlockResult, Ic3};
 use crate::solver::BlockResultNo;
 use logic_form::{Cube, Lit};
 use std::collections::HashSet;
+
 #[derive(Debug)]
 enum DownResult {
     Success(Cube),
