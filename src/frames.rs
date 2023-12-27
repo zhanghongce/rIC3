@@ -1,6 +1,5 @@
 use crate::Ic3;
 use logic_form::{Cube, Lit};
-use minisat::SatResult;
 use serde::{Deserialize, Serialize};
 use std::{
     collections::HashSet,
@@ -159,10 +158,6 @@ impl Ic3 {
             self.solvers[i].add_clause(&clause);
         }
         self.frames.early = self.frames.early.min(begin);
-    }
-
-    pub fn sat_contained(&mut self, frame: usize, cube: &Cube) -> bool {
-        matches!(self.solvers[frame].solve(cube), SatResult::Unsat(_))
     }
 }
 

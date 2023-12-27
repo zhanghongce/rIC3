@@ -42,7 +42,7 @@ impl Ic3 {
         self.solvers.len() - 1
     }
 
-    pub(crate) fn new_frame(&mut self) {
+    fn new_frame(&mut self) {
         self.frames.new_frame();
         self.solvers
             .push(Ic3Solver::new(self.share.clone(), self.solvers.len()));
@@ -60,7 +60,7 @@ impl Ic3 {
         (self.depth() + 1, cube)
     }
 
-    pub fn handle_blocked(&mut self, po: ProofObligation, blocked: BlockResultYes) {
+    fn handle_blocked(&mut self, po: ProofObligation, blocked: BlockResultYes) {
         let conflict = self.blocked_conflict(&blocked);
         let (frame, core) = self.generalize(po.frame, conflict);
         self.statistic.average_po_cube_len += po.lemma.len();
@@ -68,7 +68,7 @@ impl Ic3 {
         self.add_cube(frame - 1, core);
     }
 
-    pub(crate) fn block(&mut self) -> bool {
+    fn block(&mut self) -> bool {
         while let Some(po) = self.obligations.pop(self.depth()) {
             if po.frame == 0 {
                 return false;
@@ -81,9 +81,6 @@ impl Ic3 {
                 self.add_obligation(ProofObligation::new(po.frame + 1, po.lemma, po.depth));
                 continue;
             }
-            // if self.sat_contained(po.frame, &po.cube) {
-            //     continue;
-            // }
             match self.blocked(po.frame, &po.lemma) {
                 BlockResult::Yes(blocked) => {
                     self.handle_blocked(po, blocked);
@@ -102,7 +99,7 @@ impl Ic3 {
         true
     }
 
-    pub(crate) fn propagate(&mut self) -> bool {
+    fn propagate(&mut self) -> bool {
         for frame_idx in self.frames.early()..self.depth() {
             self.frames[frame_idx].sort_by_key(|x| x.len());
             let frame = self.frames[frame_idx].clone();
