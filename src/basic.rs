@@ -36,7 +36,7 @@ impl PartialOrd for ProofObligation {
 impl Ord for ProofObligation {
     fn cmp(&self, other: &Self) -> Ordering {
         match other.frame.cmp(&self.frame) {
-            Ordering::Equal => match other.depth.cmp(&self.depth) {
+            Ordering::Equal => match self.depth.cmp(&other.depth) {
                 Ordering::Equal => match other.lemma.len().cmp(&self.lemma.len()) {
                     Ordering::Equal => other.lemma.cmp(&self.lemma),
                     ord => ord,

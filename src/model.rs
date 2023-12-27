@@ -56,8 +56,10 @@ impl Model {
         let mut latchs: Vec<Var> = aig.latchs.iter().map(|x| Var::new(x.input)).collect();
         latchs.push(simp_solver.new_var());
         let primes: Vec<Var> = latchs.iter().map(|_| simp_solver.new_var()).collect();
+        let bad_var_lit = latchs.last().unwrap().lit();
         let bad_var_prime_lit = primes.last().unwrap().lit();
-        let init = aig.latch_init_cube().to_cube();
+        let mut init = aig.latch_init_cube().to_cube();
+        init.push(!bad_var_lit);
         let mut init_map = HashMap::new();
         for l in init.iter() {
             init_map.insert(l.var(), l.polarity());

@@ -150,19 +150,17 @@ impl Ic3 {
     }
 
     pub fn check(&mut self) -> bool {
+        self.add_obligation(ProofObligation::new(
+            1,
+            Lemma::new(self.share.model.cube_previous(&self.share.model.bad)),
+            0,
+        ));
         loop {
             let start = Instant::now();
-            loop {
-                if !self.block() {
-                    self.statistic.overall_block_time += start.elapsed();
-                    self.statistic();
-                    return false;
-                }
-                if let Some(cex) = self.get_bad() {
-                    self.add_obligation(ProofObligation::new(self.depth(), Lemma::new(cex), 0));
-                } else {
-                    break;
-                }
+            if !self.block() {
+                self.statistic.overall_block_time += start.elapsed();
+                self.statistic();
+                return false;
             }
             let blocked_time = start.elapsed();
             if self.share.args.verbose {
