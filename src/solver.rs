@@ -96,22 +96,6 @@ impl Ic3Solver {
 }
 
 impl Ic3 {
-    pub fn get_bad(&mut self) -> Option<Cube> {
-        if let SatResult::Sat(_) = self
-            .solvers
-            .last_mut()
-            .unwrap()
-            .solve(&self.share.model.bad)
-        {
-            self.statistic.num_get_bad_state += 1;
-            let model = unsafe { self.solvers.last().unwrap().solver.get_model() };
-            let bad = self.share.model.bad.clone();
-            let cex = self.minimal_predecessor(&bad, model);
-            return Some(cex);
-        }
-        None
-    }
-
     fn blocked_inner(&mut self, frame: usize, cube: &Cube) -> BlockResult {
         self.statistic.num_sat_inductive += 1;
         let solver_idx = frame - 1;

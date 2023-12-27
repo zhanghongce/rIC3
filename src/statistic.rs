@@ -10,7 +10,6 @@ use std::{
 pub struct Statistic {
     case: Case,
     time: RunningTime,
-    pub num_get_bad_state: usize,
 
     pub num_sat_inductive: usize,
     pub sat_inductive_time: Duration,
