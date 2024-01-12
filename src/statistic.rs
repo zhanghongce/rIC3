@@ -11,13 +11,14 @@ pub struct Statistic {
     case: Case,
     time: RunningTime,
 
+    pub avg_sat_call_time: AverageDuration,
     pub num_sat_inductive: usize,
     pub sat_inductive_time: Duration,
     pub num_solver_restart: usize,
 
     pub num_mic: usize,
-    pub average_mic_cube_len: StatisticAverage,
-    pub average_po_cube_len: StatisticAverage,
+    pub avg_mic_cube_len: Average,
+    pub avg_po_cube_len: Average,
     pub mic_drop: SuccessRate,
     pub num_down: usize,
 
@@ -40,26 +41,49 @@ impl Statistic {
 }
 
 #[derive(Default)]
-pub struct StatisticAverage {
+pub struct Average {
     sum: f64,
     num: usize,
 }
 
-impl Debug for StatisticAverage {
+impl Debug for Average {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{:.2}", self.sum / self.num as f64)
     }
 }
 
-impl AddAssign<usize> for StatisticAverage {
+impl AddAssign<usize> for Average {
     fn add_assign(&mut self, rhs: usize) {
         self.sum += rhs as f64;
         self.num += 1;
     }
 }
 
-impl AddAssign<f64> for StatisticAverage {
+impl AddAssign<f64> for Average {
     fn add_assign(&mut self, rhs: f64) {
+        self.sum += rhs;
+        self.num += 1;
+    }
+}
+
+#[derive(Default)]
+pub struct AverageDuration {
+    sum: Duration,
+    num: usize,
+}
+
+impl Debug for AverageDuration {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        if self.num == 0 {
+            write!(f, "None")
+        } else {
+            write!(f, "{:?}", self.sum / self.num as u32)
+        }
+    }
+}
+
+impl AddAssign<Duration> for AverageDuration {
+    fn add_assign(&mut self, rhs: Duration) {
         self.sum += rhs;
         self.num += 1;
     }

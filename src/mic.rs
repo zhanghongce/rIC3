@@ -99,7 +99,7 @@ impl Ic3 {
     }
 
     pub fn mic(&mut self, frame: usize, mut cube: Cube, level: usize) -> Cube {
-        self.statistic.average_mic_cube_len += cube.len();
+        self.statistic.avg_mic_cube_len += cube.len();
         self.statistic.num_mic += 1;
         if level > 0 {
             self.add_temporary_cube(frame, &cube);

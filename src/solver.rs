@@ -107,7 +107,9 @@ impl Ic3 {
         let mut tmp_cls = !cube;
         tmp_cls.push(!act);
         solver.add_clause(&tmp_cls);
+        let sat_start = Instant::now();
         let res = solver.solve(&assumption);
+        self.statistic.avg_sat_call_time += sat_start.elapsed();
         let act = !assumption.pop().unwrap();
         let res = match res {
             SatResult::Sat(_) => BlockResult::No(BlockResultNo {
