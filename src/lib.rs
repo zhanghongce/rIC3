@@ -27,14 +27,14 @@ use std::process::exit;
 use std::time::Instant;
 
 pub struct Ic3 {
-    pub args: Args,
-    pub model: Model,
-    pub solvers: Vec<Ic3Solver>,
-    pub frames: Frames,
-    pub activity: Activity,
-    pub obligations: ProofObligationQueue,
-    pub lift: Lift,
-    pub statistic: Statistic,
+    args: Args,
+    model: Model,
+    solvers: Vec<Ic3Solver>,
+    frames: Frames,
+    activity: Activity,
+    obligations: ProofObligationQueue,
+    lift: Lift,
+    statistic: Statistic,
 }
 
 impl Ic3 {

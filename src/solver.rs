@@ -65,6 +65,7 @@ impl Ic3Solver {
         self.solver.simplify()
     }
 
+    #[allow(unused)]
     pub fn set_polarity(&mut self, var: Var, pol: Option<bool>) {
         self.solver.set_polarity(var, pol)
     }

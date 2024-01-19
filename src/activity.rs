@@ -54,6 +54,7 @@ impl Activity {
         }
     }
 
+    #[allow(unused)]
     pub fn cube_average_activity(&self, cube: &Cube) -> f64 {
         let sum: f64 = cube.iter().map(|l| self.var_activity(*l)).sum();
         sum / cube.len() as f64
