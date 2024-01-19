@@ -22,7 +22,7 @@ impl Ic3 {
         self.statistic.num_down += 1;
         let mut ctgs = 0;
         loop {
-            if self.share.model.cube_subsume_init(&cube) {
+            if self.model.cube_subsume_init(&cube) {
                 return DownResult::IncludeInit;
             }
             match self.blocked_with_ordered(frame, &cube, false) {
@@ -34,7 +34,7 @@ impl Ic3 {
                         return DownResult::Fail(unblocked);
                     }
                     let model = self.unblocked_model(&unblocked);
-                    if ctgs < 3 && frame > 1 && !self.share.model.cube_subsume_init(&model) {
+                    if ctgs < 3 && frame > 1 && !self.model.cube_subsume_init(&model) {
                         if let BlockResult::Yes(blocked) =
                             self.blocked_with_ordered(frame - 1, &model, false)
                         {

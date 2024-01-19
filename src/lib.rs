@@ -3,34 +3,34 @@
 mod activity;
 #[allow(dead_code)]
 mod analysis;
-mod basic;
 mod command;
 mod frames;
 mod mic;
 mod model;
+mod proofoblig;
 mod solver;
 mod statistic;
 mod verify;
 
-use crate::basic::ProofObligation;
 use crate::frames::Lemma;
-use crate::{basic::BasicShare, statistic::Statistic};
-use crate::{basic::ProofObligationQueue, solver::Lift};
+use crate::proofoblig::{ProofObligation, ProofObligationQueue};
+use crate::statistic::Statistic;
 use activity::Activity;
 use aig::Aig;
 pub use command::Args;
 use frames::Frames;
 use logic_form::Cube;
 use model::Model;
-use solver::{BlockResult, BlockResultYes, Ic3Solver};
+use solver::{BlockResult, BlockResultYes, Ic3Solver, Lift};
 use std::panic::{self, AssertUnwindSafe};
 use std::process::exit;
-use std::{sync::Arc, time::Instant};
+use std::time::Instant;
 
 pub struct Ic3 {
+    pub args: Args,
+    pub model: Model,
     pub solvers: Vec<Ic3Solver>,
     pub frames: Frames,
-    pub share: Arc<BasicShare>,
     pub activity: Activity,
     pub obligations: ProofObligationQueue,
     pub lift: Lift,
@@ -45,11 +45,11 @@ impl Ic3 {
     fn new_frame(&mut self) {
         self.frames.new_frame();
         self.solvers
-            .push(Ic3Solver::new(self.share.clone(), self.solvers.len()));
+            .push(Ic3Solver::new(&self.args, &self.model, self.solvers.len()));
     }
 
     fn generalize(&mut self, frame: usize, cube: Cube) -> (usize, Cube) {
-        let level = if self.share.args.ctg { 1 } else { 0 };
+        let level = if self.args.ctg { 1 } else { 0 };
         let mut cube = self.mic(frame, cube, level);
         for i in frame + 1..=self.depth() {
             match self.blocked(i, &cube) {
@@ -73,8 +73,8 @@ impl Ic3 {
             if po.frame == 0 {
                 return false;
             }
-            assert!(!self.share.model.cube_subsume_init(&po.lemma));
-            if self.share.args.verbose_all {
+            assert!(!self.model.cube_subsume_init(&po.lemma));
+            if self.args.verbose_all {
                 self.statistic();
             }
             if self.frames.trivial_contained(po.frame, &po.lemma) {
@@ -129,18 +129,20 @@ impl Ic3 {
     pub fn new(args: Args) -> Self {
         let aig = Aig::from_file(args.model.as_ref().unwrap()).unwrap();
         let model = Model::from_aig(&aig, !args.backward);
-        let share = Arc::new(BasicShare { args, model });
+        let lift = Lift::new(&args, &model);
+        let statistic = Statistic::new(args.model.as_ref().unwrap());
         let mut res = Self {
+            args,
+            model,
             solvers: Vec::new(),
             frames: Frames::new(),
             activity: Activity::new(),
-            lift: Lift::new(share.clone()),
-            statistic: Statistic::new(share.args.model.as_ref().unwrap()),
-            share,
+            lift,
+            statistic,
             obligations: ProofObligationQueue::new(),
         };
         res.new_frame();
-        for cube in res.share.model.inits() {
+        for cube in res.model.inits() {
             res.add_cube(0, cube)
         }
         res
@@ -149,7 +151,7 @@ impl Ic3 {
     pub fn check(&mut self) -> bool {
         self.add_obligation(ProofObligation::new(
             1,
-            Lemma::new(self.share.model.cube_previous(&self.share.model.bad)),
+            Lemma::new(self.model.cube_previous(&self.model.bad)),
             0,
         ));
         loop {
@@ -160,7 +162,7 @@ impl Ic3 {
                 return false;
             }
             let blocked_time = start.elapsed();
-            if self.share.args.verbose {
+            if self.args.verbose {
                 println!(
                     "[{}:{}] frame: {}, time: {:?}",
                     file!(),
@@ -176,10 +178,10 @@ impl Ic3 {
             self.statistic.overall_propagate_time += start.elapsed();
             if propagate {
                 self.statistic();
-                if self.share.args.save_frames {
+                if self.args.save_frames {
                     self.save_frames();
                 }
-                if self.share.args.verify {
+                if self.args.verify {
                     assert!(self.verify());
                 }
                 return true;

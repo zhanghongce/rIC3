@@ -1,14 +1,7 @@
-use crate::command::Args;
 use crate::frames::Lemma;
-use crate::model::Model;
 use crate::Ic3;
 use std::cmp::Ordering;
 use std::collections::BTreeSet;
-
-pub struct BasicShare {
-    pub args: Args,
-    pub model: Model,
-}
 
 #[derive(PartialEq, Eq, Clone, Debug)]
 pub struct ProofObligation {

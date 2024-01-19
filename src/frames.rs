@@ -139,7 +139,7 @@ impl Ic3 {
         if self.frames.trivial_contained(frame, &lemma) {
             return;
         }
-        assert!(!self.share.model.cube_subsume_init(&lemma.cube));
+        assert!(!self.model.cube_subsume_init(&lemma.cube));
         let mut begin = 1;
         for i in 1..=frame {
             let cubes = take(&mut self.frames[i]);

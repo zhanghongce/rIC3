@@ -1,39 +1,37 @@
-use super::{basic::BasicShare, frames::Frames};
-use crate::Ic3;
+use super::frames::Frames;
+use crate::{model::Model, Args, Ic3};
 use logic_form::{Clause, Cube, Lit, Var};
 use minisat::{SatResult, Solver};
-use std::{mem::take, ops::Deref, sync::Arc, time::Instant};
+use std::{mem::take, ops::Deref, time::Instant};
 
 pub struct Ic3Solver {
     solver: Solver,
     num_act: usize,
-    share: Arc<BasicShare>,
     frame: usize,
     temporary: Vec<Cube>,
 }
 
 impl Ic3Solver {
-    pub fn new(share: Arc<BasicShare>, frame: usize) -> Self {
+    pub fn new(args: &Args, model: &Model, frame: usize) -> Self {
         let mut solver = Solver::new();
-        if let Some(seed) = share.args.random {
+        if let Some(seed) = args.random {
             solver.set_random_seed(seed as f64);
             solver.set_rnd_init_act(true);
         }
         let false_lit: Lit = solver.new_var().into();
         solver.add_clause(&[!false_lit]);
-        share.model.load_trans(&mut solver);
+        model.load_trans(&mut solver);
         Self {
             solver,
             frame,
             num_act: 0,
-            share,
             temporary: Vec::new(),
         }
     }
 
-    pub fn reset(&mut self, frames: &Frames) {
+    pub fn reset(&mut self, args: &Args, model: &Model, frames: &Frames) {
         let temporary = take(&mut self.temporary);
-        *self = Self::new(self.share.clone(), self.frame);
+        *self = Self::new(args, model, self.frame);
         for t in temporary {
             self.solver.add_clause(&!&t);
             self.temporary.push(t);
@@ -101,7 +99,7 @@ impl Ic3 {
         let solver_idx = frame - 1;
         let solver = &mut self.solvers[solver_idx].solver;
         let start = Instant::now();
-        let mut assumption = self.share.model.cube_next(cube);
+        let mut assumption = self.model.cube_next(cube);
         let act = solver.new_var().into();
         assumption.push(act);
         let mut tmp_cls = !cube;
@@ -128,12 +126,12 @@ impl Ic3 {
     }
 
     pub fn blocked(&mut self, frame: usize, cube: &Cube) -> BlockResult {
-        assert!(!self.share.model.cube_subsume_init(cube));
+        assert!(!self.model.cube_subsume_init(cube));
         let solver = &mut self.solvers[frame - 1];
         solver.num_act += 1;
         if solver.num_act > 1000 {
             self.statistic.num_solver_restart += 1;
-            solver.reset(&self.frames)
+            solver.reset(&self.args, &self.model, &self.frames);
         }
         self.blocked_inner(frame, cube)
     }
@@ -177,14 +175,13 @@ impl Ic3 {
                 ans.push(block.cube[i]);
             }
         }
-        if self.share.model.cube_subsume_init(&ans) {
+        if self.model.cube_subsume_init(&ans) {
             ans = Cube::new();
             let new = *block
                 .cube
                 .iter()
                 .find(|l| {
-                    self.share
-                        .model
+                    self.model
                         .init_map
                         .get(&l.var())
                         .is_some_and(|i| *i != l.polarity())
@@ -195,7 +192,7 @@ impl Ic3 {
                     ans.push(block.cube[i]);
                 }
             }
-            assert!(!self.share.model.cube_subsume_init(&ans));
+            assert!(!self.model.cube_subsume_init(&ans));
         }
         ans
     }
@@ -216,33 +213,33 @@ pub struct Lift {
 }
 
 impl Lift {
-    pub fn new(share: Arc<BasicShare>) -> Self {
+    pub fn new(args: &Args, model: &Model) -> Self {
         let mut solver = Solver::new();
-        if let Some(seed) = share.args.random {
+        if let Some(seed) = args.random {
             solver.set_random_seed(seed as f64);
             solver.set_rnd_init_act(true);
         }
         let false_lit: Lit = solver.new_var().into();
         solver.add_clause(&[!false_lit]);
-        share.model.load_trans(&mut solver);
+        model.load_trans(&mut solver);
         Self { solver, num_act: 0 }
     }
 }
 
 impl Ic3 {
     pub fn minimal_predecessor(&mut self, successor: &Cube, model: minisat::Model) -> Cube {
-        if !self.share.args.backward {
+        if !self.args.backward {
             let start = Instant::now();
             self.lift.num_act += 1;
             if self.lift.num_act > 1000 {
-                self.lift = Lift::new(self.share.clone())
+                self.lift = Lift::new(&self.args, &self.model)
             }
             let act: Lit = self.lift.solver.new_var().into();
             let mut assumption = Cube::from([act]);
             let mut cls = !successor;
             cls.push(!act);
             self.lift.solver.add_clause(&cls);
-            for input in self.share.model.inputs.iter() {
+            for input in self.model.inputs.iter() {
                 let mut lit = input.lit();
                 if !model.lit_value(lit) {
                     lit = !lit;
@@ -250,7 +247,7 @@ impl Ic3 {
                 assumption.push(lit);
             }
             let mut latchs = Cube::new();
-            for latch in self.share.model.latchs.iter() {
+            for latch in self.model.latchs.iter() {
                 let mut lit = latch.lit();
                 if !model.lit_value(lit) {
                     lit = !lit;
@@ -270,7 +267,7 @@ impl Ic3 {
             res
         } else {
             let mut latchs = Cube::new();
-            for latch in self.share.model.latchs.iter() {
+            for latch in self.model.latchs.iter() {
                 let mut lit = latch.lit();
                 if !model.lit_value(lit) {
                     lit = !lit;
