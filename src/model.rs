@@ -85,7 +85,7 @@ impl Model {
             logic.push(*c);
         }
         logic.push(aig_bad);
-        let mut trans = aig.get_optimized_cnf(&logic);
+        let mut trans = aig.get_cnf(&logic);
         let bad_lit = aig_bad.to_lit();
         trans.push(Clause::from([!bad_lit, bad_var_prime_lit]));
         trans.push(Clause::from([bad_lit, !bad_var_prime_lit]));
