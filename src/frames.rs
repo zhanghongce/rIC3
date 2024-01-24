@@ -140,20 +140,24 @@ impl Ic3 {
             return;
         }
         assert!(!self.model.cube_subsume_init(&lemma.cube));
-        let mut begin = 1;
-        for i in 1..=frame {
+        let mut begin = None;
+        for i in (1..=frame).rev() {
             let cubes = take(&mut self.frames[i]);
             for l in cubes {
-                if l.subsume(&lemma) {
-                    begin = i + 1;
+                if begin.is_none() && l.subsume(&lemma) {
+                    begin = Some(i + 1);
                 }
                 if !lemma.subsume(&l) {
                     self.frames[i].push(l);
                 }
             }
+            if begin.is_some() {
+                break;
+            }
         }
         let clause = !&lemma.cube;
         self.frames[frame].push(lemma);
+        let begin = begin.unwrap_or(1);
         for i in begin..=frame {
             self.solvers[i].add_clause(&clause);
         }
