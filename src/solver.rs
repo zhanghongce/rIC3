@@ -203,7 +203,7 @@ impl Ic3 {
         self.minimal_predecessor(&unblock.assumption, model)
     }
 
-    pub fn unblocked_model_lit_value(&self, unblock: &BlockResultNo, lit: Lit) -> bool {
+    pub fn unblocked_model_lit_value(&self, unblock: &BlockResultNo, lit: Lit) -> Option<bool> {
         unsafe { self.solvers[unblock.solver_idx].solver.get_model() }.lit_value(lit)
     }
 }
@@ -241,19 +241,21 @@ impl Ic3 {
             cls.push(!act);
             self.lift.solver.add_clause(&cls);
             for input in self.model.inputs.iter() {
-                let mut lit = input.lit();
-                if !model.lit_value(lit) {
-                    lit = !lit;
+                let lit = input.lit();
+                match model.lit_value(lit) {
+                    Some(true) => assumption.push(lit),
+                    Some(false) => assumption.push(!lit),
+                    None => (),
                 }
-                assumption.push(lit);
             }
             let mut latchs = Cube::new();
             for latch in self.model.latchs.iter() {
-                let mut lit = latch.lit();
-                if !model.lit_value(lit) {
-                    lit = !lit;
+                let lit = latch.lit();
+                match model.lit_value(lit) {
+                    Some(true) => latchs.push(lit),
+                    Some(false) => latchs.push(!lit),
+                    None => (),
                 }
-                latchs.push(lit);
             }
             self.activity.sort_by_activity(&mut latchs, false);
             assumption.extend_from_slice(&latchs);
@@ -269,11 +271,12 @@ impl Ic3 {
         } else {
             let mut latchs = Cube::new();
             for latch in self.model.latchs.iter() {
-                let mut lit = latch.lit();
-                if !model.lit_value(lit) {
-                    lit = !lit;
+                let lit = latch.lit();
+                match model.lit_value(lit) {
+                    Some(true) => latchs.push(lit),
+                    Some(false) => latchs.push(!lit),
+                    None => (),
                 }
-                latchs.push(lit);
             }
             latchs
         }
