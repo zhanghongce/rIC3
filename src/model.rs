@@ -1,5 +1,5 @@
 use aig::Aig;
-use logic_form::{Clause, Cnf, Cube, Lit, Var};
+use logic_form::{Clause, Cnf, Cube, Lit, Var, VarMap};
 use minisat::SimpSolver;
 use std::collections::HashMap;
 
@@ -16,46 +16,63 @@ pub struct Model {
     num_var: usize,
     next_map: HashMap<Var, Var>,
     previous_map: HashMap<Var, Var>,
+    pub dependence: VarMap<Vec<Var>>,
 }
 
 impl Model {
     fn backward(&self) -> Self {
-        assert!(self.forward);
-        let init = self.bad.clone();
-        let bad = self.init.clone();
-        let latchs = self.primes.clone();
-        let primes = self.latchs.clone();
-        let next_map = self.previous_map.clone();
-        let previous_map = self.next_map.clone();
-        let mut init_map = HashMap::new();
-        init_map.insert(init[0].var(), true);
-        Self {
-            forward: false,
-            inputs: self.inputs.clone(),
-            latchs,
-            primes,
-            init,
-            bad,
-            init_map,
-            constraints: self.constraints.clone(),
-            trans: self.trans.clone(),
-            num_var: self.num_var,
-            next_map,
-            previous_map,
-        }
+        // assert!(self.forward);
+        // let init = self.bad.clone();
+        // let bad = self.init.clone();
+        // let latchs = self.primes.clone();
+        // let primes = self.latchs.clone();
+        // let next_map = self.previous_map.clone();
+        // let previous_map = self.next_map.clone();
+        // let mut init_map = HashMap::new();
+        // init_map.insert(init[0].var(), true);
+        // Self {
+        //     forward: false,
+        //     inputs: self.inputs.clone(),
+        //     latchs,
+        //     primes,
+        //     init,
+        //     bad,
+        //     init_map,
+        //     constraints: self.constraints.clone(),
+        //     trans: self.trans.clone(),
+        //     num_var: self.num_var,
+        //     next_map,
+        //     previous_map,
+        // }
+        todo!();
     }
 
     pub fn from_aig(aig: &Aig, forward: bool) -> Self {
         let mut simp_solver = SimpSolver::new();
         let false_lit: Lit = simp_solver.new_var().into();
+        let mut dependence = VarMap::new();
+        dependence.push(vec![]);
         simp_solver.add_clause(&[!false_lit]);
         for node in aig.nodes.iter().skip(1) {
             assert_eq!(Var::new(node.node_id()), simp_solver.new_var());
+            let mut dep = Vec::new();
+            if node.is_and() {
+                dep.push(node.fanin0().to_lit().var());
+                dep.push(node.fanin1().to_lit().var());
+            }
+            dependence.push(dep);
         }
         let inputs: Vec<Var> = aig.inputs.iter().map(|x| Var::new(*x)).collect();
         let mut latchs: Vec<Var> = aig.latchs.iter().map(|x| Var::new(x.input)).collect();
         latchs.push(simp_solver.new_var());
-        let primes: Vec<Var> = latchs.iter().map(|_| simp_solver.new_var()).collect();
+        dependence.push(vec![]);
+        let primes: Vec<Var> = latchs
+            .iter()
+            .map(|_| {
+                dependence.push(vec![]);
+                simp_solver.new_var()
+            })
+            .collect();
         let bad_var_lit = latchs.last().unwrap().lit();
         let bad_var_prime_lit = primes.last().unwrap().lit();
         let mut init = aig.latch_init_cube().to_cube();
@@ -89,6 +106,7 @@ impl Model {
         let bad_lit = aig_bad.to_lit();
         trans.push(Clause::from([!bad_lit, bad_var_prime_lit]));
         trans.push(Clause::from([bad_lit, !bad_var_prime_lit]));
+        dependence[bad_var_prime_lit].push(bad_lit.var());
         let bad = Cube::from([bad_var_prime_lit]);
         for tran in trans.iter() {
             simp_solver.add_clause(tran);
@@ -98,6 +116,7 @@ impl Model {
             let p = p.lit();
             simp_solver.add_clause(&Clause::from([l, !p]));
             simp_solver.add_clause(&Clause::from([!l, p]));
+            dependence[p].push(l.var())
         }
         for c in constraints.iter() {
             simp_solver.add_clause(&Clause::from([*c]));
@@ -124,6 +143,7 @@ impl Model {
             num_var,
             next_map,
             previous_map,
+            dependence,
         };
         if !forward {
             res = res.backward();

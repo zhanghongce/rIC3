@@ -22,6 +22,7 @@ impl Ic3Solver {
         let false_lit: Lit = solver.new_var().into();
         solver.add_clause(&[!false_lit]);
         model.load_trans(&mut solver);
+        solver.set_ts(model.dependence.clone());
         Self {
             solver,
             frame,
@@ -103,13 +104,16 @@ impl Ic3 {
         let solver = &mut self.solvers[solver_idx].solver;
         let start = Instant::now();
         let mut assumption = self.model.cube_next(cube);
-        let act = solver.new_var().into();
+        let act = solver.new_var().lit();
+        let dep = assumption.clone();
         assumption.push(act);
         let mut tmp_cls = !cube;
         tmp_cls.push(!act);
         solver.add_clause(&tmp_cls);
         let sat_start = Instant::now();
-        let res = solver.solve(&assumption);
+        let dep = dep.iter().map(|l| l.var());
+        let res = solver.solve_with_domain(&assumption, dep);
+        // let res = solver.solve(&assumption);
         self.statistic.avg_sat_call_time += sat_start.elapsed();
         let act = !assumption.pop().unwrap();
         let res = match res {
