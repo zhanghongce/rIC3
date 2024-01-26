@@ -34,7 +34,7 @@ impl Ic3Solver {
         let temporary = take(&mut self.temporary);
         *self = Self::new(args, model, self.frame);
         for t in temporary {
-            self.solver.add_clause(&!&t);
+            self.solver.add_lemma(&!&t);
             self.temporary.push(t);
         }
         let frames_slice = if self.frame == 0 {
@@ -44,13 +44,13 @@ impl Ic3Solver {
         };
         for dnf in frames_slice.iter() {
             for cube in dnf {
-                self.add_clause(&!cube.deref());
+                self.add_lemma(&!cube.deref());
             }
         }
         self.simplify()
     }
 
-    pub fn add_clause(&mut self, clause: &Clause) {
+    pub fn add_lemma(&mut self, clause: &Clause) {
         let mut cube = !clause;
         cube.sort_by_key(|x| x.var());
         let temporary = take(&mut self.temporary);
@@ -59,7 +59,7 @@ impl Ic3Solver {
                 self.temporary.push(t);
             }
         }
-        self.solver.add_clause(clause);
+        self.solver.add_lemma(clause);
     }
 
     pub fn simplify(&mut self) {
@@ -92,7 +92,7 @@ impl Ic3Solver {
             }
         }
         self.temporary.push(cube);
-        self.solver.add_clause(clause);
+        self.solver.add_lemma(clause);
     }
 }
 
