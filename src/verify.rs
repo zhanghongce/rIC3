@@ -1,5 +1,5 @@
 use crate::{frames::Lemma, solver::Ic3Solver, Ic3};
-use minisat::SatResult;
+use gipsat::SatResult;
 use std::ops::Deref;
 
 impl Ic3 {

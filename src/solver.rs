@@ -1,7 +1,7 @@
 use super::frames::Frames;
 use crate::{model::Model, Args, Ic3};
+use gipsat::{SatResult, Solver};
 use logic_form::{Clause, Cube, Lit, Var};
-use minisat::{SatResult, Solver};
 use std::{mem::take, ops::Deref, time::Instant};
 
 pub struct Ic3Solver {
@@ -14,9 +14,10 @@ pub struct Ic3Solver {
 impl Ic3Solver {
     pub fn new(args: &Args, model: &Model, frame: usize) -> Self {
         let mut solver = Solver::new();
-        if let Some(seed) = args.random {
-            solver.set_random_seed(seed as f64);
-            solver.set_rnd_init_act(true);
+        if let Some(_) = args.random {
+            // solver.set_random_seed(seed as f64);
+            // solver.set_rnd_init_act(true);
+            todo!()
         }
         let false_lit: Lit = solver.new_var().into();
         solver.add_clause(&[!false_lit]);
@@ -62,12 +63,13 @@ impl Ic3Solver {
     }
 
     pub fn simplify(&mut self) {
-        self.solver.simplify()
+        // self.solver.simplify()
     }
 
     #[allow(unused)]
     pub fn set_polarity(&mut self, var: Var, pol: Option<bool>) {
-        self.solver.set_polarity(var, pol)
+        // self.solver.set_polarity(var, pol)
+        todo!()
     }
 
     #[allow(unused)]
@@ -121,7 +123,8 @@ impl Ic3 {
                 assumption,
             }),
         };
-        solver.release_var(act);
+        // solver.release_var(act);
+        solver.add_clause(&[act]);
         self.statistic.sat_inductive_time += start.elapsed();
         res
     }
@@ -217,8 +220,9 @@ impl Lift {
     pub fn new(args: &Args, model: &Model) -> Self {
         let mut solver = Solver::new();
         if let Some(seed) = args.random {
-            solver.set_random_seed(seed as f64);
-            solver.set_rnd_init_act(true);
+            // solver.set_random_seed(seed as f64);
+            // solver.set_rnd_init_act(true);
+            todo!()
         }
         let false_lit: Lit = solver.new_var().into();
         solver.add_clause(&[!false_lit]);
@@ -228,7 +232,7 @@ impl Lift {
 }
 
 impl Ic3 {
-    pub fn minimal_predecessor(&mut self, successor: &Cube, model: minisat::Model) -> Cube {
+    pub fn minimal_predecessor(&mut self, successor: &Cube, model: gipsat::Model) -> Cube {
         if !self.args.backward {
             let start = Instant::now();
             self.lift.num_act += 1;
@@ -265,7 +269,7 @@ impl Ic3 {
                     latchs.into_iter().filter(|l| conflict.has(*l)).collect()
                 }
             };
-            self.lift.solver.release_var(!act);
+            self.lift.solver.add_clause(&[!act]);
             self.statistic.minimal_predecessor_time += start.elapsed();
             res
         } else {
