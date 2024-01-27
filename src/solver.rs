@@ -105,13 +105,12 @@ impl Ic3 {
         let start = Instant::now();
         let mut assumption = self.model.cube_next(cube);
         let act = solver.new_var().lit();
-        let dep = assumption.clone();
         assumption.push(act);
         let mut tmp_cls = !cube;
         tmp_cls.push(!act);
         solver.add_clause(&tmp_cls);
         let sat_start = Instant::now();
-        let dep = dep.iter().map(|l| l.var());
+        let dep = assumption[0..assumption.len() - 1].iter().map(|l| l.var());
         let res = solver.solve_with_domain(&assumption, dep);
         // let res = solver.solve(&assumption);
         self.statistic.avg_sat_call_time += sat_start.elapsed();
