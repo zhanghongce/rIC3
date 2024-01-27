@@ -1,7 +1,7 @@
 use aig::Aig;
 use logic_form::{Clause, Cnf, Cube, Lit, Var, VarMap};
 use minisat::SimpSolver;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 pub struct Model {
     forward: bool,
@@ -13,7 +13,7 @@ pub struct Model {
     pub init_map: HashMap<Var, bool>,
     pub constraints: Vec<Lit>,
     pub trans: Cnf,
-    num_var: usize,
+    pub num_var: usize,
     next_map: HashMap<Var, Var>,
     previous_map: HashMap<Var, Var>,
     pub dependence: VarMap<Vec<Var>>,
@@ -45,6 +45,54 @@ impl Model {
         //     previous_map,
         // }
         todo!();
+    }
+
+    fn compress_deps_rec(
+        v: Var,
+        deps: &mut VarMap<Vec<Var>>,
+        domain: &HashSet<Var>,
+        compressed: &mut HashSet<Var>,
+    ) {
+        if compressed.contains(&v) {
+            return;
+        }
+        for d in 0..deps[v].len() {
+            Self::compress_deps_rec(deps[v][d], deps, domain, compressed);
+        }
+        let mut dep = HashSet::new();
+        for d in deps[v].iter() {
+            if domain.contains(d) {
+                dep.insert(*d);
+                continue;
+            }
+            for dd in deps[*d].iter() {
+                dep.insert(*dd);
+            }
+        }
+        deps[v] = dep.into_iter().collect();
+        deps[v].sort();
+        compressed.insert(v);
+    }
+
+    fn compress_deps(mut deps: VarMap<Vec<Var>>, cnf: &Cnf) -> VarMap<Vec<Var>> {
+        let mut domain = HashSet::new();
+        for cls in cnf.iter() {
+            for l in cls.iter() {
+                domain.insert(l.var());
+            }
+        }
+        let mut compressed: HashSet<Var> = HashSet::new();
+        for v in 0..deps.len() {
+            let v = Var::new(v);
+            Self::compress_deps_rec(v, &mut deps, &domain, &mut compressed)
+        }
+        for v in 0..deps.len() {
+            let v = Var::new(v);
+            if !domain.contains(&v) {
+                deps[v].clear();
+            }
+        }
+        deps
     }
 
     pub fn from_aig(aig: &Aig, forward: bool) -> Self {
@@ -130,6 +178,7 @@ impl Model {
             next_map.insert(*l, *p);
             previous_map.insert(*p, *l);
         }
+        dependence = Self::compress_deps(dependence, &trans);
         let mut res = Self {
             forward: true,
             inputs,
