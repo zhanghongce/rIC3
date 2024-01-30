@@ -98,7 +98,7 @@ impl Ic3Solver {
 }
 
 impl Ic3 {
-    fn blocked_inner(&mut self, frame: usize, cube: &Cube) -> BlockResult {
+    fn blocked_inner(&mut self, frame: usize, cube: &Cube, domain: bool) -> BlockResult {
         self.statistic.num_sat_inductive += 1;
         let solver_idx = frame - 1;
         let solver = &mut self.solvers[solver_idx].solver;
@@ -110,9 +110,12 @@ impl Ic3 {
         tmp_cls.push(!act);
         solver.add_clause(&tmp_cls);
         let sat_start = Instant::now();
-        let dep = assumption[0..assumption.len() - 1].iter().map(|l| l.var());
-        let res = solver.solve_with_domain(&assumption, dep);
-        // let res = solver.solve(&assumption);
+        let res = if domain {
+            let dep = assumption[0..assumption.len() - 1].iter().map(|l| l.var());
+            solver.solve_with_domain(&assumption, dep)
+        } else {
+            solver.solve(&assumption)
+        };
         self.statistic.avg_sat_call_time += sat_start.elapsed();
         let act = !assumption.pop().unwrap();
         let res = match res {
@@ -132,7 +135,7 @@ impl Ic3 {
         res
     }
 
-    pub fn blocked(&mut self, frame: usize, cube: &Cube) -> BlockResult {
+    pub fn blocked(&mut self, frame: usize, cube: &Cube, domain: bool) -> BlockResult {
         assert!(!self.model.cube_subsume_init(cube));
         let solver = &mut self.solvers[frame - 1];
         solver.num_act += 1;
@@ -140,7 +143,7 @@ impl Ic3 {
             self.statistic.num_solver_restart += 1;
             solver.reset(&self.args, &self.model, &self.frames);
         }
-        self.blocked_inner(frame, cube)
+        self.blocked_inner(frame, cube, domain)
     }
 
     pub fn blocked_with_ordered(
@@ -148,10 +151,11 @@ impl Ic3 {
         frame: usize,
         cube: &Cube,
         ascending: bool,
+        domain: bool,
     ) -> BlockResult {
         let mut ordered_cube = cube.clone();
         self.activity.sort_by_activity(&mut ordered_cube, ascending);
-        self.blocked(frame, &ordered_cube)
+        self.blocked(frame, &ordered_cube, domain)
     }
 }
 
