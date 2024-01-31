@@ -103,21 +103,17 @@ impl Ic3 {
         let solver_idx = frame - 1;
         let solver = &mut self.solvers[solver_idx].solver;
         let start = Instant::now();
-        let mut assumption = self.model.cube_next(cube);
-        let act = solver.new_var().lit();
-        assumption.push(act);
-        let mut tmp_cls = !cube;
-        tmp_cls.push(!act);
-        solver.add_clause(&tmp_cls);
+        let assumption = self.model.cube_next(cube);
+        let tmp_cls = !cube;
         let sat_start = Instant::now();
-        let res = if domain {
-            let dep = assumption[0..assumption.len() - 1].iter().map(|l| l.var());
-            solver.solve_with_domain(&assumption, dep)
-        } else {
-            solver.solve(&assumption)
-        };
+        // let res = if domain {
+        //     let dep = assumption[0..assumption.len() - 1].iter().map(|l| l.var());
+        //     solver.solve_with_domain(&assumption, dep)
+        // } else {
+        //     solver.solve(&assumption)
+        // };
+        let res = solver.solve_with_constrain(&assumption, tmp_cls, domain);
         self.statistic.avg_sat_call_time += sat_start.elapsed();
-        let act = !assumption.pop().unwrap();
         let res = match res {
             SatResult::Sat(_) => BlockResult::No(BlockResultNo {
                 solver_idx,
@@ -129,8 +125,6 @@ impl Ic3 {
                 assumption,
             }),
         };
-        // solver.release_var(act);
-        solver.add_clause(&[act]);
         self.statistic.sat_inductive_time += start.elapsed();
         res
     }
