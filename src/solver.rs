@@ -21,6 +21,9 @@ impl Ic3Solver {
         }
         let false_lit: Lit = solver.new_var().into();
         solver.add_clause_direct(&[!false_lit]);
+        while solver.num_var() < model.num_var {
+            solver.new_var();
+        }
         solver.set_ts(&model.trans, &model.dependence);
         Self {
             solver,
