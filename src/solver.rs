@@ -13,10 +13,10 @@ pub struct Ic3Solver {
 
 impl Ic3Solver {
     pub fn new(args: &Args, model: &Model, frame: usize) -> Self {
-        let mut solver = Solver::new();
+        let mut solver = Solver::new(&format!("frame{frame}"));
         if let Some(_) = args.random {
             // solver.set_random_seed(seed as f64);
-            // solver.set_rnd_init_act(true);
+            // solver.set_rnd_init_act(trsue);
             todo!()
         }
         let false_lit: Lit = solver.new_var().into();
@@ -215,7 +215,7 @@ pub struct Lift {
 
 impl Lift {
     pub fn new(args: &Args, model: &Model) -> Self {
-        let mut solver = Solver::new();
+        let mut solver = Solver::new("lift");
         if let Some(seed) = args.random {
             // solver.set_random_seed(seed as f64);
             // solver.set_rnd_init_act(true);
