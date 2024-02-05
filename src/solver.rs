@@ -1,13 +1,10 @@
-use super::frames::Frames;
 use crate::{model::Model, Args, Ic3};
 use gipsat::{SatResult, Solver};
 use logic_form::{Clause, Cube, Lit, Var};
-use std::{mem::take, ops::Deref, time::Instant};
+use std::{mem::take, time::Instant};
 
 pub struct Ic3Solver {
     solver: Solver,
-    num_act: usize,
-    frame: usize,
     temporary: Vec<Cube>,
 }
 
@@ -27,30 +24,8 @@ impl Ic3Solver {
         solver.set_ts(&model.trans, &model.dependence);
         Self {
             solver,
-            frame,
-            num_act: 0,
             temporary: Vec::new(),
         }
-    }
-
-    pub fn reset(&mut self, args: &Args, model: &Model, frames: &Frames) {
-        let temporary = take(&mut self.temporary);
-        *self = Self::new(args, model, self.frame);
-        for t in temporary {
-            self.solver.add_lemma(&!&t);
-            self.temporary.push(t);
-        }
-        let frames_slice = if self.frame == 0 {
-            &frames[0..1]
-        } else {
-            &frames[self.frame..]
-        };
-        for dnf in frames_slice.iter() {
-            for cube in dnf {
-                self.add_lemma(&!cube.deref());
-            }
-        }
-        self.simplify()
     }
 
     pub fn add_lemma(&mut self, clause: &Clause) {
@@ -100,15 +75,16 @@ impl Ic3Solver {
 }
 
 impl Ic3 {
-    fn blocked_inner(&mut self, frame: usize, cube: &Cube, domain: bool) -> BlockResult {
+    pub fn blocked(&mut self, frame: usize, cube: &Cube, domain: bool) -> BlockResult {
+        assert!(!self.model.cube_subsume_init(cube));
         self.statistic.num_sat_inductive += 1;
         let solver_idx = frame - 1;
         let solver = &mut self.solvers[solver_idx].solver;
         let start = Instant::now();
         let assumption = self.model.cube_next(cube);
-        let tmp_cls = !cube;
+        let constrain = !cube;
         let sat_start = Instant::now();
-        let res = solver.solve_with_constrain(&assumption, tmp_cls, domain);
+        let res = solver.solve_with_constrain(&assumption, constrain, domain);
         self.statistic.avg_sat_call_time += sat_start.elapsed();
         let res = match res {
             SatResult::Sat(_) => BlockResult::No(BlockResultNo {
@@ -123,17 +99,6 @@ impl Ic3 {
         };
         self.statistic.sat_inductive_time += start.elapsed();
         res
-    }
-
-    pub fn blocked(&mut self, frame: usize, cube: &Cube, domain: bool) -> BlockResult {
-        assert!(!self.model.cube_subsume_init(cube));
-        let solver = &mut self.solvers[frame - 1];
-        solver.num_act += 1;
-        // if solver.num_act > 1000 {
-        //     self.statistic.num_solver_restart += 1;
-        //     solver.reset(&self.args, &self.model, &self.frames);
-        // }
-        self.blocked_inner(frame, cube, domain)
     }
 
     pub fn blocked_with_ordered(
