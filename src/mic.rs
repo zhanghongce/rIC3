@@ -81,6 +81,7 @@ impl Ic3 {
         cube: Cube,
         i: usize,
         mut new_cube: Cube,
+        level: usize,
     ) -> (Cube, usize) {
         new_cube = cube
             .iter()
@@ -94,7 +95,9 @@ impl Ic3 {
         if new_i < new_cube.len() {
             assert!(!(cube[0..=i]).contains(&new_cube[new_i]))
         }
-        self.add_temporary_cube(frame, &new_cube);
+        if level > 0 {
+            self.add_temporary_cube(frame, &new_cube);
+        }
         (new_cube, new_i)
     }
 
@@ -117,7 +120,7 @@ impl Ic3 {
             match self.ctg_down(frame, &removed_cube, &keep, level) {
                 DownResult::Success(new_cube) => {
                     self.statistic.mic_drop.success();
-                    (cube, i) = self.handle_down_success(frame, cube, i, new_cube);
+                    (cube, i) = self.handle_down_success(frame, cube, i, new_cube, level);
                 }
                 _ => {
                     self.statistic.mic_drop.fail();
