@@ -75,6 +75,13 @@ impl Ic3 {
         }
     }
 
+    pub fn clean_temporary_cube(&mut self, mut frame: usize) {
+        frame = frame.min(self.depth());
+        for solver in self.solvers[1..=frame].iter_mut() {
+            solver.cleanup_temporary_clause();
+        }
+    }
+
     fn handle_down_success(
         &mut self,
         frame: usize,

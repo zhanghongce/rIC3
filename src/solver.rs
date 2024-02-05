@@ -70,7 +70,11 @@ impl Ic3Solver {
             }
         }
         self.temporary.push(cube);
-        self.solver.add_lemma(clause);
+        self.solver.add_temp_lemma(clause);
+    }
+
+    pub fn cleanup_temporary_clause(&mut self) {
+        self.solver.cleanup_temp_lemma();
     }
 }
 
