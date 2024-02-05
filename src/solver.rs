@@ -129,10 +129,10 @@ impl Ic3 {
         assert!(!self.model.cube_subsume_init(cube));
         let solver = &mut self.solvers[frame - 1];
         solver.num_act += 1;
-        if solver.num_act > 1000 {
-            self.statistic.num_solver_restart += 1;
-            solver.reset(&self.args, &self.model, &self.frames);
-        }
+        // if solver.num_act > 1000 {
+        //     self.statistic.num_solver_restart += 1;
+        //     solver.reset(&self.args, &self.model, &self.frames);
+        // }
         self.blocked_inner(frame, cube, domain)
     }
 
