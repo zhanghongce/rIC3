@@ -40,6 +40,7 @@ impl Ic3 {
                         {
                             ctgs += 1;
                             let conflict = self.blocked_conflict(&blocked);
+                            let conflict = self.mic(frame - 1, conflict, level - 1);
                             let mut i = frame;
                             while i <= self.depth() {
                                 if let BlockResult::No(_) = self.blocked(i, &conflict, true) {
@@ -47,7 +48,6 @@ impl Ic3 {
                                 }
                                 i += 1;
                             }
-                            let conflict = self.mic(i - 1, conflict, level - 1);
                             self.add_cube(i - 1, conflict);
                             continue;
                         }
