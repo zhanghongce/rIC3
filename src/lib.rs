@@ -22,6 +22,7 @@ use frames::Frames;
 use logic_form::Cube;
 use model::Model;
 use solver::{BlockResult, BlockResultYes, Ic3Solver, Lift};
+use std::collections::VecDeque;
 use std::panic::{self, AssertUnwindSafe};
 use std::process::exit;
 use std::time::Instant;
@@ -31,6 +32,7 @@ pub struct Ic3 {
     model: Model,
     solvers: Vec<Ic3Solver>,
     frames: Frames,
+    waiting_push: VecDeque<(Cube, usize)>,
     activity: Activity,
     obligations: ProofObligationQueue,
     lift: Lift,
@@ -51,6 +53,7 @@ impl Ic3 {
     fn generalize(&mut self, frame: usize, cube: Cube) -> (usize, Cube) {
         let level = if self.args.ctg { 1 } else { 0 };
         let mut cube = self.mic(frame, cube, level);
+        assert!(self.waiting_push.is_empty());
         for i in frame + 1..=self.depth() {
             match self.blocked(i, &cube, true) {
                 BlockResult::Yes(block) => cube = self.blocked_conflict(&block),
@@ -137,6 +140,7 @@ impl Ic3 {
             model,
             solvers: Vec::new(),
             frames: Frames::new(),
+            waiting_push: VecDeque::new(),
             activity: Activity::new(),
             lift,
             statistic,

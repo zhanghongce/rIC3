@@ -41,14 +41,8 @@ impl Ic3 {
                             ctgs += 1;
                             let conflict = self.blocked_conflict(&blocked);
                             let conflict = self.mic(frame - 1, conflict, level - 1);
-                            let mut i = frame;
-                            while i <= self.depth() {
-                                if let BlockResult::No(_) = self.blocked(i, &conflict, true) {
-                                    break;
-                                }
-                                i += 1;
-                            }
-                            self.add_cube(i - 1, conflict);
+                            self.add_cube(frame - 1, conflict.clone());
+                            self.waiting_push.push_back((conflict, frame));
                             continue;
                         }
                     }
@@ -137,6 +131,20 @@ impl Ic3 {
             }
         }
         self.activity.pump_cube_activity(&cube);
+        if level > 0 {
+            while let Some((push_cube, mut push_frame)) = self.waiting_push.pop_front() {
+                assert!(push_frame == frame);
+                while push_frame <= self.depth() {
+                    if let BlockResult::No(_) = self.blocked(push_frame, &push_cube, true) {
+                        break;
+                    }
+                    push_frame += 1;
+                }
+                if push_frame > frame {
+                    self.add_cube(push_frame - 1, push_cube);
+                }
+            }
+        }
         cube
     }
 }
