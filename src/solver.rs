@@ -4,7 +4,7 @@ use logic_form::{Clause, Cube, Lit, Var};
 use std::{mem::take, time::Instant};
 
 pub struct Ic3Solver {
-    solver: Solver,
+    pub solver: Solver,
     temporary: Vec<Cube>,
 }
 
