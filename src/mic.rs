@@ -33,6 +33,7 @@ impl Ic3 {
                     if level == 0 {
                         return DownResult::Fail(unblocked);
                     }
+                    todo!();
                     let model = self.unblocked_model(&unblocked);
                     if ctgs < 3 && frame > 1 && !self.model.cube_subsume_init(&model) {
                         if let BlockResult::Yes(blocked) =

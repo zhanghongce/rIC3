@@ -50,7 +50,7 @@ impl Ic3 {
 
     fn generalize(&mut self, frame: usize, cube: Cube) -> (usize, Cube) {
         let level = if self.args.ctg { 1 } else { 0 };
-        let mut cube = self.mic(frame, cube, level);
+        let mut cube = self.mic(frame, cube, 0);
         for i in frame + 1..=self.depth() {
             match self.blocked(i, &cube, true) {
                 BlockResult::Yes(block) => cube = self.blocked_conflict(&block),
