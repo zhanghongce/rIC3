@@ -110,6 +110,8 @@ impl Ic3 {
     }
 
     pub fn mic(&mut self, frame: usize, mut cube: Cube, level: usize) -> Cube {
+        let next_cube = self.model.cube_next(&cube);
+        self.solvers[frame - 1].solver.set_domain(&next_cube);
         self.statistic.avg_mic_cube_len += cube.len();
         self.statistic.num_mic += 1;
         if level > 0 {
@@ -137,6 +139,7 @@ impl Ic3 {
                 }
             }
         }
+        self.solvers[frame - 1].solver.unset_domain();
         self.activity.pump_cube_activity(&cube);
         cube
     }
