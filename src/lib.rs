@@ -129,15 +129,16 @@ impl Ic3 {
 impl Ic3 {
     pub fn new(args: Args) -> Self {
         let aig = Aig::from_file(args.model.as_ref().unwrap()).unwrap();
-        let model = Model::from_aig(&aig, !args.backward);
+        let model = Model::from_aig(&aig);
         let lift = Lift::new(&args, &model);
         let statistic = Statistic::new(args.model.as_ref().unwrap());
+        let activity = Activity::new(&model.latchs);
         let mut res = Self {
             args,
             model,
             solvers: Vec::new(),
             frames: Frames::new(),
-            activity: Activity::new(),
+            activity,
             lift,
             statistic,
             obligations: ProofObligationQueue::new(),

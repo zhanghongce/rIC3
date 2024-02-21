@@ -1,62 +1,50 @@
-use logic_form::{Cube, Lit, Var};
-use std::collections::HashMap;
+use logic_form::{Cube, Var, VarMap};
 
-#[derive(Default)]
 pub struct Activity {
-    activity: HashMap<Var, f64>,
+    activity: VarMap<f64>,
+    act_inc: f64,
 }
 
 impl Activity {
-    pub fn new() -> Self {
-        Self::default()
-    }
-
-    fn decay(&mut self) {
-        for (_, act) in self.activity.iter_mut() {
-            *act *= 0.99
+    pub fn new(var: &[Var]) -> Self {
+        let mut activity = VarMap::new();
+        for v in var.iter() {
+            activity.reserve(*v);
+        }
+        Self {
+            activity,
+            act_inc: 1.0,
         }
     }
 
-    fn var_activity(&self, lit: Lit) -> f64 {
-        match self.activity.get(&lit.var()) {
-            Some(a) => *a,
-            None => 0.0,
+    #[inline]
+    fn bump(&mut self, var: Var) {
+        self.activity[var] += self.act_inc;
+    }
+
+    #[inline]
+    pub fn decay(&mut self) {
+        for act in self.activity.iter_mut() {
+            *act *= 0.99;
         }
     }
 
-    fn pump_lit_activity(&mut self, lit: &Lit) {
-        match self.activity.get_mut(&lit.var()) {
-            Some(a) => *a += 1.0,
-            None => {
-                self.activity.insert(lit.var(), 1.0);
-            }
-        }
-    }
-
-    pub fn pump_cube_activity(&mut self, cube: &Cube) {
+    pub fn bump_cube_activity(&mut self, cube: &Cube) {
         self.decay();
-        cube.iter().for_each(|l| self.pump_lit_activity(l));
+        cube.iter().for_each(|l| self.bump(l.var()));
     }
 
     pub fn sort_by_activity(&self, cube: &mut Cube, ascending: bool) {
         if ascending {
-            cube.sort_by(|a, b| {
-                self.var_activity(*a)
-                    .partial_cmp(&self.var_activity(*b))
-                    .unwrap()
-            });
+            cube.sort_by(|a, b| self.activity[*a].partial_cmp(&self.activity[*b]).unwrap());
         } else {
-            cube.sort_by(|a, b| {
-                self.var_activity(*b)
-                    .partial_cmp(&self.var_activity(*a))
-                    .unwrap()
-            });
+            cube.sort_by(|a, b| self.activity[*b].partial_cmp(&self.activity[*a]).unwrap());
         }
     }
 
     #[allow(unused)]
     pub fn cube_average_activity(&self, cube: &Cube) -> f64 {
-        let sum: f64 = cube.iter().map(|l| self.var_activity(*l)).sum();
+        let sum: f64 = cube.iter().map(|l| self.activity[*l]).sum();
         sum / cube.len() as f64
     }
 }

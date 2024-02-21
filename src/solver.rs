@@ -199,56 +199,41 @@ impl Lift {
 
 impl Ic3 {
     pub fn minimal_predecessor(&mut self, successor: &Cube, model: gipsat::Model) -> Cube {
-        if !self.args.backward {
-            let start = Instant::now();
-            self.lift.num_act += 1;
-            if self.lift.num_act > 1000 {
-                self.lift = Lift::new(&self.args, &self.model)
-            }
-            let act: Lit = self.lift.solver.new_var().into();
-            let mut assumption = Cube::from([act]);
-            let mut cls = !successor;
-            cls.push(!act);
-            self.lift.solver.add_clause(&cls);
-            for input in self.model.inputs.iter() {
-                let lit = input.lit();
-                match model.lit_value(lit) {
-                    Some(true) => assumption.push(lit),
-                    Some(false) => assumption.push(!lit),
-                    None => (),
-                }
-            }
-            let mut latchs = Cube::new();
-            for latch in self.model.latchs.iter() {
-                let lit = latch.lit();
-                match model.lit_value(lit) {
-                    Some(true) => latchs.push(lit),
-                    Some(false) => latchs.push(!lit),
-                    None => (),
-                }
-            }
-            self.activity.sort_by_activity(&mut latchs, false);
-            assumption.extend_from_slice(&latchs);
-            let res: Cube = match self.lift.solver.solve(&assumption) {
-                SatResult::Sat(_) => panic!(),
-                SatResult::Unsat(conflict) => {
-                    latchs.into_iter().filter(|l| conflict.has(*l)).collect()
-                }
-            };
-            self.lift.solver.add_clause(&[!act]);
-            self.statistic.minimal_predecessor_time += start.elapsed();
-            res
-        } else {
-            let mut latchs = Cube::new();
-            for latch in self.model.latchs.iter() {
-                let lit = latch.lit();
-                match model.lit_value(lit) {
-                    Some(true) => latchs.push(lit),
-                    Some(false) => latchs.push(!lit),
-                    None => (),
-                }
-            }
-            latchs
+        let start = Instant::now();
+        self.lift.num_act += 1;
+        if self.lift.num_act > 1000 {
+            self.lift = Lift::new(&self.args, &self.model)
         }
+        let act: Lit = self.lift.solver.new_var().into();
+        let mut assumption = Cube::from([act]);
+        let mut cls = !successor;
+        cls.push(!act);
+        self.lift.solver.add_clause(&cls);
+        for input in self.model.inputs.iter() {
+            let lit = input.lit();
+            match model.lit_value(lit) {
+                Some(true) => assumption.push(lit),
+                Some(false) => assumption.push(!lit),
+                None => (),
+            }
+        }
+        let mut latchs = Cube::new();
+        for latch in self.model.latchs.iter() {
+            let lit = latch.lit();
+            match model.lit_value(lit) {
+                Some(true) => latchs.push(lit),
+                Some(false) => latchs.push(!lit),
+                None => (),
+            }
+        }
+        self.activity.sort_by_activity(&mut latchs, false);
+        assumption.extend_from_slice(&latchs);
+        let res: Cube = match self.lift.solver.solve(&assumption) {
+            SatResult::Sat(_) => panic!(),
+            SatResult::Unsat(conflict) => latchs.into_iter().filter(|l| conflict.has(*l)).collect(),
+        };
+        self.lift.solver.add_clause(&[!act]);
+        self.statistic.minimal_predecessor_time += start.elapsed();
+        res
     }
 }

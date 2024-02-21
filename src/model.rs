@@ -4,7 +4,6 @@ use minisat::SimpSolver;
 use std::collections::{HashMap, HashSet};
 
 pub struct Model {
-    forward: bool,
     pub inputs: Vec<Var>,
     pub latchs: Vec<Var>,
     pub primes: Vec<Var>,
@@ -20,33 +19,6 @@ pub struct Model {
 }
 
 impl Model {
-    fn backward(&self) -> Self {
-        // assert!(self.forward);
-        // let init = self.bad.clone();
-        // let bad = self.init.clone();
-        // let latchs = self.primes.clone();
-        // let primes = self.latchs.clone();
-        // let next_map = self.previous_map.clone();
-        // let previous_map = self.next_map.clone();
-        // let mut init_map = HashMap::new();
-        // init_map.insert(init[0].var(), true);
-        // Self {
-        //     forward: false,
-        //     inputs: self.inputs.clone(),
-        //     latchs,
-        //     primes,
-        //     init,
-        //     bad,
-        //     init_map,
-        //     constraints: self.constraints.clone(),
-        //     trans: self.trans.clone(),
-        //     num_var: self.num_var,
-        //     next_map,
-        //     previous_map,
-        // }
-        todo!();
-    }
-
     fn compress_deps_rec(
         v: Var,
         deps: &mut VarMap<Vec<Var>>,
@@ -95,7 +67,7 @@ impl Model {
         deps
     }
 
-    pub fn from_aig(aig: &Aig, forward: bool) -> Self {
+    pub fn from_aig(aig: &Aig) -> Self {
         let mut simp_solver = SimpSolver::new();
         let false_lit: Lit = simp_solver.new_var().into();
         let mut dependence = VarMap::new();
@@ -179,8 +151,7 @@ impl Model {
             previous_map.insert(*p, *l);
         }
         dependence = Self::compress_deps(dependence, &trans);
-        let mut res = Self {
-            forward: true,
+        Self {
             inputs,
             latchs,
             primes,
@@ -193,11 +164,7 @@ impl Model {
             next_map,
             previous_map,
             dependence,
-        };
-        if !forward {
-            res = res.backward();
         }
-        res
     }
 
     #[inline]

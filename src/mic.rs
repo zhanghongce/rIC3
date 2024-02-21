@@ -145,7 +145,7 @@ impl Ic3 {
             }
         }
         self.solvers[frame - 1].solver.unset_domain();
-        self.activity.pump_cube_activity(&cube);
+        self.activity.bump_cube_activity(&cube);
         cube
     }
 }

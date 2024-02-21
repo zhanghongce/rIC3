@@ -6,10 +6,6 @@ pub struct Args {
     /// input aiger file
     pub model: Option<String>,
 
-    /// backward
-    #[arg(short, long, default_value_t = false)]
-    pub backward: bool,
-
     /// verbose
     #[arg(short, default_value_t = false)]
     pub verbose: bool,
