@@ -21,7 +21,7 @@ impl Ic3Solver {
         while solver.num_var() < model.num_var {
             solver.new_var();
         }
-        solver.set_ts(&model.trans, &model.dependence);
+        solver.set_ts(model.num_var, &model.trans, &model.dependence);
         Self {
             solver,
             temporary: Vec::new(),
