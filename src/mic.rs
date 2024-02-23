@@ -69,27 +69,12 @@ impl Ic3 {
         }
     }
 
-    fn add_temporary_cube(&mut self, mut frame: usize, cube: &Cube) {
-        frame = frame.min(self.depth());
-        for solver in self.solvers[1..=frame].iter_mut() {
-            solver.add_temporary_clause(&!cube);
-        }
-    }
-
-    pub fn clean_temporary_cube(&mut self, mut frame: usize) {
-        frame = frame.min(self.depth());
-        for solver in self.solvers[1..=frame].iter_mut() {
-            solver.cleanup_temporary_clause();
-        }
-    }
-
     fn handle_down_success(
         &mut self,
         frame: usize,
         cube: Cube,
         i: usize,
         mut new_cube: Cube,
-        level: usize,
     ) -> (Cube, usize) {
         new_cube = cube
             .iter()
@@ -103,21 +88,16 @@ impl Ic3 {
         if new_i < new_cube.len() {
             assert!(!(cube[0..=i]).contains(&new_cube[new_i]))
         }
-        if level > 0 {
-            self.add_temporary_cube(frame, &new_cube);
-        }
         (new_cube, new_i)
     }
 
     pub fn mic(&mut self, frame: usize, mut cube: Cube, level: usize) -> Cube {
+        assert!(level == 0);
         self.solvers[frame - 1]
             .solver
             .set_domain(&self.model.cube_next(&cube));
         self.statistic.avg_mic_cube_len += cube.len();
         self.statistic.num_mic += 1;
-        if level > 0 {
-            self.add_temporary_cube(frame, &cube);
-        }
         self.activity.sort_by_activity(&mut cube, true);
         let mut keep = HashSet::new();
         let mut i = 0;
@@ -131,7 +111,7 @@ impl Ic3 {
             match self.ctg_down(frame, &removed_cube, &keep, level) {
                 DownResult::Success(new_cube) => {
                     self.statistic.mic_drop.success();
-                    (cube, i) = self.handle_down_success(frame, cube, i, new_cube, level);
+                    (cube, i) = self.handle_down_success(frame, cube, i, new_cube);
                     self.solvers[frame - 1].solver.unset_domain();
                     self.solvers[frame - 1]
                         .solver

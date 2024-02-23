@@ -54,28 +54,6 @@ impl Ic3Solver {
     pub fn solve<'a>(&'a mut self, assumptions: &[Lit]) -> SatResult<'a> {
         self.solver.solve(assumptions)
     }
-
-    pub fn add_temporary_clause(&mut self, clause: &Clause) {
-        let mut cube = !clause;
-        cube.sort_by_key(|x| x.var());
-        for t in self.temporary.iter() {
-            if t.ordered_subsume(&cube) {
-                return;
-            }
-        }
-        let temporary = take(&mut self.temporary);
-        for t in temporary {
-            if !cube.ordered_subsume(&t) {
-                self.temporary.push(t);
-            }
-        }
-        self.temporary.push(cube);
-        self.solver.add_temp_lemma(clause);
-    }
-
-    pub fn cleanup_temporary_clause(&mut self) {
-        self.solver.cleanup_temp_lemma();
-    }
 }
 
 impl Ic3 {

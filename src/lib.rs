@@ -64,7 +64,6 @@ impl Ic3 {
         let conflict = self.blocked_conflict(&blocked);
         let (frame, core) = self.generalize(po.frame, conflict);
         self.statistic.avg_po_cube_len += po.lemma.len();
-        self.clean_temporary_cube(po.frame);
         self.add_obligation(ProofObligation::new(frame, po.lemma, po.depth));
         self.add_cube(frame - 1, core);
     }
