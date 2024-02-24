@@ -93,9 +93,13 @@ impl Ic3 {
 
     pub fn mic(&mut self, frame: usize, mut cube: Cube, level: usize) -> Cube {
         assert!(level == 0);
-        self.solvers[frame - 1]
-            .solver
-            .set_domain(&self.model.cube_next(&cube));
+        self.solvers[frame - 1].solver.set_domain(
+            self.model
+                .cube_next(&cube)
+                .iter()
+                .copied()
+                .chain(cube.iter().copied()),
+        );
         self.statistic.avg_mic_cube_len += cube.len();
         self.statistic.num_mic += 1;
         self.activity.sort_by_activity(&mut cube, true);
@@ -113,9 +117,13 @@ impl Ic3 {
                     self.statistic.mic_drop.success();
                     (cube, i) = self.handle_down_success(frame, cube, i, new_cube);
                     self.solvers[frame - 1].solver.unset_domain();
-                    self.solvers[frame - 1]
-                        .solver
-                        .set_domain(&self.model.cube_next(&cube));
+                    self.solvers[frame - 1].solver.set_domain(
+                        self.model
+                            .cube_next(&cube)
+                            .iter()
+                            .copied()
+                            .chain(cube.iter().copied()),
+                    );
                 }
                 _ => {
                     self.statistic.mic_drop.fail();
