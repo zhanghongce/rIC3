@@ -116,8 +116,7 @@ impl Ic3 {
                 DownResult::Success(new_cube) => {
                     self.statistic.mic_drop.success();
                     (cube, i) = self.handle_down_success(frame, cube, i, new_cube);
-                    self.solvers[frame - 1].solver.unset_domain();
-                    self.solvers[frame - 1].solver.set_domain(
+                    self.solvers[frame - 1].solver.set_sub_domain(
                         self.model
                             .cube_next(&cube)
                             .iter()
