@@ -1,7 +1,7 @@
 use super::{solver::BlockResult, Ic3};
 use crate::solver::BlockResultNo;
 use logic_form::{Cube, Lit};
-use std::collections::HashSet;
+use std::{collections::HashSet, time::Instant};
 
 #[derive(Debug)]
 enum DownResult {
@@ -93,6 +93,7 @@ impl Ic3 {
 
     pub fn mic(&mut self, frame: usize, mut cube: Cube, level: usize) -> Cube {
         assert!(level == 0);
+        let start = Instant::now();
         self.solvers[frame - 1].solver.set_domain(
             self.model
                 .cube_next(&cube)
@@ -133,6 +134,7 @@ impl Ic3 {
         }
         self.solvers[frame - 1].solver.unset_domain();
         self.activity.bump_cube_activity(&cube);
+        self.statistic.overall_mic_time += start.elapsed();
         cube
     }
 }
