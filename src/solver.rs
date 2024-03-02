@@ -11,11 +11,6 @@ pub struct Ic3Solver {
 impl Ic3Solver {
     pub fn new(args: &Args, model: &Model, frame: usize) -> Self {
         let mut solver = Solver::new(&format!("frame{frame}"));
-        if let Some(_) = args.random {
-            // solver.set_random_seed(seed as f64);
-            // solver.set_rnd_init_act(trsue);
-            todo!()
-        }
         let false_lit: Lit = solver.new_var().into();
         solver.add_clause_direct(&[!false_lit]);
         while solver.num_var() < model.num_var {
@@ -57,16 +52,26 @@ impl Ic3Solver {
 }
 
 impl Ic3 {
-    pub fn blocked(&mut self, frame: usize, cube: &Cube, domain: bool) -> BlockResult {
+    pub fn blocked(
+        &mut self,
+        frame: usize,
+        cube: &Cube,
+        strengthen: bool,
+        domain: bool,
+    ) -> BlockResult {
         assert!(!self.model.cube_subsume_init(cube));
         self.statistic.num_sat_inductive += 1;
         let solver_idx = frame - 1;
         let solver = &mut self.solvers[solver_idx].solver;
         let start = Instant::now();
         let assumption = self.model.cube_next(cube);
-        let constrain = !cube;
         let sat_start = Instant::now();
-        let res = solver.solve_with_constrain(&assumption, constrain, domain);
+        let res = if strengthen {
+            let constrain = !cube;
+            solver.solve_with_constrain(&assumption, constrain, domain)
+        } else {
+            solver.solve_with_domain(&assumption, domain)
+        };
         self.statistic.avg_sat_call_time += sat_start.elapsed();
         let res = match res {
             SatResult::Sat(_) => BlockResult::No(BlockResultNo {
@@ -88,11 +93,12 @@ impl Ic3 {
         frame: usize,
         cube: &Cube,
         ascending: bool,
+        strengthen: bool,
         domain: bool,
     ) -> BlockResult {
         let mut ordered_cube = cube.clone();
         self.activity.sort_by_activity(&mut ordered_cube, ascending);
-        self.blocked(frame, &ordered_cube, domain)
+        self.blocked(frame, &ordered_cube, strengthen, domain)
     }
 }
 
@@ -163,11 +169,6 @@ pub struct Lift {
 impl Lift {
     pub fn new(args: &Args, model: &Model) -> Self {
         let mut solver = Solver::new("lift");
-        if let Some(seed) = args.random {
-            // solver.set_random_seed(seed as f64);
-            // solver.set_rnd_init_act(true);
-            todo!()
-        }
         let false_lit: Lit = solver.new_var().into();
         solver.add_clause(&[!false_lit]);
         model.load_trans(&mut solver);
