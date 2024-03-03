@@ -1,6 +1,7 @@
-use crate::{model::Model, Args, Ic3};
-use gipsat::{SatResult, Solver};
-use logic_form::{Clause, Cube, Lit, Var};
+use crate::{model::Model, Ic3};
+use gipsat::{Sat, Solver, Unsat};
+use logic_form::{Clause, Cube, Lit};
+use satif::{SatResult, SatifSat, SatifUnsat};
 use std::{mem::take, time::Instant};
 
 pub struct Ic3Solver {
@@ -9,7 +10,7 @@ pub struct Ic3Solver {
 }
 
 impl Ic3Solver {
-    pub fn new(args: &Args, model: &Model, frame: usize) -> Self {
+    pub fn new(model: &Model, frame: usize) -> Self {
         let mut solver = Solver::new(&format!("frame{frame}"));
         let false_lit: Lit = solver.new_var().into();
         solver.add_clause_direct(&[!false_lit]);
@@ -35,18 +36,8 @@ impl Ic3Solver {
         self.solver.add_lemma(clause);
     }
 
-    pub fn simplify(&mut self) {
-        // self.solver.simplify()
-    }
-
     #[allow(unused)]
-    pub fn set_polarity(&mut self, var: Var, pol: Option<bool>) {
-        // self.solver.set_polarity(var, pol)
-        todo!()
-    }
-
-    #[allow(unused)]
-    pub fn solve<'a>(&'a mut self, assumptions: &[Lit]) -> SatResult<'a> {
+    pub fn solve(&mut self, assumptions: &[Lit]) -> SatResult<Sat, Unsat> {
         self.solver.solve(assumptions)
     }
 }
@@ -59,7 +50,6 @@ impl Ic3 {
         strengthen: bool,
         domain: bool,
     ) -> BlockResult {
-        assert!(!self.model.cube_subsume_init(cube));
         self.statistic.num_sat_inductive += 1;
         let solver_idx = frame - 1;
         let solver = &mut self.solvers[solver_idx].solver;
@@ -72,18 +62,15 @@ impl Ic3 {
         } else {
             solver.solve_with_domain(&assumption, domain)
         };
-        self.statistic.avg_sat_call_time += sat_start.elapsed();
         let res = match res {
-            SatResult::Sat(_) => BlockResult::No(BlockResultNo {
-                solver_idx,
-                assumption,
-            }),
-            SatResult::Unsat(_) => BlockResult::Yes(BlockResultYes {
-                solver_idx,
+            SatResult::Sat(sat) => BlockResult::No(BlockResultNo { sat, assumption }),
+            SatResult::Unsat(unsat) => BlockResult::Yes(BlockResultYes {
+                unsat,
                 cube: cube.clone(),
                 assumption,
             }),
         };
+        self.statistic.avg_sat_call_time += sat_start.elapsed();
         self.statistic.sat_inductive_time += start.elapsed();
         res
     }
@@ -107,25 +94,28 @@ pub enum BlockResult {
     No(BlockResultNo),
 }
 
-#[derive(Debug)]
 pub struct BlockResultYes {
-    solver_idx: usize,
+    unsat: Unsat,
     cube: Cube,
     assumption: Cube,
 }
 
-#[derive(Debug)]
 pub struct BlockResultNo {
-    solver_idx: usize,
+    sat: Sat,
     assumption: Cube,
 }
 
+impl BlockResultNo {
+    pub fn lit_value(&self, lit: Lit) -> Option<bool> {
+        self.sat.lit_value(lit)
+    }
+}
+
 impl Ic3 {
-    pub fn blocked_conflict(&mut self, block: &BlockResultYes) -> Cube {
-        let conflict = unsafe { self.solvers[block.solver_idx].solver.get_conflict() };
+    pub fn blocked_conflict(&mut self, block: BlockResultYes) -> Cube {
         let mut ans = Cube::new();
         for i in 0..block.cube.len() {
-            if conflict.has(block.assumption[i]) {
+            if block.unsat.has(block.assumption[i]) {
                 ans.push(block.cube[i]);
             }
         }
@@ -142,7 +132,7 @@ impl Ic3 {
                 })
                 .unwrap();
             for i in 0..block.cube.len() {
-                if conflict.has(block.assumption[i]) || block.cube[i] == new {
+                if block.unsat.has(block.assumption[i]) || block.cube[i] == new {
                     ans.push(block.cube[i]);
                 }
             }
@@ -151,13 +141,8 @@ impl Ic3 {
         ans
     }
 
-    pub fn unblocked_model(&mut self, unblock: &BlockResultNo) -> Cube {
-        let model = unsafe { self.solvers[unblock.solver_idx].solver.get_model() };
-        self.minimal_predecessor(&unblock.assumption, model)
-    }
-
-    pub fn unblocked_model_lit_value(&self, unblock: &BlockResultNo, lit: Lit) -> Option<bool> {
-        unsafe { self.solvers[unblock.solver_idx].solver.get_model() }.lit_value(lit)
+    pub fn unblocked_model(&mut self, unblock: BlockResultNo) -> Cube {
+        self.minimal_predecessor(unblock)
     }
 }
 
@@ -167,7 +152,7 @@ pub struct Lift {
 }
 
 impl Lift {
-    pub fn new(args: &Args, model: &Model) -> Self {
+    pub fn new(model: &Model) -> Self {
         let mut solver = Solver::new("lift");
         let false_lit: Lit = solver.new_var().into();
         solver.add_clause(&[!false_lit]);
@@ -177,20 +162,20 @@ impl Lift {
 }
 
 impl Ic3 {
-    pub fn minimal_predecessor(&mut self, successor: &Cube, model: gipsat::Model) -> Cube {
+    pub fn minimal_predecessor(&mut self, unblock: BlockResultNo) -> Cube {
         let start = Instant::now();
         self.lift.num_act += 1;
         if self.lift.num_act > 1000 {
-            self.lift = Lift::new(&self.args, &self.model)
+            self.lift = Lift::new(&self.model)
         }
         let act: Lit = self.lift.solver.new_var().into();
         let mut assumption = Cube::from([act]);
-        let mut cls = !successor;
+        let mut cls = !&unblock.assumption;
         cls.push(!act);
         self.lift.solver.add_clause(&cls);
         for input in self.model.inputs.iter() {
             let lit = input.lit();
-            match model.lit_value(lit) {
+            match unblock.sat.lit_value(lit) {
                 Some(true) => assumption.push(lit),
                 Some(false) => assumption.push(!lit),
                 None => (),
@@ -199,7 +184,7 @@ impl Ic3 {
         let mut latchs = Cube::new();
         for latch in self.model.latchs.iter() {
             let lit = latch.lit();
-            match model.lit_value(lit) {
+            match unblock.sat.lit_value(lit) {
                 Some(true) => latchs.push(lit),
                 Some(false) => latchs.push(!lit),
                 None => (),

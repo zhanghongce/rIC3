@@ -3,7 +3,6 @@ use crate::solver::BlockResultNo;
 use logic_form::{Cube, Lit};
 use std::{collections::HashSet, time::Instant};
 
-#[derive(Debug)]
 enum DownResult {
     Success(Cube),
     Fail(BlockResultNo),
@@ -15,55 +14,55 @@ impl Ic3 {
         &mut self,
         frame: usize,
         cube: &Cube,
-        keep: &HashSet<Lit>,
+        _keep: &HashSet<Lit>,
         level: usize,
     ) -> DownResult {
-        let mut cube = cube.clone();
+        let cube = cube.clone();
         self.statistic.num_down += 1;
-        let mut ctgs = 0;
+        // let mut ctgs = 0;
         loop {
             if self.model.cube_subsume_init(&cube) {
                 return DownResult::IncludeInit;
             }
             match self.blocked_with_ordered(frame, &cube, false, true, true) {
                 BlockResult::Yes(blocked) => {
-                    return DownResult::Success(self.blocked_conflict(&blocked))
+                    return DownResult::Success(self.blocked_conflict(blocked))
                 }
                 BlockResult::No(unblocked) => {
                     if level == 0 {
                         return DownResult::Fail(unblocked);
                     }
                     todo!();
-                    let model = self.unblocked_model(&unblocked);
-                    if ctgs < 3 && frame > 1 && !self.model.cube_subsume_init(&model) {
-                        if let BlockResult::Yes(blocked) =
-                            self.blocked_with_ordered(frame - 1, &model, false, true, true)
-                        {
-                            ctgs += 1;
-                            let conflict = self.blocked_conflict(&blocked);
-                            let conflict = self.mic(frame - 1, conflict, level - 1);
-                            let mut i = frame;
-                            while i <= self.depth() {
-                                if let BlockResult::No(_) = self.blocked(i, &conflict, true, true) {
-                                    break;
-                                }
-                                i += 1;
-                            }
-                            self.add_cube(i - 1, conflict);
-                            continue;
-                        }
-                    }
-                    ctgs = 0;
-                    let cex_set: HashSet<Lit> = HashSet::from_iter(model);
-                    let mut cube_new = Cube::new();
-                    for lit in cube {
-                        if cex_set.contains(&lit) {
-                            cube_new.push(lit);
-                        } else if keep.contains(&lit) {
-                            return DownResult::Fail(unblocked);
-                        }
-                    }
-                    cube = cube_new;
+                    //     let model = self.unblocked_model(unblocked);
+                    //     if ctgs < 3 && frame > 1 && !self.model.cube_subsume_init(&model) {
+                    //         if let BlockResult::Yes(blocked) =
+                    //             self.blocked_with_ordered(frame - 1, &model, false, true, true)
+                    //         {
+                    //             ctgs += 1;
+                    //             let conflict = self.blocked_conflict(blocked);
+                    //             let conflict = self.mic(frame - 1, conflict, level - 1);
+                    //             let mut i = frame;
+                    //             while i <= self.depth() {
+                    //                 if let BlockResult::No(_) = self.blocked(i, &conflict, true, true) {
+                    //                     break;
+                    //                 }
+                    //                 i += 1;
+                    //             }
+                    //             self.add_cube(i - 1, conflict);
+                    //             continue;
+                    //         }
+                    //     }
+                    //     ctgs = 0;
+                    //     let cex_set: HashSet<Lit> = HashSet::from_iter(model);
+                    //     let mut cube_new = Cube::new();
+                    //     for lit in cube {
+                    //         if cex_set.contains(&lit) {
+                    //             cube_new.push(lit);
+                    //         } else if keep.contains(&lit) {
+                    //             return DownResult::Fail(unblocked);
+                    //         }
+                    //     }
+                    //     cube = cube_new;
                 }
             }
         }
@@ -71,7 +70,7 @@ impl Ic3 {
 
     fn handle_down_success(
         &mut self,
-        frame: usize,
+        _frame: usize,
         cube: Cube,
         i: usize,
         mut new_cube: Cube,
@@ -92,7 +91,6 @@ impl Ic3 {
     }
 
     pub fn mic(&mut self, frame: usize, mut cube: Cube, level: usize) -> Cube {
-        assert!(level == 0);
         let start = Instant::now();
         self.solvers[frame - 1].solver.set_domain(
             self.model
