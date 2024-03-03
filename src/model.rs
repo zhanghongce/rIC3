@@ -1,6 +1,7 @@
 use aig::Aig;
 use logic_form::{Clause, Cnf, Cube, Lit, Var, VarMap};
 use minisat::SimpSolver;
+use satif::Satif;
 use std::collections::{HashMap, HashSet};
 
 pub struct Model {
@@ -196,7 +197,7 @@ impl Model {
         true
     }
 
-    pub fn load_trans(&self, solver: &mut gipsat::Solver) {
+    pub fn load_trans(&self, solver: &mut minisat::Solver) {
         while solver.num_var() < self.num_var {
             solver.new_var();
         }

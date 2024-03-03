@@ -1,7 +1,7 @@
 use crate::{model::Model, Ic3};
 use gipsat::{Sat, Solver, Unsat};
 use logic_form::{Clause, Cube, Lit};
-use satif::{SatResult, SatifSat, SatifUnsat};
+use satif::{SatResult, Satif, SatifSat, SatifUnsat};
 use std::{mem::take, time::Instant};
 
 pub struct Ic3Solver {
@@ -147,13 +147,13 @@ impl Ic3 {
 }
 
 pub struct Lift {
-    solver: Solver,
+    solver: minisat::Solver,
     num_act: usize,
 }
 
 impl Lift {
     pub fn new(model: &Model) -> Self {
-        let mut solver = Solver::new("lift");
+        let mut solver = minisat::Solver::new();
         let false_lit: Lit = solver.new_var().into();
         solver.add_clause(&[!false_lit]);
         model.load_trans(&mut solver);
