@@ -11,13 +11,12 @@ pub struct Ic3Solver {
 
 impl Ic3Solver {
     pub fn new(model: &Model, frame: usize) -> Self {
-        let mut solver = Solver::new(&format!("frame{frame}"));
-        let false_lit: Lit = solver.new_var().into();
-        solver.add_clause_direct(&[!false_lit]);
-        while solver.num_var() < model.num_var {
-            solver.new_var();
-        }
-        solver.set_ts(model.num_var, &model.trans, &model.dependence);
+        let solver = Solver::new(
+            &format!("frame{frame}"),
+            model.num_var,
+            &model.trans,
+            &model.dependence,
+        );
         Self {
             solver,
             temporary: Vec::new(),
