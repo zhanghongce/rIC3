@@ -34,11 +34,6 @@ impl Ic3Solver {
         }
         self.solver.add_lemma(clause);
     }
-
-    #[allow(unused)]
-    pub fn solve(&mut self, assumptions: &[Lit]) -> SatResult<Sat, Unsat> {
-        self.solver.solve(assumptions)
-    }
 }
 
 impl Ic3 {
