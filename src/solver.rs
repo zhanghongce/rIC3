@@ -2,11 +2,10 @@ use crate::{model::Model, Ic3};
 use gipsat::{Sat, Solver, Unsat};
 use logic_form::{Clause, Cube, Lit};
 use satif::{SatResult, Satif, SatifSat, SatifUnsat};
-use std::{mem::take, time::Instant};
+use std::time::Instant;
 
 pub struct Ic3Solver {
     pub solver: Solver,
-    temporary: Vec<Cube>,
 }
 
 impl Ic3Solver {
@@ -17,21 +16,17 @@ impl Ic3Solver {
             &model.trans,
             &model.dependence,
         );
-        Self {
-            solver,
-            temporary: Vec::new(),
-        }
+        Self { solver }
+    }
+
+    pub fn new_frame(&self, model: &Model, frame: usize) -> Self {
+        let solver = Solver::new_frame(&self.solver, &format!("frame{frame}"), &model.trans);
+        Self { solver }
     }
 
     pub fn add_lemma(&mut self, clause: &Clause) {
         let mut cube = !clause;
         cube.sort_by_key(|x| x.var());
-        let temporary = take(&mut self.temporary);
-        for t in temporary {
-            if !cube.ordered_subsume(&t) {
-                self.temporary.push(t);
-            }
-        }
         self.solver.add_lemma(clause);
     }
 }
