@@ -151,7 +151,7 @@ impl Ic3 {
     pub fn check(&mut self) -> bool {
         self.add_obligation(ProofObligation::new(
             1,
-            Lemma::new(self.model.cube_previous(&self.model.bad)),
+            Lemma::new(self.model.bad.clone()),
             0,
         ));
         loop {
