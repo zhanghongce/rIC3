@@ -12,14 +12,13 @@ mod solver;
 mod statistic;
 mod verify;
 
-use crate::frames::Lemma;
 use crate::proofoblig::{ProofObligation, ProofObligationQueue};
 use crate::statistic::Statistic;
 use activity::Activity;
 use aig::Aig;
 pub use command::Args;
 use frames::Frames;
-use logic_form::Cube;
+use logic_form::{Cube, Lemma};
 use model::Model;
 use solver::{BlockResult, BlockResultYes, Ic3Solver, Lift};
 use std::panic::{self, AssertUnwindSafe};

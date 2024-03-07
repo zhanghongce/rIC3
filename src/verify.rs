@@ -1,4 +1,5 @@
-use crate::{frames::Lemma, Ic3};
+use crate::Ic3;
+use logic_form::Lemma;
 use minisat::Solver;
 use satif::{SatResult, Satif};
 use std::ops::Deref;
