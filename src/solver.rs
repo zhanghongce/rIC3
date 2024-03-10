@@ -38,6 +38,7 @@ impl Ic3 {
         cube: &Cube,
         strengthen: bool,
         domain: bool,
+        bucket: bool,
     ) -> BlockResult {
         self.statistic.num_sat_inductive += 1;
         let solver_idx = frame - 1;
@@ -47,9 +48,9 @@ impl Ic3 {
         let sat_start = Instant::now();
         let res = if strengthen {
             let constrain = !cube;
-            solver.solve_with_constrain(&assumption, constrain, domain)
+            solver.solve_with_constrain(&assumption, constrain, domain, bucket)
         } else {
-            solver.solve_with_domain(&assumption, domain)
+            solver.solve_with_domain(&assumption, domain, bucket)
         };
         let res = match res {
             SatResult::Sat(sat) => BlockResult::No(BlockResultNo { sat, assumption }),
@@ -71,20 +72,19 @@ impl Ic3 {
         ascending: bool,
         strengthen: bool,
         domain: bool,
+        bucket: bool,
     ) -> BlockResult {
         let mut ordered_cube = cube.clone();
         self.activity.sort_by_activity(&mut ordered_cube, ascending);
-        self.blocked(frame, &ordered_cube, strengthen, domain)
+        self.blocked(frame, &ordered_cube, strengthen, domain, bucket)
     }
 
     pub fn get_bad(&mut self) -> Option<Cube> {
-        match self
-            .solvers
-            .last_mut()
-            .unwrap()
-            .solver
-            .solve_with_domain(&self.model.bad, true)
-        {
+        match self.solvers.last_mut().unwrap().solver.solve_with_domain(
+            &self.model.bad,
+            true,
+            false,
+        ) {
             SatResult::Sat(sat) => Some(self.unblocked_model(BlockResultNo {
                 sat,
                 assumption: self.model.bad.clone(),

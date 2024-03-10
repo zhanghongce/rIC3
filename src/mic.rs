@@ -23,7 +23,7 @@ impl Ic3 {
             if self.model.cube_subsume_init(&cube) {
                 return DownResult::IncludeInit;
             }
-            match self.blocked_with_ordered(frame, &cube, false, true, true) {
+            match self.blocked_with_ordered(frame, &cube, false, true, true, true) {
                 BlockResult::Yes(blocked) => {
                     return DownResult::Success(self.blocked_conflict(blocked))
                 }
@@ -114,7 +114,8 @@ impl Ic3 {
                 DownResult::Success(new_cube) => {
                     self.statistic.mic_drop.success();
                     (cube, i) = self.handle_down_success(frame, cube, i, new_cube);
-                    self.solvers[frame - 1].solver.set_sub_domain(
+                    self.solvers[frame - 1].solver.unset_domain();
+                    self.solvers[frame - 1].solver.set_domain(
                         self.model
                             .cube_next(&cube)
                             .iter()

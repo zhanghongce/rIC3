@@ -55,7 +55,7 @@ impl Ic3 {
         // let level = if self.args.ctg { 1 } else { 0 };
         let mut cube = self.mic(frame, cube, 0);
         for i in frame + 1..=self.depth() {
-            match self.blocked(i, &cube, true, true) {
+            match self.blocked(i, &cube, true, true, true) {
                 BlockResult::Yes(block) => cube = self.blocked_conflict(block),
                 BlockResult::No(_) => return (i, cube),
             }
@@ -84,7 +84,7 @@ impl Ic3 {
                 self.add_obligation(ProofObligation::new(po.frame + 1, po.lemma, po.depth));
                 continue;
             }
-            match self.blocked_with_ordered(po.frame, &po.lemma, false, true, true) {
+            match self.blocked_with_ordered(po.frame, &po.lemma, false, true, true, false) {
                 BlockResult::Yes(blocked) => {
                     self.handle_blocked(po, blocked);
                 }
@@ -110,7 +110,7 @@ impl Ic3 {
                 if !self.frames[frame_idx].contains(&cube) {
                     continue;
                 }
-                match self.blocked(frame_idx + 1, &cube, false, true) {
+                match self.blocked(frame_idx + 1, &cube, false, true, true) {
                     BlockResult::Yes(blocked) => {
                         let conflict = self.blocked_conflict(blocked);
                         self.add_cube(frame_idx + 1, conflict);
