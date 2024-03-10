@@ -43,11 +43,11 @@ impl Ic3 {
 
     fn new_frame(&mut self) {
         self.frames.new_frame();
-        let solver = if self.solvers.len() > 1 {
-            self.solvers[self.solvers.len() - 2].new_frame(&self.model, self.solvers.len())
-        } else {
-            Ic3Solver::new(&self.model, self.solvers.len())
-        };
+        // let solver = if self.solvers.len() > 1 {
+        //     self.solvers[self.solvers.len() - 2].new_frame(&self.model, self.solvers.len())
+        // } else {
+        let solver = Ic3Solver::new(&self.model, self.solvers.len());
+        // };
         self.solvers.push(solver);
     }
 
