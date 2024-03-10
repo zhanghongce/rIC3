@@ -152,17 +152,19 @@ impl Ic3 {
     }
 
     pub fn check(&mut self) -> bool {
-        self.add_obligation(ProofObligation::new(
-            1,
-            Lemma::new(self.model.bad.clone()),
-            0,
-        ));
         loop {
             let start = Instant::now();
-            if !self.block() {
-                self.statistic.overall_block_time += start.elapsed();
-                self.statistic();
-                return false;
+            loop {
+                if !self.block() {
+                    self.statistic.overall_block_time += start.elapsed();
+                    self.statistic();
+                    return false;
+                }
+                if let Some(bad) = self.get_bad() {
+                    self.add_obligation(ProofObligation::new(self.depth(), Lemma::new(bad), 0))
+                } else {
+                    break;
+                }
             }
             let blocked_time = start.elapsed();
             if self.args.verbose {

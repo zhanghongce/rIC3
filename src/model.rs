@@ -83,10 +83,8 @@ impl Model {
             dependence.push(dep);
         }
         let inputs: Vec<Var> = aig.inputs.iter().map(|x| Var::new(*x)).collect();
-        let mut latchs: Vec<Var> = aig.latchs.iter().map(|x| Var::new(x.input)).collect();
-        latchs.push(simp_solver.new_var());
-        dependence.push(vec![]);
-        let mut primes: Vec<Lit> = aig
+        let latchs: Vec<Var> = aig.latchs.iter().map(|x| Var::new(x.input)).collect();
+        let primes: Vec<Lit> = aig
             .latchs
             .iter()
             .map(|l| {
@@ -94,12 +92,7 @@ impl Model {
                 l.next.to_lit()
             })
             .collect();
-        primes.push(simp_solver.new_var().lit());
-        dependence.push(vec![]);
-        let bad_var_lit = latchs.last().unwrap().lit();
-        let bad_var_prime_lit = *primes.last().unwrap();
-        let mut init = aig.latch_init_cube().to_cube();
-        init.push(!bad_var_lit);
+        let init = aig.latch_init_cube().to_cube();
         let mut init_map = HashMap::new();
         for l in init.iter() {
             init_map.insert(l.var(), l.polarity());
@@ -125,12 +118,10 @@ impl Model {
             logic.push(*c);
         }
         logic.push(aig_bad);
-        let mut trans = aig.get_cnf(&logic);
+        let trans = aig.get_cnf(&logic);
         let bad_lit = aig_bad.to_lit();
-        trans.push(Clause::from([!bad_lit, bad_var_prime_lit]));
-        trans.push(Clause::from([bad_lit, !bad_var_prime_lit]));
-        dependence[bad_var_prime_lit].push(bad_lit.var());
-        let bad = Cube::from([bad_var_lit]);
+        let bad = Cube::from([bad_lit]);
+        simp_solver.set_frozen(bad_lit.var(), true);
         for tran in trans.iter() {
             simp_solver.add_clause(tran);
         }
