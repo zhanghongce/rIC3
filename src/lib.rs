@@ -1,8 +1,6 @@
 #![feature(assert_matches, is_sorted, get_mut_unchecked, format_args_nl)]
 
 mod activity;
-#[allow(dead_code)]
-mod analysis;
 mod command;
 mod frames;
 mod mic;
@@ -80,7 +78,7 @@ impl Ic3 {
             if self.args.verbose_all {
                 self.statistic();
             }
-            if self.frames.trivial_contained(po.frame, &po.lemma) {
+            if self.trivial_contained(po.frame, &po.lemma) {
                 self.add_obligation(ProofObligation::new(po.frame + 1, po.lemma, po.depth));
                 continue;
             }
@@ -183,9 +181,6 @@ impl Ic3 {
             self.statistic.overall_propagate_time += start.elapsed();
             if propagate {
                 self.statistic();
-                if self.args.save_frames {
-                    self.save_frames();
-                }
                 if self.args.verify {
                     assert!(self.verify());
                 }

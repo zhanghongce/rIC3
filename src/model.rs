@@ -16,6 +16,7 @@ pub struct Model {
     pub num_var: usize,
     next_map: LitMap<Lit>,
     pub dependence: VarMap<Vec<Var>>,
+    pub max_latch: Var,
 }
 
 impl Model {
@@ -84,6 +85,7 @@ impl Model {
         }
         let inputs: Vec<Var> = aig.inputs.iter().map(|x| Var::new(*x)).collect();
         let latchs: Vec<Var> = aig.latchs.iter().map(|x| Var::new(x.input)).collect();
+        let max_latch = *latchs.iter().max().unwrap();
         let primes: Vec<Lit> = aig
             .latchs
             .iter()
@@ -151,6 +153,7 @@ impl Model {
             num_var,
             next_map,
             dependence,
+            max_latch,
         }
     }
 
