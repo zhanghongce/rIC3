@@ -19,10 +19,10 @@ impl Ic3Solver {
         Self { solver }
     }
 
-    pub fn new_frame(&self, model: &Model, frame: usize) -> Self {
-        let solver = Solver::new_frame(&self.solver, &format!("frame{frame}"), &model.trans);
-        Self { solver }
-    }
+    // pub fn new_frame(&self, model: &Model, frame: usize) -> Self {
+    //     let solver = Solver::new_frame(&self.solver, &format!("frame{frame}"), &model.trans);
+    //     Self { solver }
+    // }
 
     pub fn add_lemma(&mut self, clause: &Clause) {
         let mut cube = !clause;
