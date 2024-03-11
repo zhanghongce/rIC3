@@ -1,5 +1,5 @@
-# ic3
+# rIC3
 
-ic3 algorithm implemented in rust
+IC3 algorithm implemented in rust.
 
-competitive with ic3ref and abc
+rIC3 significantly outperforms all existing open-source implementations of the IC3 algorithm in terms of performance and scalability.
