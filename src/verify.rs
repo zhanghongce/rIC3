@@ -24,14 +24,15 @@ impl Ic3 {
 
     pub fn verify(&mut self) -> bool {
         let invariant = self
-            .frames
+            .gipsat
+            .frame
             .iter()
             .position(|frame| frame.is_empty())
             .unwrap();
         let mut invariants = Vec::new();
-        for i in invariant..self.frames.len() {
-            for cube in self.frames[i].iter() {
-                invariants.push(cube.clone());
+        for i in invariant..self.gipsat.frame.len() {
+            for cube in self.gipsat.frame[i].iter() {
+                invariants.push(cube.lemma.clone());
             }
         }
         if !self.verify_invariant(&invariants) {

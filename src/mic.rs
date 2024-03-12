@@ -1,4 +1,5 @@
-use super::{solver::BlockResult, Ic3};
+use super::Ic3;
+use gipsat::BlockResult;
 use logic_form::{Cube, Lit};
 use std::{collections::HashSet, time::Instant};
 
@@ -23,9 +24,9 @@ impl Ic3 {
             if self.model.cube_subsume_init(&cube) {
                 return DownResult::IncludeInit;
             }
-            match self.blocked_with_ordered(frame, &cube, false, true, true, true) {
+            match self.blocked_with_ordered(frame, &cube, false, true, true) {
                 BlockResult::Yes(blocked) => {
-                    return DownResult::Success(self.blocked_conflict(blocked))
+                    return DownResult::Success(self.gipsat.blocked_conflict(blocked))
                 }
                 BlockResult::No(_) => {
                     if level == 0 {
@@ -91,7 +92,7 @@ impl Ic3 {
 
     pub fn mic(&mut self, frame: usize, mut cube: Cube, level: usize) -> Cube {
         let start = Instant::now();
-        self.solvers[frame - 1].solver.set_domain(
+        self.gipsat.solvers[frame - 1].set_domain(
             self.model
                 .cube_next(&cube)
                 .iter()
@@ -114,8 +115,8 @@ impl Ic3 {
                 DownResult::Success(new_cube) => {
                     self.statistic.mic_drop.success();
                     (cube, i) = self.handle_down_success(frame, cube, i, new_cube);
-                    self.solvers[frame - 1].solver.unset_domain();
-                    self.solvers[frame - 1].solver.set_domain(
+                    self.gipsat.solvers[frame - 1].unset_domain();
+                    self.gipsat.solvers[frame - 1].set_domain(
                         self.model
                             .cube_next(&cube)
                             .iter()
@@ -130,7 +131,7 @@ impl Ic3 {
                 }
             }
         }
-        self.solvers[frame - 1].solver.unset_domain();
+        self.gipsat.solvers[frame - 1].unset_domain();
         self.activity.bump_cube_activity(&cube);
         self.statistic.overall_mic_time += start.elapsed();
         cube

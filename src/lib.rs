@@ -14,9 +14,9 @@ use crate::statistic::Statistic;
 use activity::Activity;
 use aig::Aig;
 pub use command::Args;
-use frames::Frames;
+use gipsat::{BlockResult, BlockResultYes, GipSAT};
 use logic_form::{Cube, Lemma};
-use solver::{BlockResult, BlockResultYes, Ic3Solver, Lift};
+use solver::Lift;
 use std::panic::{self, AssertUnwindSafe};
 use std::process::exit;
 use std::time::Instant;
@@ -25,8 +25,7 @@ use transys::Model;
 pub struct Ic3 {
     args: Args,
     model: Model,
-    solvers: Vec<Ic3Solver>,
-    frames: Frames,
+    gipsat: GipSAT,
     activity: Activity,
     obligations: ProofObligationQueue,
     lift: Lift,
@@ -35,25 +34,19 @@ pub struct Ic3 {
 
 impl Ic3 {
     pub fn depth(&self) -> usize {
-        self.solvers.len() - 1
+        self.gipsat.depth()
     }
 
     fn new_frame(&mut self) {
-        self.frames.new_frame();
-        // let solver = if self.solvers.len() > 1 {
-        //     self.solvers[self.solvers.len() - 2].new_frame(&self.model, self.solvers.len())
-        // } else {
-        let solver = Ic3Solver::new(&self.model, self.solvers.len());
-        // };
-        self.solvers.push(solver);
+        self.gipsat.new_frame();
     }
 
     fn generalize(&mut self, frame: usize, cube: Cube) -> (usize, Cube) {
         // let level = if self.args.ctg { 1 } else { 0 };
         let mut cube = self.mic(frame, cube, 0);
         for i in frame + 1..=self.depth() {
-            match self.blocked(i, &cube, true, true, true) {
-                BlockResult::Yes(block) => cube = self.blocked_conflict(block),
+            match self.gipsat.blocked(i, &cube, true, true) {
+                BlockResult::Yes(block) => cube = self.gipsat.blocked_conflict(block),
                 BlockResult::No(_) => return (i, cube),
             }
         }
@@ -61,7 +54,7 @@ impl Ic3 {
     }
 
     fn handle_blocked(&mut self, po: ProofObligation, blocked: BlockResultYes) {
-        let conflict = self.blocked_conflict(blocked);
+        let conflict = self.gipsat.blocked_conflict(blocked);
         let (frame, core) = self.generalize(po.frame, conflict);
         self.statistic.avg_po_cube_len += po.lemma.len();
         self.add_obligation(ProofObligation::new(frame, po.lemma, po.depth));
@@ -77,11 +70,11 @@ impl Ic3 {
             if self.args.verbose_all {
                 self.statistic();
             }
-            if self.trivial_contained(po.frame, &po.lemma) {
+            if self.gipsat.trivial_contained(po.frame, &po.lemma) {
                 self.add_obligation(ProofObligation::new(po.frame + 1, po.lemma, po.depth));
                 continue;
             }
-            match self.blocked_with_ordered(po.frame, &po.lemma, false, true, true, false) {
+            match self.blocked_with_ordered(po.frame, &po.lemma, false, true, false) {
                 BlockResult::Yes(blocked) => {
                     self.handle_blocked(po, blocked);
                 }
@@ -98,30 +91,6 @@ impl Ic3 {
         }
         true
     }
-
-    fn propagate(&mut self) -> bool {
-        for frame_idx in self.frames.early()..self.depth() {
-            self.frames[frame_idx].sort_by_key(|x| x.len());
-            let frame = self.frames[frame_idx].clone();
-            for cube in frame {
-                if !self.frames[frame_idx].contains(&cube) {
-                    continue;
-                }
-                match self.blocked(frame_idx + 1, &cube, false, true, true) {
-                    BlockResult::Yes(blocked) => {
-                        let conflict = self.blocked_conflict(blocked);
-                        self.add_cube(frame_idx + 1, conflict);
-                    }
-                    BlockResult::No(_) => {}
-                }
-            }
-            if self.frames[frame_idx].is_empty() {
-                return true;
-            }
-        }
-        self.frames.reset_early();
-        false
-    }
 }
 
 impl Ic3 {
@@ -131,12 +100,12 @@ impl Ic3 {
         let lift = Lift::new(&model);
         let statistic = Statistic::new(args.model.as_ref().unwrap());
         let activity = Activity::new(&model.latchs);
+        let gipsat = GipSAT::new(model.clone());
         let mut res = Self {
             args,
             model,
-            solvers: Vec::new(),
-            frames: Frames::new(),
             activity,
+            gipsat,
             lift,
             statistic,
             obligations: ProofObligationQueue::new(),
@@ -157,7 +126,8 @@ impl Ic3 {
                     self.statistic();
                     return false;
                 }
-                if let Some(bad) = self.get_bad() {
+                if let Some(bad) = self.gipsat.get_bad() {
+                    let bad = self.unblocked_model(bad);
                     self.add_obligation(ProofObligation::new(self.depth(), Lemma::new(bad), 0))
                 } else {
                     break;
@@ -176,7 +146,7 @@ impl Ic3 {
             self.statistic.overall_block_time += blocked_time;
             self.new_frame();
             let start = Instant::now();
-            let propagate = self.propagate();
+            let propagate = self.gipsat.propagate();
             self.statistic.overall_propagate_time += start.elapsed();
             if propagate {
                 self.statistic();
