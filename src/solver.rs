@@ -1,8 +1,9 @@
-use crate::{model::Model, Ic3};
+use crate::Ic3;
 use gipsat::{Sat, Solver, Unsat};
 use logic_form::{Clause, Cube, Lit};
 use satif::{SatResult, Satif, SatifSat, SatifUnsat};
 use std::time::Instant;
+use transys::Model;
 
 pub struct Ic3Solver {
     pub solver: Solver,

@@ -4,7 +4,6 @@ mod activity;
 mod command;
 mod frames;
 mod mic;
-mod model;
 mod proofoblig;
 mod solver;
 mod statistic;
@@ -17,11 +16,11 @@ use aig::Aig;
 pub use command::Args;
 use frames::Frames;
 use logic_form::{Cube, Lemma};
-use model::Model;
 use solver::{BlockResult, BlockResultYes, Ic3Solver, Lift};
 use std::panic::{self, AssertUnwindSafe};
 use std::process::exit;
 use std::time::Instant;
+use transys::Model;
 
 pub struct Ic3 {
     args: Args,

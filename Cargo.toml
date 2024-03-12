@@ -17,3 +17,4 @@ ctrlc = { version = "3.4.1", features = ["termination"] }
 giputils = { path = "../giputils" }
 gipsat = { path = "../gipsat" }
 satif = { path = "../satif" }
+transys = { path = "../transys" }
