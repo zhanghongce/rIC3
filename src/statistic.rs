@@ -41,7 +41,7 @@ impl Statistic {
 impl Ic3 {
     pub fn statistic(&self) {
         self.obligations.statistic();
-        // self.frames.statistic();
+        self.gipsat.statistic();
         println!("{:#?}", self.statistic);
     }
 }
