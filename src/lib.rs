@@ -2,7 +2,6 @@
 
 mod activity;
 mod command;
-mod frames;
 mod mic;
 mod proofoblig;
 mod solver;
@@ -58,7 +57,7 @@ impl Ic3 {
         let (frame, core) = self.generalize(po.frame, conflict);
         self.statistic.avg_po_cube_len += po.lemma.len();
         self.add_obligation(ProofObligation::new(frame, po.lemma, po.depth));
-        self.add_cube(frame - 1, core);
+        self.gipsat.add_lemma(frame - 1, core);
     }
 
     fn block(&mut self) -> bool {
@@ -112,7 +111,7 @@ impl Ic3 {
         };
         res.new_frame();
         for cube in res.model.inits() {
-            res.add_cube(0, cube)
+            res.gipsat.add_lemma(0, cube)
         }
         res
     }
