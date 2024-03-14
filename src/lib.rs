@@ -32,8 +32,8 @@ pub struct Ic3 {
 }
 
 impl Ic3 {
-    pub fn depth(&self) -> usize {
-        self.gipsat.depth()
+    pub fn level(&self) -> usize {
+        self.gipsat.level()
     }
 
     fn new_frame(&mut self) {
@@ -43,13 +43,13 @@ impl Ic3 {
     fn generalize(&mut self, frame: usize, cube: Cube) -> (usize, Cube) {
         // let level = if self.args.ctg { 1 } else { 0 };
         let mut cube = self.mic(frame, cube, 0);
-        for i in frame + 1..=self.depth() {
+        for i in frame + 1..=self.level() {
             match self.gipsat.blocked(i, &cube, true, true) {
                 BlockResult::Yes(block) => cube = self.gipsat.blocked_conflict(block),
                 BlockResult::No(_) => return (i, cube),
             }
         }
-        (self.depth() + 1, cube)
+        (self.level() + 1, cube)
     }
 
     fn handle_blocked(&mut self, po: ProofObligation, blocked: BlockResultYes) {
@@ -61,7 +61,7 @@ impl Ic3 {
     }
 
     fn block(&mut self) -> bool {
-        while let Some(po) = self.obligations.pop(self.depth()) {
+        while let Some(po) = self.obligations.pop(self.level()) {
             if po.frame == 0 {
                 return false;
             }
@@ -127,7 +127,7 @@ impl Ic3 {
                 }
                 if let Some(bad) = self.gipsat.get_bad() {
                     let bad = self.unblocked_model(bad);
-                    self.add_obligation(ProofObligation::new(self.depth(), Lemma::new(bad), 0))
+                    self.add_obligation(ProofObligation::new(self.level(), Lemma::new(bad), 0))
                 } else {
                     break;
                 }
@@ -138,7 +138,7 @@ impl Ic3 {
                     "[{}:{}] frame: {}, time: {:?}",
                     file!(),
                     line!(),
-                    self.depth(),
+                    self.level(),
                     blocked_time,
                 );
             }
