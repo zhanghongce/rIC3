@@ -1,5 +1,5 @@
 [package]
-name = "ic3"
+name = "rIC3"
 version = "0.1.0"
 edition = "2021"
 
@@ -18,3 +18,7 @@ giputils = { path = "../giputils" }
 gipsat = { path = "../gipsat" }
 satif = { path = "../satif" }
 transys = { path = "../transys" }
+
+[features]
+default = ["no_bound_check"]
+no_bound_check = ["logic-form/no_bound_check", "giputils/no_bound_check", "gipsat/no_bound_check"]
