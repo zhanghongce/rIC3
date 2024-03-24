@@ -7,15 +7,15 @@ use std::ops::Deref;
 impl Ic3 {
     fn verify_invariant(&mut self, invariants: &[Lemma]) -> bool {
         let mut solver = Solver::new();
-        self.model.load_trans(&mut solver);
+        self.ts.load_trans(&mut solver);
         for lemma in invariants {
             solver.add_clause(&!lemma.deref());
         }
-        if let SatResult::Sat(_) = solver.solve(&self.model.bad) {
+        if let SatResult::Sat(_) = solver.solve(&self.ts.bad) {
             return false;
         }
         for lemma in invariants {
-            if let SatResult::Sat(_) = solver.solve(&self.model.cube_next(lemma)) {
+            if let SatResult::Sat(_) = solver.solve(&self.ts.cube_next(lemma)) {
                 return false;
             }
         }

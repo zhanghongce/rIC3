@@ -19,11 +19,11 @@ use solver::Lift;
 use std::panic::{self, AssertUnwindSafe};
 use std::process::exit;
 use std::time::Instant;
-use transys::Model;
+use transys::Transys;
 
 pub struct Ic3 {
     args: Args,
-    model: Model,
+    ts: Transys,
     gipsat: GipSAT,
     activity: Activity,
     obligations: ProofObligationQueue,
@@ -65,7 +65,7 @@ impl Ic3 {
             if po.frame == 0 {
                 return false;
             }
-            assert!(!self.model.cube_subsume_init(&po.lemma));
+            assert!(!self.ts.cube_subsume_init(&po.lemma));
             if self.args.verbose_all {
                 self.statistic();
             }
@@ -95,14 +95,14 @@ impl Ic3 {
 impl Ic3 {
     pub fn new(args: Args) -> Self {
         let aig = Aig::from_file(args.model.as_ref().unwrap()).unwrap();
-        let model = Model::from_aig(&aig);
-        let lift = Lift::new(&model);
+        let ts = Transys::from_aig(&aig);
+        let lift = Lift::new(&ts);
         let statistic = Statistic::new(args.model.as_ref().unwrap());
-        let activity = Activity::new(&model.latchs);
-        let gipsat = GipSAT::new(model.clone());
+        let activity = Activity::new(&ts.latchs);
+        let gipsat = GipSAT::new(ts.clone());
         let mut res = Self {
             args,
-            model,
+            ts,
             activity,
             gipsat,
             lift,
@@ -110,7 +110,7 @@ impl Ic3 {
             obligations: ProofObligationQueue::new(),
         };
         res.new_frame();
-        for cube in res.model.inits() {
+        for cube in res.ts.inits() {
             res.gipsat.add_lemma(0, cube)
         }
         res

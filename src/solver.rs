@@ -3,7 +3,7 @@ use gipsat::{BlockResult, BlockResultNo};
 use logic_form::{Cube, Lit};
 use satif::{SatResult, Satif, SatifSat, SatifUnsat};
 use std::time::Instant;
-use transys::Model;
+use transys::Transys;
 
 impl Ic3 {
     pub fn blocked_with_ordered(
@@ -33,7 +33,7 @@ pub struct Lift {
 }
 
 impl Lift {
-    pub fn new(model: &Model) -> Self {
+    pub fn new(model: &Transys) -> Self {
         let mut solver = minisat::Solver::new();
         let false_lit: Lit = solver.new_var().into();
         solver.add_clause(&[!false_lit]);
@@ -47,14 +47,14 @@ impl Ic3 {
         let start = Instant::now();
         self.lift.num_act += 1;
         if self.lift.num_act > 1000 {
-            self.lift = Lift::new(&self.model)
+            self.lift = Lift::new(&self.ts)
         }
         let act: Lit = self.lift.solver.new_var().into();
         let mut assumption = Cube::from([act]);
         let mut cls = !&unblock.assumption;
         cls.push(!act);
         self.lift.solver.add_clause(&cls);
-        for input in self.model.inputs.iter() {
+        for input in self.ts.inputs.iter() {
             let lit = input.lit();
             match unblock.sat.lit_value(lit) {
                 Some(true) => assumption.push(lit),
@@ -63,7 +63,7 @@ impl Ic3 {
             }
         }
         let mut latchs = Cube::new();
-        for latch in self.model.latchs.iter() {
+        for latch in self.ts.latchs.iter() {
             let lit = latch.lit();
             match unblock.sat.lit_value(lit) {
                 Some(true) => latchs.push(lit),

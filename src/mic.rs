@@ -21,7 +21,7 @@ impl Ic3 {
         self.statistic.num_down += 1;
         // let mut ctgs = 0;
         loop {
-            if self.model.cube_subsume_init(&cube) {
+            if self.ts.cube_subsume_init(&cube) {
                 return DownResult::IncludeInit;
             }
             match self.blocked_with_ordered(frame, &cube, false, true, true) {
@@ -93,7 +93,7 @@ impl Ic3 {
     pub fn mic(&mut self, frame: usize, mut cube: Cube, level: usize) -> Cube {
         let start = Instant::now();
         self.gipsat.solvers[frame - 1].set_domain(
-            self.model
+            self.ts
                 .cube_next(&cube)
                 .iter()
                 .copied()
@@ -117,7 +117,7 @@ impl Ic3 {
                     (cube, i) = self.handle_down_success(frame, cube, i, new_cube);
                     self.gipsat.solvers[frame - 1].unset_domain();
                     self.gipsat.solvers[frame - 1].set_domain(
-                        self.model
+                        self.ts
                             .cube_next(&cube)
                             .iter()
                             .copied()
