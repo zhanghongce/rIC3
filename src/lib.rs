@@ -15,7 +15,6 @@ use aig::Aig;
 pub use command::Args;
 use gipsat::{BlockResult, BlockResultYes, GipSAT};
 use logic_form::{Cube, Lemma};
-use solver::Lift;
 use std::panic::{self, AssertUnwindSafe};
 use std::process::exit;
 use std::time::Instant;
@@ -27,7 +26,6 @@ pub struct Ic3 {
     gipsat: GipSAT,
     activity: Activity,
     obligations: ProofObligationQueue,
-    lift: Lift,
     statistic: Statistic,
 }
 
@@ -96,7 +94,6 @@ impl Ic3 {
     pub fn new(args: Args) -> Self {
         let aig = Aig::from_file(args.model.as_ref().unwrap()).unwrap();
         let ts = Transys::from_aig(&aig);
-        let lift = Lift::new(&ts);
         let statistic = Statistic::new(args.model.as_ref().unwrap());
         let activity = Activity::new(&ts.latchs);
         let gipsat = GipSAT::new(ts.clone());
@@ -105,7 +102,6 @@ impl Ic3 {
             ts,
             activity,
             gipsat,
-            lift,
             statistic,
             obligations: ProofObligationQueue::new(),
         };
