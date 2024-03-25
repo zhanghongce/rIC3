@@ -122,7 +122,6 @@ impl Ic3 {
                     return false;
                 }
                 if let Some(bad) = self.gipsat.get_bad() {
-                    let bad = self.unblocked_model(bad);
                     self.add_obligation(ProofObligation::new(self.level(), Lemma::new(bad), 0))
                 } else {
                     break;
