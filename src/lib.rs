@@ -34,8 +34,8 @@ impl Ic3 {
         self.gipsat.level()
     }
 
-    fn new_frame(&mut self) {
-        self.gipsat.new_frame();
+    fn extend(&mut self) {
+        self.gipsat.extend();
     }
 
     fn generalize(&mut self, frame: usize, cube: Cube) -> (usize, Cube) {
@@ -105,7 +105,7 @@ impl Ic3 {
             statistic,
             obligations: ProofObligationQueue::new(),
         };
-        res.new_frame();
+        res.extend();
         for cube in res.ts.inits() {
             res.gipsat.add_lemma(0, cube)
         }
@@ -139,7 +139,7 @@ impl Ic3 {
                 );
             }
             self.statistic.overall_block_time += blocked_time;
-            self.new_frame();
+            self.extend();
             let start = Instant::now();
             let propagate = self.gipsat.propagate();
             self.statistic.overall_propagate_time += start.elapsed();
