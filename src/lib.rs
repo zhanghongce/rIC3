@@ -42,7 +42,7 @@ impl Ic3 {
         // let level = if self.args.ctg { 1 } else { 0 };
         let mut cube = self.mic(frame, cube, 0);
         for i in frame + 1..=self.level() {
-            if self.gipsat.inductive(i, &cube, true, true) {
+            if self.gipsat.inductive(i, &cube, true) {
                 cube = self.gipsat.inductive_core();
             } else {
                 return (i, cube);
