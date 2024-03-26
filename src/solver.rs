@@ -8,11 +8,10 @@ impl Ic3 {
         cube: &Cube,
         ascending: bool,
         strengthen: bool,
-        bucket: bool,
     ) -> bool {
         let mut ordered_cube = cube.clone();
         self.activity.sort_by_activity(&mut ordered_cube, ascending);
         self.gipsat
-            .inductive(frame, &ordered_cube, strengthen, bucket)
+            .inductive(frame, &ordered_cube, strengthen, true)
     }
 }

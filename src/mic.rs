@@ -23,7 +23,7 @@ impl Ic3 {
             if self.ts.cube_subsume_init(&cube) {
                 return DownResult::IncludeInit;
             }
-            if self.blocked_with_ordered(frame, &cube, false, true, true) {
+            if self.blocked_with_ordered(frame, &cube, false, true) {
                 return DownResult::Success(self.gipsat.inductive_core());
             } else {
                 if level == 0 {
@@ -33,7 +33,7 @@ impl Ic3 {
                 //     let model = self.unblocked_model(unblocked);
                 //     if ctgs < 3 && frame > 1 && !self.model.cube_subsume_init(&model) {
                 //         if let BlockResult::Yes(blocked) =
-                //             self.blocked_with_ordered(frame - 1, &model, false, true, true)
+                //             self.blocked_with_ordered(frame - 1, &model, false, true)
                 //         {
                 //             ctgs += 1;
                 //             let conflict = self.blocked_conflict(blocked);

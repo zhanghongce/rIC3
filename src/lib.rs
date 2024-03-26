@@ -72,7 +72,7 @@ impl Ic3 {
                 self.add_obligation(ProofObligation::new(po.frame + 1, po.lemma, po.depth));
                 continue;
             }
-            if self.blocked_with_ordered(po.frame, &po.lemma, false, true, false) {
+            if self.blocked_with_ordered(po.frame, &po.lemma, false, true) {
                 self.handle_blocked(po);
             } else {
                 let model = self.gipsat.get_predecessor();
@@ -110,7 +110,6 @@ impl Ic3 {
     pub fn check(&mut self) -> bool {
         loop {
             let start = Instant::now();
-            dbg!(self.level());
             loop {
                 if !self.block() {
                     self.statistic.overall_block_time += start.elapsed();
