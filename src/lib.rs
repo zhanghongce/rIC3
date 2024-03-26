@@ -13,7 +13,7 @@ use crate::statistic::Statistic;
 use activity::Activity;
 use aig::Aig;
 pub use command::Args;
-use gipsat::{BlockResult, BlockResultYes, GipSAT};
+use gipsat::GipSAT;
 use logic_form::{Cube, Lemma};
 use std::panic::{self, AssertUnwindSafe};
 use std::process::exit;
@@ -42,16 +42,17 @@ impl Ic3 {
         // let level = if self.args.ctg { 1 } else { 0 };
         let mut cube = self.mic(frame, cube, 0);
         for i in frame + 1..=self.level() {
-            match self.gipsat.blocked(i, &cube, true, true) {
-                BlockResult::Yes(block) => cube = self.gipsat.blocked_conflict(block),
-                BlockResult::No(_) => return (i, cube),
+            if self.gipsat.inductive(i, &cube, true, true) {
+                cube = self.gipsat.inductive_core();
+            } else {
+                return (i, cube);
             }
         }
         (self.level() + 1, cube)
     }
 
-    fn handle_blocked(&mut self, po: ProofObligation, blocked: BlockResultYes) {
-        let conflict = self.gipsat.blocked_conflict(blocked);
+    fn handle_blocked(&mut self, po: ProofObligation) {
+        let conflict = self.gipsat.inductive_core();
         let (frame, core) = self.generalize(po.frame, conflict);
         self.statistic.avg_po_cube_len += po.lemma.len();
         self.add_obligation(ProofObligation::new(frame, po.lemma, po.depth));
@@ -71,19 +72,16 @@ impl Ic3 {
                 self.add_obligation(ProofObligation::new(po.frame + 1, po.lemma, po.depth));
                 continue;
             }
-            match self.blocked_with_ordered(po.frame, &po.lemma, false, true, false) {
-                BlockResult::Yes(blocked) => {
-                    self.handle_blocked(po, blocked);
-                }
-                BlockResult::No(unblocked) => {
-                    let model = self.unblocked_model(unblocked);
-                    self.add_obligation(ProofObligation::new(
-                        po.frame - 1,
-                        Lemma::new(model),
-                        po.depth + 1,
-                    ));
-                    self.add_obligation(po);
-                }
+            if self.blocked_with_ordered(po.frame, &po.lemma, false, true, false) {
+                self.handle_blocked(po);
+            } else {
+                let model = self.gipsat.get_predecessor();
+                self.add_obligation(ProofObligation::new(
+                    po.frame - 1,
+                    Lemma::new(model),
+                    po.depth + 1,
+                ));
+                self.add_obligation(po);
             }
         }
         true
