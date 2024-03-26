@@ -104,15 +104,13 @@ impl Ic3 {
             obligations: ProofObligationQueue::new(),
         };
         res.extend();
-        for cube in res.ts.inits() {
-            res.gipsat.add_lemma(0, cube)
-        }
         res
     }
 
     pub fn check(&mut self) -> bool {
         loop {
             let start = Instant::now();
+            dbg!(self.level());
             loop {
                 if !self.block() {
                     self.statistic.overall_block_time += start.elapsed();
