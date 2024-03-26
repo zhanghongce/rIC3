@@ -119,7 +119,7 @@ impl Ic3 {
                     self.statistic();
                     return false;
                 }
-                if self.gipsat.is_bad() {
+                if self.gipsat.has_bad() {
                     let bad = Lemma::new(self.gipsat.get_predecessor());
                     self.add_obligation(ProofObligation::new(self.level(), bad, 0))
                 } else {
