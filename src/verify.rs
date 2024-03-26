@@ -7,7 +7,12 @@ use std::ops::Deref;
 impl Ic3 {
     fn verify_invariant(&mut self, invariants: &[Lemma]) -> bool {
         let mut solver = Solver::new();
-        self.ts.load_trans(&mut solver);
+        while solver.num_var() < self.ts.num_var {
+            solver.new_var();
+        }
+        for cls in self.ts.trans.iter() {
+            solver.add_clause(cls)
+        }
         for lemma in invariants {
             solver.add_clause(&!lemma.deref());
         }
