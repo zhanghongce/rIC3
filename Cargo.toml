@@ -21,4 +21,9 @@ transys = { path = "../transys" }
 
 [features]
 default = ["no_bound_check"]
-no_bound_check = ["logic-form/no_bound_check", "giputils/no_bound_check", "gipsat/no_bound_check"]
+no_bound_check = [
+    "logic-form/no_bound_check",
+    "giputils/no_bound_check",
+    "gipsat/no_bound_check",
+    "transys/no_bound_check",
+]
