@@ -1,5 +1,5 @@
 use crate::Ic3;
-use giputils::statistic::{Average, AverageDuration, Case, RunningTime, SuccessRate};
+use giputils::statistic::{Average, Case, RunningTime, SuccessRate};
 use std::{fmt::Debug, time::Duration};
 
 #[allow(unused)]
@@ -8,18 +8,11 @@ pub struct Statistic {
     case: Case,
     time: RunningTime,
 
-    pub avg_sat_call_time: AverageDuration,
-    pub num_sat_inductive: usize,
-    pub sat_inductive_time: Duration,
-    pub num_solver_restart: usize,
-
     pub num_mic: usize,
     pub avg_mic_cube_len: Average,
     pub avg_po_cube_len: Average,
     pub mic_drop: SuccessRate,
     pub num_down: usize,
-
-    pub minimal_predecessor_time: Duration,
 
     pub overall_mic_time: Duration,
     pub overall_block_time: Duration,
