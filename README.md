@@ -12,3 +12,4 @@ rIC3 demonstrates competitive performance and scalability compared to state-of-t
 ```
 cargo r --release -- <aag file>
 ```
+For FM2024 artifact, `git checkout fm24`
