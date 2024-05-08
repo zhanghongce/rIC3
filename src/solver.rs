@@ -1,7 +1,7 @@
-use crate::Ic3;
+use crate::IC3;
 use logic_form::Cube;
 
-impl Ic3 {
+impl IC3 {
     pub fn blocked_with_ordered(
         &mut self,
         frame: usize,

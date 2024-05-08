@@ -1,10 +1,10 @@
-use crate::Ic3;
+use crate::IC3;
 use logic_form::Lemma;
 use minisat::Solver;
 use satif::{SatResult, Satif};
 use std::ops::Deref;
 
-impl Ic3 {
+impl IC3 {
     fn verify_invariant(&mut self, invariants: &[Lemma]) -> bool {
         let mut solver = Solver::new();
         while solver.num_var() < self.ts.num_var {

@@ -1,4 +1,4 @@
-use crate::Ic3;
+use crate::IC3;
 use giputils::statistic::{Average, Case, RunningTime, SuccessRate};
 use std::{fmt::Debug, time::Duration};
 
@@ -31,7 +31,7 @@ impl Statistic {
     }
 }
 
-impl Ic3 {
+impl IC3 {
     pub fn statistic(&self) {
         self.obligations.statistic();
         self.gipsat.statistic();

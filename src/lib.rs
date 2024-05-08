@@ -20,7 +20,7 @@ use std::process::exit;
 use std::time::Instant;
 use transys::Transys;
 
-pub struct Ic3 {
+pub struct IC3 {
     args: Args,
     ts: Transys,
     gipsat: GipSAT,
@@ -29,7 +29,7 @@ pub struct Ic3 {
     statistic: Statistic,
 }
 
-impl Ic3 {
+impl IC3 {
     pub fn level(&self) -> usize {
         self.gipsat.level()
     }
@@ -88,7 +88,7 @@ impl Ic3 {
     }
 }
 
-impl Ic3 {
+impl IC3 {
     pub fn new(args: Args) -> Self {
         let aig = Aig::from_file(args.model.as_ref().unwrap()).unwrap();
         let ts = Transys::from_aig(&aig);
@@ -149,9 +149,9 @@ impl Ic3 {
     }
 
     pub fn check_with_int_hanlder(&mut self) -> bool {
-        let ic3 = self as *mut Ic3 as usize;
+        let ic3 = self as *mut IC3 as usize;
         ctrlc::set_handler(move || {
-            let ic3 = unsafe { &mut *(ic3 as *mut Ic3) };
+            let ic3 = unsafe { &mut *(ic3 as *mut IC3) };
             ic3.statistic();
             exit(130);
         })
