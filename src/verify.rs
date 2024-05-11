@@ -1,5 +1,5 @@
 use crate::IC3;
-use logic_form::Lemma;
+use logic_form::{Clause, Lemma};
 use minisat::Solver;
 use satif::{SatResult, Satif};
 use std::ops::Deref;
@@ -16,10 +16,15 @@ impl IC3 {
         for lemma in invariants {
             solver.add_clause(&!lemma.deref());
         }
+        for c in self.ts.constraints.iter() {
+            solver.add_clause(&Clause::from([*c]));
+        }
         if let SatResult::Sat(_) = solver.solve(&self.ts.bad) {
             return false;
         }
         for lemma in invariants {
+            let mut assump = self.ts.constraints.clone();
+            assump.extend_from_slice(&self.ts.bad);
             if let SatResult::Sat(_) = solver.solve(&self.ts.cube_next(lemma)) {
                 return false;
             }
