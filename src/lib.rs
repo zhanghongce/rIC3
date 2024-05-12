@@ -51,16 +51,17 @@ impl IC3 {
         (self.level() + 1, cube)
     }
 
-    fn handle_blocked(&mut self, po: ProofObligation) {
+    fn handle_blocked(&mut self, mut po: ProofObligation) {
         let conflict = self.gipsat.inductive_core();
         let (frame, core) = self.generalize(po.frame, conflict);
         self.statistic.avg_po_cube_len += po.lemma.len();
-        self.add_obligation(ProofObligation::new(frame, po.lemma, po.depth));
+        po.set_frame(frame);
+        self.add_obligation(po);
         self.gipsat.add_lemma(frame - 1, core);
     }
 
     fn block(&mut self) -> bool {
-        while let Some(po) = self.obligations.pop(self.level()) {
+        while let Some(mut po) = self.obligations.pop(self.level()) {
             if po.frame == 0 {
                 return false;
             }
@@ -69,7 +70,8 @@ impl IC3 {
                 self.statistic();
             }
             if self.gipsat.trivial_contained(po.frame, &po.lemma) {
-                self.add_obligation(ProofObligation::new(po.frame + 1, po.lemma, po.depth));
+                po.set_frame(po.frame + 1);
+                self.add_obligation(po);
                 continue;
             }
             if self.blocked_with_ordered(po.frame, &po.lemma, false, true) {
@@ -80,6 +82,7 @@ impl IC3 {
                     po.frame - 1,
                     Lemma::new(model),
                     po.depth + 1,
+                    Some(po.clone()),
                 ));
                 self.add_obligation(po);
             }
@@ -118,7 +121,7 @@ impl IC3 {
                 }
                 if self.gipsat.has_bad() {
                     let bad = Lemma::new(self.gipsat.get_predecessor());
-                    self.add_obligation(ProofObligation::new(self.level(), bad, 0))
+                    self.add_obligation(ProofObligation::new(self.level(), bad, 0, None))
                 } else {
                     break;
                 }

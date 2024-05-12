@@ -2,31 +2,58 @@ use crate::IC3;
 use logic_form::Lemma;
 use std::cmp::Ordering;
 use std::collections::BTreeSet;
+use std::ops::Deref;
+use std::rc::Rc;
 
-#[derive(PartialEq, Eq, Clone, Debug)]
-pub struct ProofObligation {
+#[derive(PartialEq, Eq, Debug)]
+pub struct ProofObligationInner {
     pub frame: usize,
     pub lemma: Lemma,
     pub depth: usize,
+    pub next: Option<ProofObligation>,
+}
+
+#[derive(PartialEq, Eq, Debug, Clone)]
+pub struct ProofObligation {
+    inner: Rc<ProofObligationInner>,
 }
 
 impl ProofObligation {
-    pub fn new(frame: usize, lemma: Lemma, depth: usize) -> Self {
+    pub fn new(frame: usize, lemma: Lemma, depth: usize, next: Option<Self>) -> Self {
         Self {
-            frame,
-            lemma,
-            depth,
+            inner: Rc::new(ProofObligationInner {
+                frame,
+                lemma,
+                depth,
+                next,
+            }),
         }
+    }
+
+    pub fn set_frame(&mut self, frame: usize) {
+        let inner = unsafe { Rc::get_mut_unchecked(&mut self.inner) };
+        inner.frame = frame;
+    }
+}
+
+impl Deref for ProofObligation {
+    type Target = ProofObligationInner;
+
+    #[inline]
+    fn deref(&self) -> &Self::Target {
+        &self.inner
     }
 }
 
 impl PartialOrd for ProofObligation {
+    #[inline]
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         Some(self.cmp(other))
     }
 }
 
 impl Ord for ProofObligation {
+    #[inline]
     fn cmp(&self, other: &Self) -> Ordering {
         match other.frame.cmp(&self.frame) {
             Ordering::Equal => match self.depth.cmp(&other.depth) {
@@ -57,7 +84,7 @@ impl ProofObligationQueue {
             self.num.resize(po.frame + 1, 0);
         }
         self.num[po.frame] += 1;
-        assert!(self.obligations.insert(po.clone()));
+        assert!(self.obligations.insert(po));
     }
 
     pub fn pop(&mut self, depth: usize) -> Option<ProofObligation> {
