@@ -22,6 +22,10 @@ pub struct Args {
     #[arg(long, default_value_t = true, action = clap::ArgAction::Set)]
     pub ctg: bool,
 
+    /// print witness
+    #[arg(short, long, default_value_t = false)]
+    pub witness: bool,
+
     /// verify
     #[arg(long, default_value_t = false)]
     pub verify: bool,

@@ -2,10 +2,11 @@ use crate::IC3;
 use logic_form::Lemma;
 use std::cmp::Ordering;
 use std::collections::BTreeSet;
+use std::fmt::{self, Debug};
 use std::ops::Deref;
 use std::rc::Rc;
 
-#[derive(PartialEq, Eq, Debug)]
+#[derive(PartialEq, Eq)]
 pub struct ProofObligationInner {
     pub frame: usize,
     pub lemma: Lemma,
@@ -13,7 +14,18 @@ pub struct ProofObligationInner {
     pub next: Option<ProofObligation>,
 }
 
-#[derive(PartialEq, Eq, Debug, Clone)]
+impl Debug for ProofObligationInner {
+    #[inline]
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("ProofObligation")
+            .field("frame", &self.frame)
+            .field("lemma", &self.lemma)
+            .field("depth", &self.depth)
+            .finish()
+    }
+}
+
+#[derive(PartialEq, Eq, Clone)]
 pub struct ProofObligation {
     inner: Rc<ProofObligationInner>,
 }
@@ -68,6 +80,13 @@ impl Ord for ProofObligation {
     }
 }
 
+impl Debug for ProofObligation {
+    #[inline]
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        self.inner.fmt(f)
+    }
+}
+
 #[derive(Default, Debug)]
 pub struct ProofObligationQueue {
     obligations: BTreeSet<ProofObligation>,
@@ -105,5 +124,16 @@ impl IC3 {
     pub fn add_obligation(&mut self, po: ProofObligation) {
         self.statistic.avg_po_cube_len += po.lemma.len();
         self.obligations.add(po)
+    }
+
+    pub fn witness(&mut self) -> Vec<ProofObligation> {
+        let mut witness = Vec::new();
+        let mut bad = self.obligations.pop(0).unwrap();
+        witness.push(bad.clone());
+        while bad.next.is_some() {
+            bad = bad.next.clone().unwrap();
+            witness.push(bad.clone());
+        }
+        witness
     }
 }

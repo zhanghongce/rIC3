@@ -63,6 +63,7 @@ impl IC3 {
     fn block(&mut self) -> bool {
         while let Some(mut po) = self.obligations.pop(self.level()) {
             if po.frame == 0 {
+                self.add_obligation(po);
                 return false;
             }
             assert!(!self.ts.cube_subsume_init(&po.lemma));
@@ -117,6 +118,9 @@ impl IC3 {
                 if !self.block() {
                     self.statistic.overall_block_time += start.elapsed();
                     self.statistic();
+                    if self.args.witness {
+                        dbg!(self.witness());
+                    }
                     return false;
                 }
                 if self.gipsat.has_bad() {
