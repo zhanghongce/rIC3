@@ -17,12 +17,13 @@ use gipsat::GipSAT;
 use logic_form::{Cube, Lemma};
 use std::panic::{self, AssertUnwindSafe};
 use std::process::exit;
+use std::rc::Rc;
 use std::time::Instant;
 use transys::Transys;
 
 pub struct IC3 {
     args: Args,
-    ts: Transys,
+    ts: Rc<Transys>,
     gipsat: GipSAT,
     activity: Activity,
     obligations: ProofObligationQueue,
@@ -95,7 +96,7 @@ impl IC3 {
 impl IC3 {
     pub fn new(args: Args) -> Self {
         let aig = Aig::from_file(args.model.as_ref().unwrap()).unwrap();
-        let ts = Transys::from_aig(&aig);
+        let ts = Rc::new(Transys::from_aig(&aig));
         let statistic = Statistic::new(args.model.as_ref().unwrap());
         let activity = Activity::new(&ts.latchs);
         let gipsat = GipSAT::new(ts.clone());
