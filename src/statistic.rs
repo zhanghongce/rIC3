@@ -34,6 +34,9 @@ impl Statistic {
 impl IC3 {
     pub fn statistic(&self) {
         self.obligations.statistic();
+        for f in self.frame.iter() {
+            print!("{} ", f.len());
+        }
         self.gipsat.statistic();
         println!("{:#?}", self.statistic);
     }

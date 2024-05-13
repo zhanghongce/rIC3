@@ -167,19 +167,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "gipsat"
-version = "0.1.0"
-dependencies = [
- "bitfield-struct",
- "clap",
- "giputils",
- "logic-form",
- "rand",
- "satif",
- "transys",
-]
-
-[[package]]
 name = "gipsyh-aiger"
 version = "0.4.0"
 
@@ -270,9 +257,9 @@ name = "rIC3"
 version = "1.0.0"
 dependencies = [
  "aig",
+ "bitfield-struct",
  "clap",
  "ctrlc",
- "gipsat",
  "giputils",
  "logic-form",
  "minisat",

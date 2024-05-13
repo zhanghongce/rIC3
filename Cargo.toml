@@ -15,15 +15,14 @@ serde_json = "1.0.107"
 serde = { version = "1.0.189", features = ["derive"] }
 ctrlc = { version = "3.4.1", features = ["termination"] }
 giputils = { path = "../giputils" }
-gipsat = { path = "../gipsat" }
 satif = { path = "../satif" }
 transys = { path = "../transys" }
+bitfield-struct = "0.5.6"
 
 [features]
 default = ["no_bound_check"]
 no_bound_check = [
     "logic-form/no_bound_check",
     "giputils/no_bound_check",
-    "gipsat/no_bound_check",
     "transys/no_bound_check",
 ]
