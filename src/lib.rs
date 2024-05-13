@@ -83,8 +83,8 @@ impl IC3 {
             if self.args.verbose_all {
                 self.statistic();
             }
-            if self.frame.trivial_contained(po.frame, &po.lemma) {
-                po.set_frame(po.frame + 1);
+            if let Some(bf) = self.frame.trivial_contained(po.frame, &po.lemma) {
+                po.set_frame(bf + 1);
                 self.add_obligation(po);
                 continue;
             }

@@ -62,7 +62,7 @@ impl Frame {
     }
 
     #[inline]
-    pub fn trivial_contained(&mut self, frame: usize, lemma: &logic_form::Lemma) -> bool {
+    pub fn trivial_contained(&mut self, frame: usize, lemma: &logic_form::Lemma) -> Option<usize> {
         let tmp_lit_set = unsafe { Rc::get_mut_unchecked(&mut self.tmp_lit_set) };
         for l in lemma.iter() {
             tmp_lit_set.insert(*l);
@@ -71,12 +71,12 @@ impl Frame {
             for l in self.frames[i].iter() {
                 if l.subsume_set(lemma, tmp_lit_set) {
                     tmp_lit_set.clear();
-                    return true;
+                    return Some(i);
                 }
             }
         }
         tmp_lit_set.clear();
-        false
+        None
     }
 
     pub fn parent_lemma(&self, cube: &Cube, frame: usize) -> Vec<logic_form::Lemma> {
@@ -131,7 +131,7 @@ impl IC3 {
             });
             return;
         }
-        if self.frame.trivial_contained(frame, &lemma) {
+        if self.frame.trivial_contained(frame, &lemma).is_some() {
             return;
         }
         assert!(!self.ts.cube_subsume_init(lemma.cube()));
