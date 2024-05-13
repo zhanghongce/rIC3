@@ -439,9 +439,8 @@ impl GipSAT {
     /// get the predecessor
     pub fn get_predecessor(&mut self) -> Cube {
         let last_ind = take(&mut self.last_ind);
-        let unblock = match last_ind.unwrap() {
-            BlockResult::Yes(_) => panic!(),
-            BlockResult::No(unblock) => unblock,
+        let BlockResult::No(unblock) = last_ind.unwrap() else {
+            panic!()
         };
         let mut assumption = Cube::new();
         let mut cls = unblock.assumption.clone();
