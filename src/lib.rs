@@ -35,6 +35,7 @@ pub struct IC3 {
 }
 
 impl IC3 {
+    #[inline]
     pub fn level(&self) -> usize {
         self.gipsat.level()
     }
