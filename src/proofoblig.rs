@@ -6,13 +6,21 @@ use std::fmt::{self, Debug};
 use std::ops::Deref;
 use std::rc::Rc;
 
-#[derive(PartialEq, Eq)]
 pub struct ProofObligationInner {
     pub frame: usize,
     pub lemma: Lemma,
     pub depth: usize,
     pub next: Option<ProofObligation>,
 }
+
+impl PartialEq for ProofObligationInner {
+    #[inline]
+    fn eq(&self, other: &Self) -> bool {
+        self.lemma == other.lemma
+    }
+}
+
+impl Eq for ProofObligationInner {}
 
 impl Debug for ProofObligationInner {
     #[inline]
@@ -25,7 +33,7 @@ impl Debug for ProofObligationInner {
     }
 }
 
-#[derive(PartialEq, Eq, Clone)]
+#[derive(Clone)]
 pub struct ProofObligation {
     inner: Rc<ProofObligationInner>,
 }
@@ -56,6 +64,15 @@ impl Deref for ProofObligation {
         &self.inner
     }
 }
+
+impl PartialEq for ProofObligation {
+    #[inline]
+    fn eq(&self, other: &Self) -> bool {
+        self.inner == other.inner
+    }
+}
+
+impl Eq for ProofObligation {}
 
 impl PartialOrd for ProofObligation {
     #[inline]
