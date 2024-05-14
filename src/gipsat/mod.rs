@@ -195,11 +195,13 @@ impl Solver {
         // dbg!(self.cdb.num_leanrt());
         // dbg!(self.cdb.num_lemma());
 
-        if let Some(constrain) = constrain {
+        if let Some(mut constrain) = constrain {
+            constrain.push(!self.constrain_act.unwrap());
             if let Some(constrain) = self.simplify_clause(&constrain) {
-                if constrain.len() > 1 {
-                    self.add_clause_inner(&constrain, ClauseKind::Temporary);
+                if constrain.len() == 1 {
+                    todo!();
                 }
+                self.add_clause_inner(&constrain, ClauseKind::Temporary);
             }
         }
 
@@ -243,7 +245,7 @@ impl Solver {
     pub fn solve_with_constrain(
         &mut self,
         assump: &[Lit],
-        mut constrain: Clause,
+        constrain: Clause,
         bucket: bool,
     ) -> SatResult<Sat, Unsat> {
         if self.temporary_domain {
@@ -258,7 +260,6 @@ impl Solver {
         assumption.extend_from_slice(assump);
         assumption.push(act);
         let cc = constrain.clone();
-        constrain.push(!act);
         self.new_round(
             Some(assump.iter().chain(cc.iter()).map(|l| l.var())),
             Some(constrain),
