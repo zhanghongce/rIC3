@@ -10,7 +10,7 @@ mod vsids;
 
 pub use cdb::{CRef, CREF_NONE};
 
-use crate::frame::Frame;
+use crate::{frame::Frame, IC3};
 use analyze::Analyze;
 use cdb::{ClauseDB, ClauseKind};
 use domain::Domain;
@@ -511,5 +511,19 @@ impl GipSAT {
         }
         println!("{:#?}", statistic);
         println!("{:#?}", self.statistic);
+    }
+}
+
+impl IC3 {
+    pub fn blocked_with_ordered(
+        &mut self,
+        frame: usize,
+        cube: &Cube,
+        ascending: bool,
+        strengthen: bool,
+    ) -> bool {
+        let mut ordered_cube = cube.clone();
+        self.activity.sort_by_activity(&mut ordered_cube, ascending);
+        self.gipsat.inductive(frame, &ordered_cube, strengthen)
     }
 }

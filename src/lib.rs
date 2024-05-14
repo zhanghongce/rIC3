@@ -1,12 +1,11 @@
 #![feature(assert_matches, is_sorted, get_mut_unchecked, format_args_nl)]
 
 mod activity;
-mod command;
+mod args;
 mod frame;
 mod gipsat;
 mod mic;
 mod proofoblig;
-mod solver;
 mod statistic;
 mod verify;
 
@@ -14,7 +13,7 @@ use crate::proofoblig::{ProofObligation, ProofObligationQueue};
 use crate::statistic::Statistic;
 use activity::Activity;
 use aig::Aig;
-pub use command::Args;
+pub use args::Args;
 use frame::Frame;
 use gipsat::{GipSAT, Solver};
 use logic_form::{Cube, Lemma};

@@ -14,7 +14,7 @@ impl IC3 {
         frame: usize,
         cube: &Cube,
         keep: &HashSet<Lit>,
-        level: usize,
+        _level: usize,
     ) -> DownResult {
         let mut cube = cube.clone();
         self.statistic.num_down += 1;
@@ -50,7 +50,6 @@ impl IC3 {
                 //         }
                 //     }
                 // ctgs = 0;
-                // let cex_set: HashSet<Lit> = HashSet::from_iter(model);
                 let mut cube_new = Cube::new();
                 for lit in cube {
                     if let Some(true) = self.gipsat.unblocked_value(lit) {
