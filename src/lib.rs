@@ -88,7 +88,7 @@ impl IC3 {
                 self.add_obligation(po);
                 continue;
             }
-            if self.blocked_with_ordered(po.frame, &po.lemma, false, true) {
+            if self.blocked_with_ordered(po.frame, &po.lemma, false, false) {
                 self.handle_blocked(po);
             } else {
                 let model = self.gipsat.get_predecessor();

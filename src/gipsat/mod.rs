@@ -277,6 +277,10 @@ impl Solver {
         self.clean_temporary();
         self.domain
             .enable_local(domain.map(|l| l.var()), &self.ts, &self.value);
+        if self.constrain_act.is_none() {
+            let constrain_act = self.new_var();
+            self.constrain_act = Some(constrain_act.lit());
+        }
         assert!(!self.domain.local.has(self.constrain_act.unwrap().var()));
         self.domain.local.insert(self.constrain_act.unwrap().var());
         self.vsids.enable_bucket = true;
