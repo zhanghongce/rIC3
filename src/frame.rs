@@ -79,8 +79,27 @@ impl Frame {
         None
     }
 
-    pub fn parent_lemma(&self, cube: &Cube, frame: usize) -> Vec<logic_form::Lemma> {
-        let lemma = logic_form::Lemma::new(cube.clone());
+    pub fn parent_lemma(
+        &self,
+        lemma: &logic_form::Lemma,
+        frame: usize,
+    ) -> Option<logic_form::Lemma> {
+        if frame == 1 {
+            return None;
+        }
+        for c in self.frames[frame - 1].iter() {
+            if c.subsume(lemma) {
+                return Some(c.lemma.clone());
+            }
+        }
+        None
+    }
+
+    pub fn _parent_lemmas(
+        &self,
+        lemma: &logic_form::Lemma,
+        frame: usize,
+    ) -> Vec<logic_form::Lemma> {
         let mut res = Vec::new();
         if frame == 1 {
             return res;
