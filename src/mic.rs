@@ -13,10 +13,10 @@ impl IC3 {
         &mut self,
         frame: usize,
         cube: &Cube,
-        _keep: &HashSet<Lit>,
+        keep: &HashSet<Lit>,
         level: usize,
     ) -> DownResult {
-        let cube = cube.clone();
+        let mut cube = cube.clone();
         self.statistic.num_down += 1;
         // let mut ctgs = 0;
         loop {
@@ -26,10 +26,10 @@ impl IC3 {
             if self.blocked_with_ordered(frame, &cube, false, true) {
                 return DownResult::Success(self.gipsat.inductive_core());
             } else {
-                if level == 0 {
-                    return DownResult::Fail;
-                }
-                todo!();
+                // if level == 0 {
+                //     return DownResult::Fail;
+                // }
+                // todo!();
                 //     let model = self.unblocked_model(unblocked);
                 //     if ctgs < 3 && frame > 1 && !self.model.cube_subsume_init(&model) {
                 //         if let BlockResult::Yes(blocked) =
@@ -49,17 +49,17 @@ impl IC3 {
                 //             continue;
                 //         }
                 //     }
-                //     ctgs = 0;
-                //     let cex_set: HashSet<Lit> = HashSet::from_iter(model);
-                //     let mut cube_new = Cube::new();
-                //     for lit in cube {
-                //         if cex_set.contains(&lit) {
-                //             cube_new.push(lit);
-                //         } else if keep.contains(&lit) {
-                //             return DownResult::Fail(unblocked);
-                //         }
-                //     }
-                //     cube = cube_new;
+                // ctgs = 0;
+                // let cex_set: HashSet<Lit> = HashSet::from_iter(model);
+                let mut cube_new = Cube::new();
+                for lit in cube {
+                    if let Some(true) = self.gipsat.unblocked_value(lit) {
+                        cube_new.push(lit);
+                    } else if keep.contains(&lit) {
+                        return DownResult::Fail;
+                    }
+                }
+                cube = cube_new;
             }
         }
     }
