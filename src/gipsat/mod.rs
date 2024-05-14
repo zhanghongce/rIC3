@@ -411,12 +411,7 @@ impl GipSAT {
             let new = *block
                 .cube
                 .iter()
-                .find(|l| {
-                    self.ts
-                        .init_map
-                        .get(&l.var())
-                        .is_some_and(|i| *i != l.polarity())
-                })
+                .find(|l| self.ts.init_map[l.var()].is_some_and(|i| i != l.polarity()))
                 .unwrap();
             for i in 0..block.cube.len() {
                 if block.unsat.has(block.assumption[i]) || block.cube[i] == new {
