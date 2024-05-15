@@ -79,7 +79,7 @@ impl Frame {
         None
     }
 
-    pub fn parent_lemma(
+    pub fn _parent_lemma(
         &self,
         lemma: &logic_form::Lemma,
         frame: usize,
