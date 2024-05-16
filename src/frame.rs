@@ -105,7 +105,7 @@ impl Frame {
             return res;
         }
         for c in self.frames[frame - 1].iter() {
-            if c.subsume(&lemma) {
+            if c.subsume(lemma) {
                 res.push(c.lemma.clone());
             }
         }
