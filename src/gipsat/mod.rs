@@ -182,7 +182,7 @@ impl Solver {
 
     fn new_round(
         &mut self,
-        domain: Option<impl Iterator<Item = Var>>,
+        domain: impl Iterator<Item = Var>,
         constrain: Option<Clause>,
         bucket: bool,
     ) {
@@ -206,12 +206,10 @@ impl Solver {
         }
 
         if !self.temporary_domain {
-            if let Some(domain) = domain {
-                self.domain.enable_local(domain, &self.ts, &self.value);
-                if self.constrain_act.is_some() {
-                    assert!(!self.domain.local.has(self.constrain_act.unwrap().var()));
-                    self.domain.local.insert(self.constrain_act.unwrap().var());
-                }
+            self.domain.enable_local(domain, &self.ts, &self.value);
+            if self.constrain_act.is_some() {
+                assert!(!self.domain.local.has(self.constrain_act.unwrap().var()));
+                self.domain.local.insert(self.constrain_act.unwrap().var());
             }
             if bucket {
                 self.vsids.enable_bucket = true;
@@ -234,7 +232,7 @@ impl Solver {
         if self.temporary_domain {
             assert!(bucket);
         }
-        self.new_round(Some(assump.iter().map(|l| l.var())), None, bucket);
+        self.new_round(assump.iter().map(|l| l.var()), None, bucket);
         self.statistic.num_solve += 1;
         self.clean_leanrt();
         self.simplify();
@@ -261,7 +259,7 @@ impl Solver {
         assumption.push(act);
         let cc = constrain.clone();
         self.new_round(
-            Some(assump.iter().chain(cc.iter()).map(|l| l.var())),
+            assump.iter().chain(cc.iter()).map(|l| l.var()),
             Some(constrain),
             bucket,
         );
