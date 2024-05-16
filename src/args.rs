@@ -18,10 +18,6 @@ pub struct Args {
     #[arg(short, long)]
     pub random: Option<usize>,
 
-    /// counter example to generalize
-    #[arg(long, default_value_t = true, action = clap::ArgAction::Set)]
-    pub ctg: bool,
-
     /// print witness
     #[arg(short, long, default_value_t = false)]
     pub witness: bool,
