@@ -68,7 +68,8 @@ impl IC3 {
         let conflict = self.gipsat.inductive_core();
         let (frame, core) = self.generalize(po.frame, conflict);
         self.statistic.avg_po_cube_len += po.lemma.len();
-        po.set_frame(frame);
+        po.frame = frame;
+        po.num_unblock = 0;
         self.add_obligation(po);
         self.add_lemma(frame - 1, core);
     }
@@ -84,7 +85,8 @@ impl IC3 {
                 self.statistic();
             }
             if let Some(bf) = self.frame.trivial_contained(po.frame, &po.lemma) {
-                po.set_frame(bf + 1);
+                po.frame = bf + 1;
+                po.num_unblock = 0;
                 self.add_obligation(po);
                 continue;
             }
@@ -98,6 +100,7 @@ impl IC3 {
                     po.depth + 1,
                     Some(po.clone()),
                 ));
+                po.num_unblock += 1;
                 self.add_obligation(po);
             }
         }

@@ -3,7 +3,7 @@ use logic_form::Lemma;
 use std::cmp::Ordering;
 use std::collections::BTreeSet;
 use std::fmt::{self, Debug};
-use std::ops::Deref;
+use std::ops::{Deref, DerefMut};
 use std::rc::Rc;
 
 pub struct ProofObligationInner {
@@ -11,6 +11,7 @@ pub struct ProofObligationInner {
     pub lemma: Lemma,
     pub depth: usize,
     pub next: Option<ProofObligation>,
+    pub num_unblock: usize,
 }
 
 impl PartialEq for ProofObligationInner {
@@ -29,6 +30,7 @@ impl Debug for ProofObligationInner {
             .field("frame", &self.frame)
             .field("lemma", &self.lemma)
             .field("depth", &self.depth)
+            .field("num_unblock", &self.num_unblock)
             .finish()
     }
 }
@@ -46,13 +48,9 @@ impl ProofObligation {
                 lemma,
                 depth,
                 next,
+                num_unblock: 0,
             }),
         }
-    }
-
-    pub fn set_frame(&mut self, frame: usize) {
-        let inner = unsafe { Rc::get_mut_unchecked(&mut self.inner) };
-        inner.frame = frame;
     }
 }
 
@@ -62,6 +60,13 @@ impl Deref for ProofObligation {
     #[inline]
     fn deref(&self) -> &Self::Target {
         &self.inner
+    }
+}
+
+impl DerefMut for ProofObligation {
+    #[inline]
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        unsafe { Rc::get_mut_unchecked(&mut self.inner) }
     }
 }
 
