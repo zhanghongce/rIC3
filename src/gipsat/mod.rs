@@ -22,7 +22,12 @@ use satif::{SatResult, SatifSat, SatifUnsat};
 use search::Value;
 use simplify::Simplify;
 use statistic::{GipSATStatistic, SolverStatistic};
-use std::{mem::take, rc::Rc, time::Instant};
+use std::{
+    mem::take,
+    ops::{Deref, DerefMut},
+    rc::Rc,
+    time::Instant,
+};
 use transys::Transys;
 use utils::Lbool;
 use vsids::Vsids;
@@ -228,11 +233,36 @@ impl Solver {
             / (self.ts.num_var - self.trail.len() as usize) as f64
     }
 
-    pub fn solve_with_domain(&mut self, assump: &[Lit], bucket: bool) -> SatResult<Sat, Unsat> {
+    pub fn solve_with_domain(
+        &mut self,
+        assump: &[Lit],
+        constrain: Option<Clause>,
+        bucket: bool,
+    ) -> SatResult<Sat, Unsat> {
         if self.temporary_domain {
             assert!(bucket);
         }
-        self.new_round(assump.iter().map(|l| l.var()), None, bucket);
+        let mut assumption;
+        let assump = if let Some(constrain) = constrain {
+            if self.constrain_act.is_none() {
+                let constrain_act = self.new_var();
+                self.constrain_act = Some(constrain_act.lit());
+            }
+            let act = self.constrain_act.unwrap();
+            assumption = Cube::new();
+            assumption.extend_from_slice(assump);
+            assumption.push(act);
+            let cc = constrain.clone();
+            self.new_round(
+                assump.iter().chain(cc.iter()).map(|l| l.var()),
+                Some(constrain),
+                bucket,
+            );
+            &assumption
+        } else {
+            self.new_round(assump.iter().map(|l| l.var()), None, bucket);
+            assump
+        };
         self.statistic.num_solve += 1;
         self.clean_leanrt();
         self.simplify();
@@ -240,35 +270,35 @@ impl Solver {
         self.search_with_restart(assump)
     }
 
-    pub fn solve_with_constrain(
-        &mut self,
-        assump: &[Lit],
-        constrain: Clause,
-        bucket: bool,
-    ) -> SatResult<Sat, Unsat> {
-        if self.temporary_domain {
-            assert!(bucket);
-        }
-        if self.constrain_act.is_none() {
-            let constrain_act = self.new_var();
-            self.constrain_act = Some(constrain_act.lit());
-        }
-        let act = self.constrain_act.unwrap();
-        let mut assumption = Cube::new();
-        assumption.extend_from_slice(assump);
-        assumption.push(act);
-        let cc = constrain.clone();
-        self.new_round(
-            assump.iter().chain(cc.iter()).map(|l| l.var()),
-            Some(constrain),
-            bucket,
-        );
-        self.statistic.num_solve += 1;
-        self.clean_leanrt();
-        self.simplify();
-        self.garbage_collect();
-        self.search_with_restart(&assumption)
-    }
+    // pub fn solve_with_constrain(
+    //     &mut self,
+    //     assump: &[Lit],
+    //     constrain: Clause,
+    //     bucket: bool,
+    // ) -> SatResult<Sat, Unsat> {
+    //     if self.temporary_domain {
+    //         assert!(bucket);
+    //     }
+    //     if self.constrain_act.is_none() {
+    //         let constrain_act = self.new_var();
+    //         self.constrain_act = Some(constrain_act.lit());
+    //     }
+    //     let act = self.constrain_act.unwrap();
+    //     let mut assumption = Cube::new();
+    //     assumption.extend_from_slice(assump);
+    //     assumption.push(act);
+    //     let cc = constrain.clone();
+    //     self.new_round(
+    //         assump.iter().chain(cc.iter()).map(|l| l.var()),
+    //         Some(constrain),
+    //         bucket,
+    //     );
+    //     self.statistic.num_solve += 1;
+    //     self.clean_leanrt();
+    //     self.simplify();
+    //     self.garbage_collect();
+    //     self.search_with_restart(&assumption)
+    // }
 
     pub fn set_domain(&mut self, domain: impl Iterator<Item = Lit>) {
         self.temporary_domain = true;
@@ -378,20 +408,17 @@ impl GipSAT {
         self.statistic.num_sat += 1;
         let solver_idx = frame - 1;
         let assumption = self.ts.cube_next(cube);
-        let res = if strengthen {
-            let constrain = Clause::from_iter(cube.iter().map(|l| !*l));
-            self.solvers[solver_idx].solve_with_constrain(&assumption, constrain, true)
-        } else {
-            self.solvers[solver_idx].solve_with_domain(&assumption, true)
-        };
-        self.last_ind = Some(match res {
-            SatResult::Sat(sat) => BlockResult::No(BlockResultNo { sat, assumption }),
-            SatResult::Unsat(unsat) => BlockResult::Yes(BlockResultYes {
-                unsat,
-                cube: Cube::from(cube),
-                assumption,
-            }),
-        });
+        let constrain = strengthen.then_some(Clause::from_iter(cube.iter().map(|l| !*l)));
+        self.last_ind = Some(
+            match self.solvers[solver_idx].solve_with_domain(&assumption, constrain, true) {
+                SatResult::Sat(sat) => BlockResult::No(BlockResultNo { sat, assumption }),
+                SatResult::Unsat(unsat) => BlockResult::Yes(BlockResultYes {
+                    unsat,
+                    cube: Cube::from(cube),
+                    assumption,
+                }),
+            },
+        );
         self.statistic.avg_sat_time += start.elapsed();
         matches!(self.last_ind.as_ref().unwrap(), BlockResult::Yes(_))
     }
@@ -464,7 +491,7 @@ impl GipSAT {
         let solver = unsafe { &*unblock.sat.solver };
         solver.vsids.activity.sort_by_activity(&mut latchs, false);
         assumption.extend_from_slice(&latchs);
-        let res: Cube = match self.lift.solve_with_constrain(&assumption, cls, false) {
+        let res: Cube = match self.lift.solve_with_domain(&assumption, Some(cls), false) {
             SatResult::Sat(_) => panic!(),
             SatResult::Unsat(conflict) => latchs.into_iter().filter(|l| conflict.has(*l)).collect(),
         };
@@ -474,21 +501,22 @@ impl GipSAT {
     pub fn has_bad(&mut self) -> bool {
         let start = Instant::now();
         self.statistic.num_sat += 1;
-        let res = match self
-            .solvers
-            .last_mut()
-            .unwrap()
-            .solve_with_domain(&self.ts.bad, false)
-        {
-            SatResult::Sat(sat) => {
-                self.last_ind = Some(BlockResult::No(BlockResultNo {
-                    sat,
-                    assumption: self.ts.bad.clone(),
-                }));
-                true
-            }
-            SatResult::Unsat(_) => false,
-        };
+        let res =
+            match self
+                .solvers
+                .last_mut()
+                .unwrap()
+                .solve_with_domain(&self.ts.bad, None, false)
+            {
+                SatResult::Sat(sat) => {
+                    self.last_ind = Some(BlockResult::No(BlockResultNo {
+                        sat,
+                        assumption: self.ts.bad.clone(),
+                    }));
+                    true
+                }
+                SatResult::Unsat(_) => false,
+            };
         self.statistic.avg_sat_time += start.elapsed();
         res
     }
@@ -509,6 +537,22 @@ impl GipSAT {
         }
         println!("{:#?}", statistic);
         println!("{:#?}", self.statistic);
+    }
+}
+
+impl Deref for GipSAT {
+    type Target = [Solver];
+
+    #[inline]
+    fn deref(&self) -> &Self::Target {
+        &self.solvers
+    }
+}
+
+impl DerefMut for GipSAT {
+    #[inline]
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.solvers
     }
 }
 
