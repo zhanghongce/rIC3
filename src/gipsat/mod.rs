@@ -270,36 +270,6 @@ impl Solver {
         self.search_with_restart(assump)
     }
 
-    // pub fn solve_with_constrain(
-    //     &mut self,
-    //     assump: &[Lit],
-    //     constrain: Clause,
-    //     bucket: bool,
-    // ) -> SatResult<Sat, Unsat> {
-    //     if self.temporary_domain {
-    //         assert!(bucket);
-    //     }
-    //     if self.constrain_act.is_none() {
-    //         let constrain_act = self.new_var();
-    //         self.constrain_act = Some(constrain_act.lit());
-    //     }
-    //     let act = self.constrain_act.unwrap();
-    //     let mut assumption = Cube::new();
-    //     assumption.extend_from_slice(assump);
-    //     assumption.push(act);
-    //     let cc = constrain.clone();
-    //     self.new_round(
-    //         assump.iter().chain(cc.iter()).map(|l| l.var()),
-    //         Some(constrain),
-    //         bucket,
-    //     );
-    //     self.statistic.num_solve += 1;
-    //     self.clean_leanrt();
-    //     self.simplify();
-    //     self.garbage_collect();
-    //     self.search_with_restart(&assumption)
-    // }
-
     pub fn set_domain(&mut self, domain: impl Iterator<Item = Lit>) {
         self.temporary_domain = true;
         self.backtrack(0, false);
