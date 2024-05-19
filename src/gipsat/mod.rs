@@ -49,7 +49,7 @@ pub struct Solver {
     unsat_core: LitSet,
     domain: Domain,
     temporary_domain: bool,
-    constrain_act: Option<Lit>,
+    constrain_act: Var,
 
     ts: Rc<Transys>,
     frame: Frame,
@@ -80,7 +80,7 @@ impl Solver {
             domain: Domain::new(),
             temporary_domain: Default::default(),
             statistic: Default::default(),
-            constrain_act: None,
+            constrain_act: Var(0),
             rng: StdRng::seed_from_u64(0),
         };
         while solver.num_var() < solver.ts.num_var {
@@ -104,7 +104,8 @@ impl Solver {
     }
 
     pub fn new_var(&mut self) -> Var {
-        let var = Var::new(self.num_var());
+        let v = self.constrain_act;
+        let var = Var::new(self.num_var() + 1);
         self.value.reserve(var);
         self.level.reserve(var);
         self.reason.reserve(var);
@@ -114,21 +115,20 @@ impl Solver {
         self.analyze.reserve(var);
         self.unsat_core.reserve(var);
         self.domain.reserve(var);
-        var
+        self.constrain_act = var;
+        v
     }
 
     #[inline]
     pub fn num_var(&self) -> usize {
-        self.reason.len()
+        self.constrain_act.into()
     }
 
     fn simplify_clause(&mut self, cls: &[Lit]) -> Option<logic_form::Clause> {
         assert!(self.highest_level() == 0);
         let mut clause = logic_form::Clause::new();
         for l in cls.iter() {
-            while self.num_var() <= l.var().into() {
-                self.new_var();
-            }
+            assert!(self.num_var() + 1 > l.var().into());
             match self.value.v(*l) {
                 Lbool::TRUE => return None,
                 Lbool::FALSE => (),
@@ -145,10 +145,8 @@ impl Solver {
             None => return CREF_NONE,
         };
         for l in clause.iter() {
-            if let Some(act) = self.constrain_act {
-                if act.var() == l.var() {
-                    kind = ClauseKind::Temporary;
-                }
+            if self.constrain_act == l.var() {
+                kind = ClauseKind::Temporary;
             }
         }
         if clause.len() == 1 {
@@ -185,6 +183,12 @@ impl Solver {
         }
     }
 
+    fn reset(&mut self) {
+        self.backtrack(0, false);
+        self.clean_temporary();
+        assert!(!self.temporary_domain);
+    }
+
     fn new_round(
         &mut self,
         domain: impl Iterator<Item = Var>,
@@ -201,7 +205,7 @@ impl Solver {
         // dbg!(self.cdb.num_lemma());
 
         if let Some(mut constrain) = constrain {
-            constrain.push(!self.constrain_act.unwrap());
+            constrain.push(!self.constrain_act.lit());
             if let Some(constrain) = self.simplify_clause(&constrain) {
                 if constrain.len() == 1 {
                     todo!();
@@ -212,10 +216,8 @@ impl Solver {
 
         if !self.temporary_domain {
             self.domain.enable_local(domain, &self.ts, &self.value);
-            if self.constrain_act.is_some() {
-                assert!(!self.domain.local.has(self.constrain_act.unwrap().var()));
-                self.domain.local.insert(self.constrain_act.unwrap().var());
-            }
+            assert!(!self.domain.local.has(self.constrain_act));
+            self.domain.local.insert(self.constrain_act);
             if bucket {
                 self.vsids.enable_bucket = true;
                 self.vsids.bucket.clear();
@@ -244,14 +246,9 @@ impl Solver {
         }
         let mut assumption;
         let assump = if let Some(constrain) = constrain {
-            if self.constrain_act.is_none() {
-                let constrain_act = self.new_var();
-                self.constrain_act = Some(constrain_act.lit());
-            }
-            let act = self.constrain_act.unwrap();
             assumption = Cube::new();
             assumption.extend_from_slice(assump);
-            assumption.push(act);
+            assumption.push(self.constrain_act.lit());
             let cc = constrain.clone();
             self.new_round(
                 assump.iter().chain(cc.iter()).map(|l| l.var()),
@@ -276,12 +273,8 @@ impl Solver {
         self.clean_temporary();
         self.domain
             .enable_local(domain.map(|l| l.var()), &self.ts, &self.value);
-        if self.constrain_act.is_none() {
-            let constrain_act = self.new_var();
-            self.constrain_act = Some(constrain_act.lit());
-        }
-        assert!(!self.domain.local.has(self.constrain_act.unwrap().var()));
-        self.domain.local.insert(self.constrain_act.unwrap().var());
+        assert!(!self.domain.local.has(self.constrain_act));
+        self.domain.local.insert(self.constrain_act);
         self.vsids.enable_bucket = true;
         self.vsids.bucket.clear();
         for d in self.domain.domains() {
@@ -537,5 +530,16 @@ impl IC3 {
         let mut ordered_cube = cube.clone();
         self.activity.sort_by_activity(&mut ordered_cube, ascending);
         self.gipsat.inductive(frame, &ordered_cube, strengthen)
+    }
+
+    pub fn new_var(&mut self) -> Var {
+        let ts = unsafe { Rc::get_mut_unchecked(&mut self.ts) };
+        let var = ts.new_var();
+        for s in self.gipsat.solvers.iter_mut() {}
+        todo!()
+    }
+
+    pub fn add_latch(&mut self) {
+        todo!()
     }
 }

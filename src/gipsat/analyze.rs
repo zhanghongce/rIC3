@@ -123,7 +123,9 @@ impl Solver {
             for lit in begin..cref.len() {
                 let lit = cref[lit];
                 if !self.analyze.seen(lit) && self.level[lit] > 0 {
-                    self.vsids.bump(lit.var());
+                    if lit.var() != self.constrain_act {
+                        self.vsids.bump(lit.var());
+                    }
                     self.analyze[lit] = Mark::Seen;
                     if self.level[lit] >= self.highest_level() as u32 {
                         path += 1;

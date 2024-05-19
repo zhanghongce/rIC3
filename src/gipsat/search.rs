@@ -100,10 +100,8 @@ impl Solver {
                 } else {
                     let mut kind = ClauseKind::Learnt;
                     for l in learnt.iter() {
-                        if let Some(act) = self.constrain_act {
-                            if act.var() == l.var() {
-                                kind = ClauseKind::Temporary;
-                            }
+                        if self.constrain_act == l.var() {
+                            kind = ClauseKind::Temporary;
                         }
                     }
                     let learnt_id = self.attach_clause(&learnt, kind);
