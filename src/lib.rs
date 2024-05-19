@@ -114,7 +114,7 @@ impl IC3 {
                 if self.frame[frame_idx].iter().all(|l| l.lemma != lemma.lemma) {
                     continue;
                 }
-                if self.gipsat.inductive(frame_idx + 1, &lemma, false) {
+                if self.blocked_with_ordered(frame_idx + 1, &lemma, false, false) {
                     let core = self.gipsat.inductive_core();
                     self.add_lemma(frame_idx + 1, core);
                 }
