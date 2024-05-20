@@ -194,7 +194,7 @@ impl Solver {
         domain: impl Iterator<Item = Var>,
         constrain: Option<Clause>,
         bucket: bool,
-    ) {
+    ) -> bool {
         self.backtrack(0, self.temporary_domain);
         self.clean_temporary();
         // dbg!(&self.name);
@@ -208,7 +208,7 @@ impl Solver {
             constrain.push(!self.constrain_act.lit());
             if let Some(constrain) = self.simplify_clause(&constrain) {
                 if constrain.len() == 1 {
-                    todo!();
+                    return false;
                 }
                 self.add_clause_inner(&constrain, ClauseKind::Temporary);
             }
@@ -232,7 +232,8 @@ impl Solver {
             }
         }
         self.statistic.avg_decide_var += self.domain.domains().len() as f64
-            / (self.ts.num_var - self.trail.len() as usize) as f64
+            / (self.ts.num_var - self.trail.len() as usize) as f64;
+        true
     }
 
     pub fn solve_with_domain(
@@ -250,14 +251,17 @@ impl Solver {
             assumption.extend_from_slice(assump);
             assumption.push(self.constrain_act.lit());
             let cc = constrain.clone();
-            self.new_round(
+            if !self.new_round(
                 assump.iter().chain(cc.iter()).map(|l| l.var()),
                 Some(constrain),
                 bucket,
-            );
+            ) {
+                self.unsat_core.clear();
+                return SatResult::Unsat(Unsat { solver: self });
+            };
             &assumption
         } else {
-            self.new_round(assump.iter().map(|l| l.var()), None, bucket);
+            assert!(self.new_round(assump.iter().map(|l| l.var()), None, bucket));
             assump
         };
         self.statistic.num_solve += 1;

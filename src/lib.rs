@@ -73,6 +73,16 @@ impl IC3 {
         self.add_lemma(frame - 1, core);
     }
 
+    // pub fn check_witness(&mut self) {
+    //     let mut witness = Vec::new();
+    //     let mut bad = self.obligations.pop(0).unwrap();
+    //     witness.push(bad.clone());
+    //     while bad.next.is_some() {
+    //         bad = bad.next.clone().unwrap();
+    //         witness.push(bad.clone());
+    //     }
+    // }
+
     fn block(&mut self) -> bool {
         while let Some(mut po) = self.obligations.pop(self.level()) {
             if po.frame == 0 {
