@@ -248,8 +248,8 @@ impl Solver {
         let mut assumption;
         let assump = if let Some(constrain) = constrain {
             assumption = Cube::new();
-            assumption.extend_from_slice(assump);
             assumption.push(self.constrain_act.lit());
+            assumption.extend_from_slice(assump);
             let cc = constrain.clone();
             if !self.new_round(
                 assump.iter().chain(cc.iter()).map(|l| l.var()),
