@@ -73,6 +73,17 @@ impl Solver {
         let mut restarts = 0;
         let rest_base = luby(2.0, restarts);
         loop {
+            if restarts > 10 {
+                if self.vsids.enable_bucket {
+                    self.vsids.enable_bucket = false;
+                    self.vsids.heap.clear();
+                    for d in self.domain.domains() {
+                        if self.value.v(d.lit()).is_none() {
+                            self.vsids.push(*d);
+                        }
+                    }
+                }
+            }
             match self.search(assumption, Some(rest_base * 100.0)) {
                 Some(true) => return SatResult::Sat(Sat { solver: self }),
                 Some(false) => return SatResult::Unsat(Unsat { solver: self }),
