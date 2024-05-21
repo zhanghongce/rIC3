@@ -3,30 +3,25 @@ use logic_form::{Cube, Lit, Var, VarMap};
 use std::collections::HashMap;
 
 pub struct Activity {
-    activity: Vec<f64>,
-    idx_map: VarMap<usize>,
+    activity: VarMap<f64>,
     act_inc: f64,
 }
 
 impl Activity {
     pub fn new(var: &[Var]) -> Self {
-        let mut idx_map = VarMap::new();
-        let mut activity = Vec::new();
+        let mut activity = VarMap::new();
         for i in 0..var.len() {
-            idx_map.reserve(var[i]);
-            idx_map[var[i]] = i;
-            activity.push(0.0);
+            activity.reserve(var[i]);
         }
         Self {
             activity,
-            idx_map,
             act_inc: 1.0,
         }
     }
 
     #[inline]
     fn bump(&mut self, var: Var) {
-        self.activity[self.idx_map[var]] += self.act_inc;
+        self.activity[var] += self.act_inc;
     }
 
     #[inline]
@@ -42,11 +37,8 @@ impl Activity {
     }
 
     pub fn sort_by_activity(&self, cube: &mut Cube, ascending: bool) {
-        let ascending_func = |a: &Lit, b: &Lit| {
-            self.activity[self.idx_map[*a]]
-                .partial_cmp(&self.activity[self.idx_map[*b]])
-                .unwrap()
-        };
+        let ascending_func =
+            |a: &Lit, b: &Lit| self.activity[*a].partial_cmp(&self.activity[*b]).unwrap();
         if ascending {
             cube.sort_by(ascending_func);
         } else {
@@ -56,7 +48,7 @@ impl Activity {
 
     #[allow(unused)]
     pub fn cube_average_activity(&self, cube: &Cube) -> f64 {
-        let sum: f64 = cube.iter().map(|l| self.activity[self.idx_map[*l]]).sum();
+        let sum: f64 = cube.iter().map(|l| self.activity[*l]).sum();
         sum / cube.len() as f64
     }
 }
@@ -74,15 +66,15 @@ impl IC3 {
             for j in i..cube.len() {
                 if self.ts.latch_group[cube[j].var()] == g {
                     num += 1;
-                    sum += self.activity.activity[self.activity.idx_map[cube[j]]];
+                    sum += self.activity.activity[cube[j]];
                 }
             }
             group.insert(g, sum / num as f64);
         }
         let ascending_func = |a: &Lit, b: &Lit| {
             if self.ts.latch_group[*a] == self.ts.latch_group[*b] {
-                self.activity.activity[self.activity.idx_map[*a]]
-                    .partial_cmp(&self.activity.activity[self.activity.idx_map[*b]])
+                self.activity.activity[*a]
+                    .partial_cmp(&self.activity.activity[*b])
                     .unwrap()
             } else {
                 group[&self.ts.latch_group[*a]]
