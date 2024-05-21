@@ -134,10 +134,11 @@ impl Activity {
         assert!(self.bucket_heap.pos[var].is_some())
     }
 
+    #[inline]
     fn bucket(&self, var: Var) -> u32 {
         match self.bucket_heap.pos[var] {
-            OptionU32::NONE => u32::BITS - self.bucket_heap.len().leading_zeros() + 1,
-            b => u32::BITS - b.leading_zeros(),
+            OptionU32::NONE => 33 - self.bucket_heap.len().leading_zeros(),
+            b => 32 - b.leading_zeros(),
         }
     }
 
