@@ -133,7 +133,12 @@ impl Solver {
                 while self.highest_level() < assumption.len() {
                     let a = assumption[self.highest_level()];
                     match self.value.v(a) {
-                        Lbool::TRUE => self.new_level(),
+                        Lbool::TRUE => {
+                            self.new_level();
+                            if self.highest_level() == assumption.len() {
+                                self.prepare_vsids();
+                            }
+                        }
                         Lbool::FALSE => {
                             self.analyze_unsat_core(a);
                             return Some(false);
@@ -141,6 +146,9 @@ impl Solver {
                         _ => {
                             self.new_level();
                             self.assign(a, CREF_NONE);
+                            if self.highest_level() == assumption.len() {
+                                self.prepare_vsids();
+                            }
                             continue 'ml;
                         }
                     }

@@ -49,6 +49,7 @@ pub struct Solver {
     unsat_core: LitSet,
     domain: Domain,
     temporary_domain: bool,
+    prepared_vsids: bool,
     constrain_act: Var,
 
     ts: Rc<Transys>,
@@ -79,6 +80,7 @@ impl Solver {
             unsat_core: Default::default(),
             domain: Domain::new(),
             temporary_domain: Default::default(),
+            prepared_vsids: false,
             statistic: Default::default(),
             constrain_act: Var(0),
             rng: StdRng::seed_from_u64(0),
@@ -166,8 +168,7 @@ impl Solver {
 
     #[inline]
     pub fn add_lemma(&mut self, lemma: &[Lit]) -> CRef {
-        self.backtrack(0, false);
-        self.clean_temporary();
+        self.reset();
         for l in lemma.iter() {
             self.domain.lemma.insert(l.var());
         }
@@ -176,8 +177,7 @@ impl Solver {
 
     #[inline]
     pub fn remove_lemma(&mut self, cref: CRef) {
-        self.backtrack(0, false);
-        self.clean_temporary();
+        self.reset();
         if !self.locked(cref) {
             self.remove_clause(cref)
         }
@@ -186,6 +186,7 @@ impl Solver {
     fn reset(&mut self) {
         self.backtrack(0, false);
         self.clean_temporary();
+        self.prepared_vsids = false;
         assert!(!self.temporary_domain);
     }
 
@@ -197,6 +198,7 @@ impl Solver {
     ) -> bool {
         self.backtrack(0, self.temporary_domain);
         self.clean_temporary();
+        self.prepared_vsids = false;
         // dbg!(&self.name);
         // self.vsids.activity.print();
         // dbg!(self.num_var());
@@ -225,11 +227,6 @@ impl Solver {
                 self.vsids.enable_bucket = false;
                 self.vsids.heap.clear();
             }
-            for d in self.domain.domains() {
-                if self.value.v(d.lit()).is_none() {
-                    self.vsids.push(*d);
-                }
-            }
         }
         self.statistic.avg_decide_var += self.domain.domains().len() as f64
             / (self.ts.num_var - self.trail.len() as usize) as f64;
@@ -242,6 +239,7 @@ impl Solver {
         constrain: Option<Clause>,
         bucket: bool,
     ) -> SatResult<Sat, Unsat> {
+        assert!(!assump.is_empty());
         if self.temporary_domain {
             assert!(bucket);
         }
@@ -272,9 +270,8 @@ impl Solver {
     }
 
     pub fn set_domain(&mut self, domain: impl Iterator<Item = Lit>) {
+        self.reset();
         self.temporary_domain = true;
-        self.backtrack(0, false);
-        self.clean_temporary();
         self.domain
             .enable_local(domain.map(|l| l.var()), &self.ts, &self.value);
         assert!(!self.domain.local.has(self.constrain_act));

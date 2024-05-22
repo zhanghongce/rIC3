@@ -306,4 +306,16 @@ impl Solver {
         }
         false
     }
+
+    #[inline]
+    pub fn prepare_vsids(&mut self) {
+        if !self.prepared_vsids && !self.temporary_domain {
+            self.prepared_vsids = true;
+            for d in self.domain.domains() {
+                if self.value.v(d.lit()).is_none() {
+                    self.vsids.push(*d);
+                }
+            }
+        }
+    }
 }
