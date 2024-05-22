@@ -27,7 +27,7 @@ impl Activity {
     #[inline]
     pub fn decay(&mut self) {
         for act in self.activity.iter_mut() {
-            *act *= 0.99;
+            *act *= 0.9;
         }
     }
 
