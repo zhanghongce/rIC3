@@ -369,13 +369,17 @@ impl GipSAT {
         self.solvers.len() - 1
     }
 
-    /// query whether the cube is inductively relative to the frame
-    pub fn inductive(&mut self, frame: usize, cube: &[Lit], strengthen: bool) -> bool {
+    pub fn inductive_with_constrain(
+        &mut self,
+        frame: usize,
+        cube: &[Lit],
+        strengthen: bool,
+        mut constrain: Vec<Clause>,
+    ) -> bool {
         let start = Instant::now();
         self.statistic.num_sat += 1;
         let solver_idx = frame - 1;
         let assumption = self.ts.cube_next(cube);
-        let mut constrain = Vec::new();
         if strengthen {
             constrain.push(Clause::from_iter(cube.iter().map(|l| !*l)));
         }
@@ -393,7 +397,10 @@ impl GipSAT {
         matches!(self.last_ind.as_ref().unwrap(), BlockResult::Yes(_))
     }
 
-    /// get the inductive core
+    pub fn inductive(&mut self, frame: usize, cube: &[Lit], strengthen: bool) -> bool {
+        self.inductive_with_constrain(frame, cube, strengthen, vec![])
+    }
+
     pub fn inductive_core(&mut self) -> Cube {
         let last_ind = take(&mut self.last_ind);
         let block = match last_ind.unwrap() {
@@ -538,6 +545,20 @@ impl IC3 {
         let mut ordered_cube = cube.clone();
         self.activity.sort_by_activity(&mut ordered_cube, ascending);
         self.gipsat.inductive(frame, &ordered_cube, strengthen)
+    }
+
+    pub fn blocked_with_ordered_with_constrain(
+        &mut self,
+        frame: usize,
+        cube: &Cube,
+        ascending: bool,
+        strengthen: bool,
+        constrain: Vec<Clause>,
+    ) -> bool {
+        let mut ordered_cube = cube.clone();
+        self.activity.sort_by_activity(&mut ordered_cube, ascending);
+        self.gipsat
+            .inductive_with_constrain(frame, &ordered_cube, strengthen, constrain)
     }
 
     pub fn new_var(&mut self) -> Var {
