@@ -1,46 +1,10 @@
-use crate::{
-    gipsat::{CRef, CREF_NONE},
-    IC3,
-};
-use logic_form::{Cube, LitSet};
+use crate::{gipsat::CREF_NONE, IC3};
+use logic_form::{Cube, Lemma, LitSet};
 use std::{
     ops::{Deref, DerefMut},
     rc::Rc,
 };
 use transys::Transys;
-
-#[derive(Debug, Clone)]
-pub struct Lemma {
-    pub lemma: logic_form::Lemma,
-    pub begin: usize,
-    pub cref: Vec<CRef>,
-}
-
-impl Deref for Lemma {
-    type Target = logic_form::Lemma;
-
-    #[inline]
-    fn deref(&self) -> &Self::Target {
-        &self.lemma
-    }
-}
-
-impl Lemma {
-    #[inline]
-    pub fn get_cref(&self, id: usize) -> CRef {
-        if id < self.begin {
-            CREF_NONE
-        } else {
-            self.cref[id - self.begin]
-        }
-    }
-
-    #[inline]
-    pub fn set_cref(&mut self, id: usize, cref: CRef) {
-        assert!(id >= self.begin);
-        self.cref[id - self.begin] = cref
-    }
-}
 
 #[derive(Clone)]
 pub struct Frame {
@@ -88,7 +52,7 @@ impl Frame {
         }
         for c in self.frames[frame - 1].iter() {
             if c.subsume(lemma) {
-                return Some(c.lemma.clone());
+                return Some(c.clone());
             }
         }
         None
@@ -105,7 +69,7 @@ impl Frame {
         }
         for c in self.frames[frame - 1].iter() {
             if c.subsume(lemma) {
-                res.push(c.lemma.clone());
+                res.push(c.clone());
             }
         }
         res
@@ -142,11 +106,7 @@ impl IC3 {
         if frame == 0 {
             assert!(self.frame.len() == 1);
             assert!(self.gipsat.solvers[0].add_lemma(&!lemma.cube()) == CREF_NONE);
-            self.frame[0].push(Lemma {
-                lemma,
-                cref: Vec::new(),
-                begin: 1,
-            });
+            self.frame[0].push(lemma);
             return;
         }
         if self.frame.trivial_contained(frame, &lemma).is_some() {
@@ -160,12 +120,10 @@ impl IC3 {
                 let l = &self.frame[i][j];
                 if begin.is_none() && l.subsume(&lemma) {
                     if l.eq(&lemma) {
-                        let mut eq_lemma = self.frame[i].swap_remove(j);
+                        let eq_lemma = self.frame[i].swap_remove(j);
                         let clause = !lemma.cube();
                         for k in i + 1..=frame {
-                            eq_lemma
-                                .cref
-                                .push(self.gipsat.solvers[k].add_lemma(&clause));
+                            self.gipsat.solvers[k].add_lemma(&clause);
                         }
                         self.frame[frame].push(eq_lemma);
                         self.frame.early = self.frame.early.min(i + 1);
@@ -176,12 +134,6 @@ impl IC3 {
                     }
                 }
                 if lemma.subsume(l) {
-                    for k in l.begin..=i {
-                        let cref = l.get_cref(k);
-                        if cref != CREF_NONE {
-                            self.gipsat.solvers[k].remove_lemma(cref);
-                        }
-                    }
                     self.frame[i].swap_remove(j);
                     continue;
                 }
@@ -190,11 +142,10 @@ impl IC3 {
         }
         let clause = !lemma.cube();
         let begin = begin.unwrap_or(1);
-        let mut cref = Vec::new();
         for i in begin..=frame {
-            cref.push(self.gipsat.solvers[i].add_lemma(&clause))
+            self.gipsat.solvers[i].add_lemma(&clause);
         }
-        self.frame[frame].push(Lemma { lemma, cref, begin });
+        self.frame[frame].push(lemma);
         self.frame.early = self.frame.early.min(begin);
     }
 }

@@ -121,7 +121,7 @@ impl IC3 {
             self.frame[frame_idx].sort_by_key(|x| x.len());
             let frame = self.frame[frame_idx].clone();
             for lemma in frame {
-                if self.frame[frame_idx].iter().all(|l| l.lemma != lemma.lemma) {
+                if self.frame[frame_idx].iter().all(|l| l.ne(&lemma)) {
                     continue;
                 }
                 if self.blocked_with_ordered(frame_idx + 1, &lemma, false, false) {

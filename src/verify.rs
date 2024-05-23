@@ -41,7 +41,7 @@ impl IC3 {
         let mut invariants = Vec::new();
         for i in invariant..self.frame.len() {
             for cube in self.frame[i].iter() {
-                invariants.push(cube.lemma.clone());
+                invariants.push(cube.clone());
             }
         }
         if !self.verify_invariant(&invariants) {

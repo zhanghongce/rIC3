@@ -33,7 +33,7 @@ use utils::Lbool;
 use vsids::Vsids;
 
 pub struct Solver {
-    id: Option<usize>,
+    _id: Option<usize>,
     cdb: ClauseDB,
     watchers: Watchers,
     value: Value,
@@ -53,7 +53,7 @@ pub struct Solver {
     constrain_act: Var,
 
     ts: Rc<Transys>,
-    frame: Frame,
+    _frame: Frame,
 
     rng: StdRng,
     statistic: SolverStatistic,
@@ -62,9 +62,9 @@ pub struct Solver {
 impl Solver {
     pub fn new(id: Option<usize>, ts: &Rc<Transys>, frame: &Frame) -> Self {
         let mut solver = Self {
-            id,
+            _id: id,
             ts: ts.clone(),
-            frame: frame.clone(),
+            _frame: frame.clone(),
             cdb: Default::default(),
             watchers: Default::default(),
             value: Default::default(),
@@ -177,14 +177,6 @@ impl Solver {
             }
         }
         self.add_clause_inner(lemma, ClauseKind::Lemma)
-    }
-
-    #[inline]
-    pub fn remove_lemma(&mut self, cref: CRef) {
-        self.reset();
-        if !self.locked(cref) {
-            self.remove_clause(cref)
-        }
     }
 
     fn reset(&mut self) {

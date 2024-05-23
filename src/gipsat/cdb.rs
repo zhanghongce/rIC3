@@ -228,6 +228,7 @@ pub enum ClauseKind {
 
 pub struct ClauseDB {
     allocator: Allocator,
+    lemmas: Gvec<CRef>,
     trans: Gvec<CRef>,
     learnt: Gvec<CRef>,
     temporary: Gvec<CRef>,
@@ -249,7 +250,7 @@ impl ClauseDB {
         );
         match kind {
             ClauseKind::Trans => self.trans.push(cid),
-            ClauseKind::Lemma => (),
+            ClauseKind::Lemma => self.lemmas.push(cid),
             ClauseKind::Learnt => self.learnt.push(cid),
             ClauseKind::Temporary => self.temporary.push(cid),
         }
@@ -296,6 +297,7 @@ impl Default for ClauseDB {
     fn default() -> Self {
         Self {
             allocator: Default::default(),
+            lemmas: Default::default(),
             trans: Default::default(),
             learnt: Default::default(),
             temporary: Default::default(),
@@ -390,6 +392,8 @@ impl Solver {
 
     pub fn simplify_satisfied(&mut self) {
         assert!(self.highest_level() == 0);
+        let lemmas = take(&mut self.cdb.lemmas);
+        self.cdb.lemmas = self.simplify_clauses(lemmas);
         let learnt = take(&mut self.cdb.learnt);
         self.cdb.learnt = self.simplify_clauses(learnt);
         let trans = take(&mut self.cdb.trans);
@@ -408,21 +412,11 @@ impl Solver {
                 }
             }
 
-            if let Some(id) = self.id {
-                for i in id..self.frame.len() {
-                    for l in self.frame[i].iter_mut() {
-                        let cref = l.get_cref(id);
-                        if cref != CREF_NONE {
-                            l.set_cref(id, self.cdb.allocator.reloc(cref, &mut to));
-                        }
-                    }
-                }
-            }
-
             let cls = self
                 .cdb
                 .trans
                 .iter_mut()
+                .chain(self.cdb.lemmas.iter_mut())
                 .chain(self.cdb.learnt.iter_mut())
                 .chain(self.cdb.temporary.iter_mut());
 
