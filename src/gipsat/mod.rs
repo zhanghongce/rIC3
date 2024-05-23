@@ -189,7 +189,7 @@ impl Solver {
     fn new_round(
         &mut self,
         domain: impl Iterator<Item = Var>,
-        constrain: Option<Clause>,
+        constrain: Vec<Clause>,
         bucket: bool,
     ) -> bool {
         self.backtrack(0, self.temporary_domain);
@@ -202,13 +202,15 @@ impl Solver {
         // dbg!(self.cdb.num_leanrt());
         // dbg!(self.cdb.num_lemma());
 
-        if let Some(mut constrain) = constrain {
-            constrain.push(!self.constrain_act.lit());
-            if let Some(constrain) = self.simplify_clause(&constrain) {
-                if constrain.len() == 1 {
-                    return false;
+        if !constrain.is_empty() {
+            for mut c in constrain {
+                c.push(!self.constrain_act.lit());
+                if let Some(c) = self.simplify_clause(&c) {
+                    if c.len() == 1 {
+                        return false;
+                    }
+                    self.add_clause_inner(&c, ClauseKind::Temporary);
                 }
-                self.add_clause_inner(&constrain, ClauseKind::Temporary);
             }
         }
 
@@ -232,7 +234,7 @@ impl Solver {
     pub fn solve_with_domain(
         &mut self,
         assump: &[Lit],
-        constrain: Option<Clause>,
+        constrain: Vec<Clause>,
         bucket: bool,
     ) -> SatResult<Sat, Unsat> {
         assert!(!assump.is_empty());
@@ -240,14 +242,19 @@ impl Solver {
             assert!(bucket);
         }
         let mut assumption;
-        let assump = if let Some(constrain) = constrain {
+        let assump = if !constrain.is_empty() {
             assumption = Cube::new();
             assumption.push(self.constrain_act.lit());
             assumption.extend_from_slice(assump);
-            let cc = constrain.clone();
+            let mut cc = Vec::new();
+            for c in constrain.iter() {
+                for l in c.iter() {
+                    cc.push(*l);
+                }
+            }
             if !self.new_round(
                 assump.iter().chain(cc.iter()).map(|l| l.var()),
-                Some(constrain),
+                constrain,
                 bucket,
             ) {
                 self.unsat_core.clear();
@@ -255,7 +262,7 @@ impl Solver {
             };
             &assumption
         } else {
-            assert!(self.new_round(assump.iter().map(|l| l.var()), None, bucket));
+            assert!(self.new_round(assump.iter().map(|l| l.var()), vec![], bucket));
             assump
         };
         self.statistic.num_solve += 1;
@@ -368,7 +375,10 @@ impl GipSAT {
         self.statistic.num_sat += 1;
         let solver_idx = frame - 1;
         let assumption = self.ts.cube_next(cube);
-        let constrain = strengthen.then_some(Clause::from_iter(cube.iter().map(|l| !*l)));
+        let mut constrain = Vec::new();
+        if strengthen {
+            constrain.push(Clause::from_iter(cube.iter().map(|l| !*l)));
+        }
         self.last_ind = Some(
             match self.solvers[solver_idx].solve_with_domain(&assumption, constrain, true) {
                 SatResult::Sat(sat) => BlockResult::No(BlockResultNo { sat, assumption }),
@@ -451,7 +461,8 @@ impl GipSAT {
         let solver = unsafe { &*unblock.sat.solver };
         solver.vsids.activity.sort_by_activity(&mut latchs, false);
         assumption.extend_from_slice(&latchs);
-        let res: Cube = match self.lift.solve_with_domain(&assumption, Some(cls), false) {
+        let cls = vec![cls];
+        let res: Cube = match self.lift.solve_with_domain(&assumption, cls, false) {
             SatResult::Sat(_) => panic!(),
             SatResult::Unsat(conflict) => latchs.into_iter().filter(|l| conflict.has(*l)).collect(),
         };
@@ -466,7 +477,7 @@ impl GipSAT {
                 .solvers
                 .last_mut()
                 .unwrap()
-                .solve_with_domain(&self.ts.bad, None, false)
+                .solve_with_domain(&self.ts.bad, vec![], false)
             {
                 SatResult::Sat(sat) => {
                     self.last_ind = Some(BlockResult::No(BlockResultNo {
