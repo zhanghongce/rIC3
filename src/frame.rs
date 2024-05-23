@@ -46,13 +46,12 @@ impl Lemma {
 pub struct Frame {
     frames: Rc<Vec<Vec<Lemma>>>,
     pub early: usize,
-    tmp_lit_set: Rc<LitSet>,
+    pub tmp_lit_set: Rc<LitSet>,
 }
 
 impl Frame {
     pub fn new(ts: &Rc<Transys>) -> Self {
         let mut tmp_lit_set = LitSet::new();
-        tmp_lit_set.reserve(ts.max_latch);
         tmp_lit_set.reserve(ts.max_latch);
         Self {
             frames: Default::default(),

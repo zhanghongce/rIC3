@@ -15,7 +15,7 @@ use analyze::Analyze;
 use cdb::{ClauseDB, ClauseKind};
 use domain::Domain;
 use giputils::gvec::Gvec;
-use logic_form::{Clause, Cube, Lit, LitSet, Var, VarMap};
+use logic_form::{Clause, Cnf, Cube, Lit, LitSet, Var, VarMap};
 use propagate::Watchers;
 use rand::{rngs::StdRng, SeedableRng};
 use satif::{SatResult, SatifSat, SatifUnsat};
@@ -106,6 +106,7 @@ impl Solver {
     }
 
     pub fn new_var(&mut self) -> Var {
+        self.reset();
         let v = self.constrain_act;
         let var = Var::new(self.num_var() + 1);
         self.value.reserve(var);
@@ -171,6 +172,9 @@ impl Solver {
         self.reset();
         for l in lemma.iter() {
             self.domain.lemma.insert(l.var());
+            for d in self.ts.dependence[l.var()].iter() {
+                self.domain.lemma.insert(*d);
+            }
         }
         self.add_clause_inner(lemma, ClauseKind::Lemma)
     }
@@ -536,11 +540,33 @@ impl IC3 {
     pub fn new_var(&mut self) -> Var {
         let ts = unsafe { Rc::get_mut_unchecked(&mut self.ts) };
         let var = ts.new_var();
-        for s in self.gipsat.solvers.iter_mut() {}
-        todo!()
+        for s in self.gipsat.solvers.iter_mut() {
+            assert!(var == s.new_var());
+        }
+        assert!(var == self.gipsat.lift.new_var());
+        var
     }
 
-    pub fn add_latch(&mut self) {
-        todo!()
+    pub fn add_latch(
+        &mut self,
+        state: Var,
+        next: Lit,
+        init: Option<bool>,
+        trans: Cnf,
+        dep: Vec<Var>,
+        dep_next: Vec<Var>,
+    ) {
+        let ts = unsafe { Rc::get_mut_unchecked(&mut self.ts) };
+        ts.add_latch(state, next, init, trans.clone(), dep, dep_next);
+        let tmp_lit_set = unsafe { Rc::get_mut_unchecked(&mut self.frame.tmp_lit_set) };
+        tmp_lit_set.reserve(self.ts.max_latch);
+        for s in self.gipsat.solvers.iter_mut() {
+            for cls in trans.iter() {
+                s.add_clause_inner(cls, ClauseKind::Trans);
+            }
+        }
+        for cls in trans.iter() {
+            self.gipsat.lift.add_clause_inner(cls, ClauseKind::Trans);
+        }
     }
 }
