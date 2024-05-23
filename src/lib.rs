@@ -51,8 +51,7 @@ impl IC3 {
         }
     }
 
-    fn generalize(&mut self, frame: usize, cube: Cube) -> (usize, Cube) {
-        let mut cube = self.mic(frame, cube, 0);
+    fn push_lemma(&mut self, frame: usize, mut cube: Cube) -> (usize, Cube) {
         for i in frame + 1..=self.level() {
             if self.gipsat.inductive(i, &cube, true) {
                 cube = self.gipsat.inductive_core();
@@ -64,24 +63,15 @@ impl IC3 {
     }
 
     fn handle_blocked(&mut self, mut po: ProofObligation) {
-        let conflict = self.gipsat.inductive_core();
-        let (frame, core) = self.generalize(po.frame, conflict);
+        let mut mic = self.gipsat.inductive_core();
+        mic = self.mic(po.frame, mic, 0);
+        let (frame, mic) = self.push_lemma(po.frame, mic);
         self.statistic.avg_po_cube_len += po.lemma.len();
         po.frame = frame;
         po.num_unblock = 0;
         self.add_obligation(po);
-        self.add_lemma(frame - 1, core);
+        self.add_lemma(frame - 1, mic);
     }
-
-    // pub fn check_witness(&mut self) {
-    //     let mut witness = Vec::new();
-    //     let mut bad = self.obligations.pop(0).unwrap();
-    //     witness.push(bad.clone());
-    //     while bad.next.is_some() {
-    //         bad = bad.next.clone().unwrap();
-    //         witness.push(bad.clone());
-    //     }
-    // }
 
     fn block(&mut self) -> bool {
         while let Some(mut po) = self.obligations.pop(self.level()) {

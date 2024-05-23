@@ -73,14 +73,12 @@ impl Solver {
         let mut restarts = 0;
         let rest_base = luby(2.0, restarts);
         loop {
-            if restarts > 10 {
-                if self.vsids.enable_bucket {
-                    self.vsids.enable_bucket = false;
-                    self.vsids.heap.clear();
-                    for d in self.domain.domains() {
-                        if self.value.v(d.lit()).is_none() {
-                            self.vsids.push(*d);
-                        }
+            if restarts > 10 && self.vsids.enable_bucket {
+                self.vsids.enable_bucket = false;
+                self.vsids.heap.clear();
+                for d in self.domain.domains() {
+                    if self.value.v(d.lit()).is_none() {
+                        self.vsids.push(*d);
                     }
                 }
             }

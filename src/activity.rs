@@ -10,8 +10,8 @@ pub struct Activity {
 impl Activity {
     pub fn new(var: &[Var]) -> Self {
         let mut activity = VarMap::new();
-        for i in 0..var.len() {
-            activity.reserve(var[i]);
+        for v in var.iter() {
+            activity.reserve(*v);
         }
         Self {
             activity,
