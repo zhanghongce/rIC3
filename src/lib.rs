@@ -92,7 +92,7 @@ impl IC3 {
             if self.blocked_with_ordered(po.frame, &po.lemma, false, false) {
                 self.handle_blocked(po);
             } else {
-                let model = self.gipsat.get_predecessor();
+                let model = self.get_predecessor();
                 self.add_obligation(ProofObligation::new(
                     po.frame - 1,
                     Lemma::new(model),
@@ -162,7 +162,7 @@ impl IC3 {
                     return false;
                 }
                 if self.gipsat.has_bad() {
-                    let bad = Lemma::new(self.gipsat.get_predecessor());
+                    let bad = Lemma::new(self.get_predecessor());
                     self.add_obligation(ProofObligation::new(self.level(), bad, 0, None))
                 } else {
                     break;

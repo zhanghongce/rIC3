@@ -438,44 +438,6 @@ impl GipSAT {
         unblock.lit_value(lit)
     }
 
-    /// get the predecessor
-    pub fn get_predecessor(&mut self) -> Cube {
-        let last_ind = take(&mut self.last_ind);
-        let BlockResult::No(unblock) = last_ind.unwrap() else {
-            panic!()
-        };
-        let mut assumption = Cube::new();
-        let mut cls = unblock.assumption.clone();
-        cls.extend_from_slice(&self.ts.constraints);
-        let cls = !cls;
-        for input in self.ts.inputs.iter() {
-            let lit = input.lit();
-            match unblock.sat.lit_value(lit) {
-                Some(true) => assumption.push(lit),
-                Some(false) => assumption.push(!lit),
-                None => (),
-            }
-        }
-        let mut latchs = Cube::new();
-        for latch in self.ts.latchs.iter() {
-            let lit = latch.lit();
-            match unblock.sat.lit_value(lit) {
-                Some(true) => latchs.push(lit),
-                Some(false) => latchs.push(!lit),
-                None => (),
-            }
-        }
-        let solver = unsafe { &*unblock.sat.solver };
-        solver.vsids.activity.sort_by_activity(&mut latchs, false);
-        assumption.extend_from_slice(&latchs);
-        let cls = vec![cls];
-        let res: Cube = match self.lift.solve_with_domain(&assumption, cls, false) {
-            SatResult::Sat(_) => panic!(),
-            SatResult::Unsat(conflict) => latchs.into_iter().filter(|l| conflict.has(*l)).collect(),
-        };
-        res
-    }
-
     pub fn has_bad(&mut self) -> bool {
         let start = Instant::now();
         self.statistic.num_sat += 1;
@@ -559,6 +521,43 @@ impl IC3 {
         self.activity.sort_by_activity(&mut ordered_cube, ascending);
         self.gipsat
             .inductive_with_constrain(frame, &ordered_cube, strengthen, constrain)
+    }
+
+    /// get the predecessor
+    pub fn get_predecessor(&mut self) -> Cube {
+        let last_ind = take(&mut self.gipsat.last_ind);
+        let BlockResult::No(unblock) = last_ind.unwrap() else {
+            panic!()
+        };
+        let mut assumption = Cube::new();
+        let mut cls = unblock.assumption.clone();
+        cls.extend_from_slice(&self.ts.constraints);
+        let cls = !cls;
+        for input in self.ts.inputs.iter() {
+            let lit = input.lit();
+            match unblock.sat.lit_value(lit) {
+                Some(true) => assumption.push(lit),
+                Some(false) => assumption.push(!lit),
+                None => (),
+            }
+        }
+        let mut latchs = Cube::new();
+        for latch in self.ts.latchs.iter() {
+            let lit = latch.lit();
+            match unblock.sat.lit_value(lit) {
+                Some(true) => latchs.push(lit),
+                Some(false) => latchs.push(!lit),
+                None => (),
+            }
+        }
+        self.activity.sort_by_activity(&mut latchs, false);
+        assumption.extend_from_slice(&latchs);
+        let cls = vec![cls];
+        let res: Cube = match self.gipsat.lift.solve_with_domain(&assumption, cls, false) {
+            SatResult::Sat(_) => panic!(),
+            SatResult::Unsat(conflict) => latchs.into_iter().filter(|l| conflict.has(*l)).collect(),
+        };
+        res
     }
 
     pub fn new_var(&mut self) -> Var {
