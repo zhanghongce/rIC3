@@ -12,7 +12,6 @@ pub struct ProofObligationInner {
     pub depth: usize,
     pub next: Option<ProofObligation>,
     pub num_unblock: usize,
-    pub abs: Lemma,
 }
 
 impl PartialEq for ProofObligationInner {
@@ -32,7 +31,6 @@ impl Debug for ProofObligationInner {
             .field("lemma", &self.lemma)
             .field("depth", &self.depth)
             .field("num_unblock", &self.num_unblock)
-            .field("abs", &self.abs)
             .finish()
     }
 }
@@ -51,7 +49,6 @@ impl ProofObligation {
                 depth,
                 next,
                 num_unblock: 0,
-                abs: Default::default(),
             }),
         }
     }
