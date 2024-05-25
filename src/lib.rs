@@ -62,7 +62,7 @@ impl IC3 {
         (self.level() + 1, cube)
     }
 
-    fn handle_blocked(&mut self, mut po: ProofObligation) {
+    fn generalize(&mut self, mut po: ProofObligation) {
         let mut mic = self.gipsat.inductive_core();
         mic = self.mic(po.frame, mic, 0);
         let (frame, mic) = self.push_lemma(po.frame, mic);
@@ -90,7 +90,7 @@ impl IC3 {
                 continue;
             }
             if self.blocked_with_ordered(po.frame, &po.lemma, false, false) {
-                self.handle_blocked(po);
+                self.generalize(po);
             } else {
                 let model = self.get_predecessor();
                 self.add_obligation(ProofObligation::new(
