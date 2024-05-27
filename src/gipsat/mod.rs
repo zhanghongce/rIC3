@@ -172,8 +172,15 @@ impl Solver {
         self.reset();
         for l in lemma.iter() {
             self.domain.lemma.insert(l.var());
-            for d in self.ts.dependence[l.var()].iter() {
-                self.domain.lemma.insert(*d);
+            let mut queue = Vec::new();
+            queue.push(l.var());
+            while let Some(v) = queue.pop() {
+                for d in self.ts.dependence[v].iter() {
+                    if !self.domain.lemma.has(*d) {
+                        self.domain.lemma.insert(*d);
+                        queue.push(*d);
+                    }
+                }
             }
         }
         self.add_clause_inner(lemma, ClauseKind::Lemma)
