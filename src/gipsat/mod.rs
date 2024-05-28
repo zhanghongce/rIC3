@@ -297,7 +297,7 @@ impl Solver {
         self.temporary_domain = false;
     }
 
-    pub fn flippable(&mut self, var: Var) -> bool {
+    pub fn flippable(&self, var: Var) -> bool {
         if self.level[var] == 0 {
             return false;
         }
@@ -305,11 +305,14 @@ impl Solver {
         let l = match self.value.v(l) {
             Lbool::TRUE => l,
             Lbool::FALSE => !l,
-            _ => panic!(),
+            _ => return true,
         };
-        for w in self.watchers.wtrs[l].iter() {
+        for w in self.watchers.wtrs[!l].iter() {
             let clause = self.cdb.get(w.clause);
             if clause[0].var() == l.var() {
+                return false;
+            }
+            if self.value.v(clause[0]).is_false() {
                 return false;
             }
         }
@@ -571,8 +574,7 @@ impl IC3 {
         for latch in self.ts.latchs.iter() {
             let lit = latch.lit();
             match unblock.sat.lit_value(lit) {
-                Some(true) => latchs.push(lit),
-                Some(false) => latchs.push(!lit),
+                Some(v) => latchs.push(lit.not_if(!v)),
                 None => (),
             }
         }
