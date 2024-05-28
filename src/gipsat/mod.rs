@@ -296,6 +296,25 @@ impl Solver {
     pub fn unset_domain(&mut self) {
         self.temporary_domain = false;
     }
+
+    pub fn flippable(&mut self, var: Var) -> bool {
+        if self.level[var] == 0 {
+            return false;
+        }
+        let l = var.lit();
+        let l = match self.value.v(l) {
+            Lbool::TRUE => l,
+            Lbool::FALSE => !l,
+            _ => panic!(),
+        };
+        for w in self.watchers.wtrs[l].iter() {
+            let clause = self.cdb.get(w.clause);
+            if clause[0].var() == l.var() {
+                return false;
+            }
+        }
+        true
+    }
 }
 
 pub struct Sat {

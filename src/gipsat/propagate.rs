@@ -9,7 +9,7 @@ use logic_form::{Lit, LitMap, Var};
 #[derive(Clone, Copy, Debug, Default)]
 pub struct Watcher {
     pub clause: CRef,
-    blocker: Lit,
+    pub blocker: Lit,
 }
 
 impl Watcher {
