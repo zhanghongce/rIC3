@@ -55,6 +55,8 @@ impl IC3 {
                         if !self.gipsat.solvers[frame - 1].flip_to_none(lit.var()) {
                             cube_new.push(lit);
                             continue;
+                        } else {
+                            self.statistic.a += 1;
                         }
                     }
                     if keep.contains(&lit) {
