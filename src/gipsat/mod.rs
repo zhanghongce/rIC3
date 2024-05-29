@@ -296,28 +296,6 @@ impl Solver {
     pub fn unset_domain(&mut self) {
         self.temporary_domain = false;
     }
-
-    pub fn flippable(&self, var: Var) -> bool {
-        if self.level[var] == 0 {
-            return false;
-        }
-        let l = var.lit();
-        let l = match self.value.v(l) {
-            Lbool::TRUE => l,
-            Lbool::FALSE => !l,
-            _ => return true,
-        };
-        for w in self.watchers.wtrs[!l].iter() {
-            let clause = self.cdb.get(w.clause);
-            if clause[0].var() == l.var() {
-                return false;
-            }
-            if self.value.v(clause[0]).is_false() {
-                return false;
-            }
-        }
-        true
-    }
 }
 
 pub struct Sat {
@@ -573,9 +551,8 @@ impl IC3 {
         let mut latchs = Cube::new();
         for latch in self.ts.latchs.iter() {
             let lit = latch.lit();
-            match unblock.sat.lit_value(lit) {
-                Some(v) => latchs.push(lit.not_if(!v)),
-                None => (),
+            if let Some(v) = unblock.sat.lit_value(lit) {
+                latchs.push(lit.not_if(!v))
             }
         }
         self.activity.sort_by_activity(&mut latchs, false);
