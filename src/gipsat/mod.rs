@@ -23,6 +23,7 @@ use search::Value;
 use simplify::Simplify;
 use statistic::{GipSATStatistic, SolverStatistic};
 use std::{
+    collections::HashSet,
     mem::take,
     ops::{Deref, DerefMut},
     rc::Rc,
@@ -370,7 +371,6 @@ impl GipSAT {
         }
     }
 
-    /// get the highest level of GipSAT
     #[inline]
     pub fn level(&self) -> usize {
         self.solvers.len() - 1
@@ -530,7 +530,6 @@ impl IC3 {
             .inductive_with_constrain(frame, &ordered_cube, strengthen, constrain)
     }
 
-    /// get the predecessor
     pub fn get_predecessor(&mut self) -> Cube {
         let last_ind = take(&mut self.gipsat.last_ind);
         let BlockResult::No(unblock) = last_ind.unwrap() else {
@@ -539,6 +538,7 @@ impl IC3 {
         let mut assumption = Cube::new();
         let mut cls = unblock.assumption.clone();
         cls.extend_from_slice(&self.ts.constraints);
+        let in_cls: HashSet<Var> = HashSet::from_iter(cls.iter().map(|l| l.var()));
         let cls = !cls;
         for input in self.ts.inputs.iter() {
             let lit = input.lit();
@@ -553,10 +553,8 @@ impl IC3 {
             let lit = latch.lit();
             if let Some(v) = unblock.sat.lit_value(lit) {
                 let solver = unsafe { &mut *unblock.sat.solver };
-                if !solver.flip_to_none(*latch) {
-                    latchs.push(lit.not_if(!v))
-                } else {
-                    self.statistic.a += 1;
+                if in_cls.contains(latch) || !solver.flip_to_none(*latch) {
+                    latchs.push(lit.not_if(!v));
                 }
             }
         }
