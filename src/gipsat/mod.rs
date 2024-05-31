@@ -552,7 +552,12 @@ impl IC3 {
         for latch in self.ts.latchs.iter() {
             let lit = latch.lit();
             if let Some(v) = unblock.sat.lit_value(lit) {
-                latchs.push(lit.not_if(!v))
+                let solver = unsafe { &mut *unblock.sat.solver };
+                if !solver.flip_to_none(*latch) {
+                    latchs.push(lit.not_if(!v))
+                } else {
+                    self.statistic.a += 1;
+                }
             }
         }
         self.activity.sort_by_activity(&mut latchs, false);
