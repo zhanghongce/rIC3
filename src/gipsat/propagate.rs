@@ -80,18 +80,20 @@ impl Solver {
                 }
                 debug_assert!(cref[1] == !p);
                 let new_watcher = Watcher::new(cid, cref[0]);
-                match self.value.v(cref[0]) {
-                    Lbool::TRUE => {
-                        watchers[w] = new_watcher;
-                        w += 1;
-                        continue;
-                    }
-                    Lbool::FALSE => (),
-                    _ => {
-                        if !propagate_full && !self.domain.has(cref[0].var()) {
+                if cref[0] != blocker {
+                    match self.value.v(cref[0]) {
+                        Lbool::TRUE => {
                             watchers[w] = new_watcher;
                             w += 1;
                             continue;
+                        }
+                        Lbool::FALSE => (),
+                        _ => {
+                            if !propagate_full && !self.domain.has(cref[0].var()) {
+                                watchers[w] = new_watcher;
+                                w += 1;
+                                continue;
+                            }
                         }
                     }
                 }

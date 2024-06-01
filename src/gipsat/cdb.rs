@@ -346,6 +346,9 @@ impl Solver {
         if (self.highest_level() == 0 && self.cdb.learnt.len() * 15 >= self.cdb.trans.len())
             || self.cdb.learnt.len() * 3 >= self.cdb.trans.len()
         {
+            // dbg!(self.highest_level());
+            // dbg!(self.cdb.learnt.len());
+            // dbg!(self.cdb.trans.len());
             self.cdb.learnt.sort_unstable_by(|a, b| {
                 self.cdb
                     .allocator
@@ -364,6 +367,7 @@ impl Solver {
                     self.cdb.learnt.push(l);
                 }
             }
+            // dbg!(self.cdb.learnt.len());
         }
     }
 
