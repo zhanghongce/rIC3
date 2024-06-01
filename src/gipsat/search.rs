@@ -71,7 +71,6 @@ impl Solver {
 
     pub fn search_with_restart(&mut self, assumption: &[Lit]) -> SatResult<Sat, Unsat> {
         let mut restarts = 0;
-        let rest_base = luby(2.0, restarts);
         loop {
             if restarts > 10 && self.vsids.enable_bucket {
                 self.vsids.enable_bucket = false;
@@ -82,6 +81,7 @@ impl Solver {
                     }
                 }
             }
+            let rest_base = luby(2.0, restarts);
             match self.search(assumption, Some(rest_base * 100.0)) {
                 Some(true) => return SatResult::Sat(Sat { solver: self }),
                 Some(false) => return SatResult::Unsat(Unsat { solver: self }),
