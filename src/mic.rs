@@ -51,14 +51,18 @@ impl IC3 {
                 // let cex_set: HashSet<Lit> = HashSet::from_iter(model);
                 let mut cube_new = Cube::new();
                 for lit in cube {
-                    if let Some(true) = self.gipsat.unblocked_value(lit) {
-                        if !self.gipsat.solvers[frame - 1].flip_to_none(lit.var()) {
-                            cube_new.push(lit);
-                            continue;
-                        }
-                    }
                     if keep.contains(&lit) {
-                        return DownResult::Fail;
+                        if let Some(true) = self.gipsat.unblocked_value(lit) {
+                            cube_new.push(lit);
+                        } else {
+                            return DownResult::Fail;
+                        }
+                    } else {
+                        if let Some(true) = self.gipsat.unblocked_value(lit) {
+                            if !self.gipsat.solvers[frame - 1].flip_to_none(lit.var()) {
+                                cube_new.push(lit);
+                            }
+                        }
                     }
                 }
                 cube = cube_new;
