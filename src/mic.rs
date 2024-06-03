@@ -25,19 +25,11 @@ impl IC3 {
             if self.ts.cube_subsume_init(&cube) {
                 return DownResult::IncludeInit;
             }
-            // println!("down {:?}", cube);
             let lemma = Lemma::new(cube.clone());
-            let mut pred = false;
             for (s, t) in cex.iter() {
                 if !lemma.subsume(s) && lemma.subsume(t) {
-                    pred = true;
-                    self.statistic.num_pred += 1;
-                    break;
+                    return DownResult::Fail;
                 }
-            }
-            self.statistic.can_pred.statistic(pred);
-            if pred {
-                return DownResult::Fail;
             }
             if self.blocked_with_ordered(frame, &cube, false, true) {
                 return DownResult::Success(self.gipsat.inductive_core());
@@ -88,7 +80,6 @@ impl IC3 {
                 }
                 cube = cube_new;
 
-                let start = Instant::now();
                 let mut s = Cube::new();
                 let mut t = Cube::new();
                 for l in full.iter() {
@@ -102,7 +93,6 @@ impl IC3 {
                         t.push(l.not_if(!v));
                     }
                 }
-                self.statistic.pred_time_b += start.elapsed();
                 cex.push((Lemma::new(s), Lemma::new(t)));
                 if ret {
                     return DownResult::Fail;

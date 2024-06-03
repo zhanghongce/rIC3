@@ -17,11 +17,6 @@ pub struct Statistic {
     pub overall_mic_time: Duration,
     pub overall_block_time: Duration,
     pub overall_propagate_time: Duration,
-
-    pub num_pred: usize,
-    pub can_pred: SuccessRate,
-    pub pred_time_a: Duration,
-    pub pred_time_b: Duration,
 }
 
 impl Statistic {
