@@ -210,15 +210,13 @@ impl Solver {
         // dbg!(self.cdb.num_leanrt());
         // dbg!(self.cdb.num_lemma());
 
-        if !constrain.is_empty() {
-            for mut c in constrain {
-                c.push(!self.constrain_act.lit());
-                if let Some(c) = self.simplify_clause(&c) {
-                    if c.len() == 1 {
-                        return false;
-                    }
-                    self.add_clause_inner(&c, ClauseKind::Temporary);
+        for mut c in constrain {
+            c.push(!self.constrain_act.lit());
+            if let Some(c) = self.simplify_clause(&c) {
+                if c.len() == 1 {
+                    return false;
                 }
+                self.add_clause_inner(&c, ClauseKind::Temporary);
             }
         }
 
