@@ -133,7 +133,7 @@ impl IC3 {
         let aig = Aig::from_file(args.model.as_ref().unwrap()).unwrap();
         let ts = Rc::new(Transys::from_aig(&aig));
         let statistic = Statistic::new(args.model.as_ref().unwrap());
-        let activity = Activity::new(&ts.latchs);
+        let activity = Activity::new(&ts);
         let frame = Frame::new(&ts);
         let gipsat = GipSAT::new(ts.clone(), frame.clone());
         let mut res = Self {

@@ -1,6 +1,7 @@
 use crate::IC3;
 use logic_form::{Cube, Lit, Var, VarMap};
-use std::collections::HashMap;
+use std::{collections::HashMap, ops::MulAssign};
+use transys::Transys;
 
 pub struct Activity {
     activity: VarMap<f64>,
@@ -8,11 +9,9 @@ pub struct Activity {
 }
 
 impl Activity {
-    pub fn new(var: &[Var]) -> Self {
+    pub fn new(ts: &Transys) -> Self {
         let mut activity = VarMap::new();
-        for v in var.iter() {
-            activity.reserve(*v);
-        }
+        activity.reserve(ts.max_latch);
         Self {
             activity,
             act_inc: 1.0,
@@ -22,13 +21,15 @@ impl Activity {
     #[inline]
     fn bump(&mut self, var: Var) {
         self.activity[var] += self.act_inc;
+        if self.activity[var] > 1e100 {
+            self.activity.iter_mut().for_each(|a| a.mul_assign(1e-100));
+            self.act_inc *= 1e-100;
+        }
     }
 
     #[inline]
     pub fn decay(&mut self) {
-        for act in self.activity.iter_mut() {
-            *act *= 0.9;
-        }
+        self.act_inc *= 1.0 / 0.9
     }
 
     pub fn bump_cube_activity(&mut self, cube: &Cube) {
