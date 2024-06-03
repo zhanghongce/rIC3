@@ -1,5 +1,5 @@
 use super::IC3;
-use logic_form::{Cube, Lit};
+use logic_form::{Cube, Lemma, Lit};
 use std::{collections::HashSet, time::Instant};
 
 enum DownResult {
@@ -15,13 +15,30 @@ impl IC3 {
         cube: &Cube,
         keep: &HashSet<Lit>,
         _level: usize,
+        full: &Cube,
+        cex: &mut Vec<(Lemma, Lemma)>,
     ) -> DownResult {
         let mut cube = cube.clone();
         self.statistic.num_down += 1;
         // let mut ctgs = 0;
+        // println!("full {:?}", full);
         loop {
             if self.ts.cube_subsume_init(&cube) {
                 return DownResult::IncludeInit;
+            }
+            // println!("down {:?}", cube);
+            let lemma = Lemma::new(cube.clone());
+            let mut pred = false;
+            for (s, t) in cex.iter() {
+                if !lemma.subsume(s) && lemma.subsume(t) {
+                    pred = true;
+                    self.statistic.num_pred += 1;
+                    break;
+                }
+            }
+            self.statistic.can_pred.statistic(pred);
+            if pred {
+                return DownResult::Fail;
             }
             if self.blocked_with_ordered(frame, &cube, false, true) {
                 return DownResult::Success(self.gipsat.inductive_core());
@@ -49,19 +66,45 @@ impl IC3 {
                 // }
                 // ctgs = 0;
                 // let cex_set: HashSet<Lit> = HashSet::from_iter(model);
+                let mut ret = false;
                 let mut cube_new = Cube::new();
+                let mut tried = HashSet::new();
                 for lit in cube {
                     if let Some(true) = self.gipsat.unblocked_value(lit) {
+                        tried.insert(lit);
                         if !self.gipsat.solvers[frame - 1].flip_to_none(lit.var()) {
                             cube_new.push(lit);
                             continue;
                         }
                     }
                     if keep.contains(&lit) {
-                        return DownResult::Fail;
+                        ret = true;
+                        break;
                     }
                 }
                 cube = cube_new;
+
+                let start = Instant::now();
+                let mut s = Cube::new();
+                let mut t = Cube::new();
+                for l in full.iter() {
+                    if let Some(v) = self.gipsat.unblocked_value(*l) {
+                        if tried.contains(l)
+                            || !self.gipsat.solvers[frame - 1].flip_to_none(l.var())
+                        {
+                            s.push(l.not_if(!v));
+                        }
+                    }
+                    let lt = self.ts.lit_next(*l);
+                    if let Some(v) = self.gipsat.unblocked_value(lt) {
+                        t.push(l.not_if(!v));
+                    }
+                }
+                self.statistic.pred_time_b += start.elapsed();
+                cex.push((Lemma::new(s), Lemma::new(t)));
+                if ret {
+                    return DownResult::Fail;
+                }
             }
         }
     }
@@ -89,6 +132,7 @@ impl IC3 {
     }
 
     pub fn mic(&mut self, frame: usize, mut cube: Cube, level: usize) -> Cube {
+        let mut cex = Vec::new();
         let start = Instant::now();
         self.gipsat.set_domain(
             frame - 1,
@@ -110,7 +154,7 @@ impl IC3 {
             }
             let mut removed_cube = cube.clone();
             removed_cube.remove(i);
-            match self.ctg_down(frame, &removed_cube, &keep, level) {
+            match self.ctg_down(frame, &removed_cube, &keep, level, &cube, &mut cex) {
                 DownResult::Success(new_cube) => {
                     self.statistic.mic_drop.success();
                     (cube, i) = self.handle_down_success(frame, cube, i, new_cube);
