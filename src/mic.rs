@@ -69,12 +69,10 @@ impl IC3 {
                             ret = true;
                             break;
                         }
-                    } else {
-                        if let Some(true) = self.gipsat.unblocked_value(lit) {
-                            if !self.gipsat.solvers[frame - 1].flip_to_none(lit.var()) {
-                                // tried.insert(lit);
-                                cube_new.push(lit);
-                            }
+                    } else if let Some(true) = self.gipsat.unblocked_value(lit) {
+                        if !self.gipsat.solvers[frame - 1].flip_to_none(lit.var()) {
+                            // tried.insert(lit);
+                            cube_new.push(lit);
                         }
                     }
                 }

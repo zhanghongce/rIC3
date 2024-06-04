@@ -559,11 +559,12 @@ impl IC3 {
         self.activity.sort_by_activity(&mut latchs, false);
         assumption.extend_from_slice(&latchs);
         let cls = vec![cls];
-        let res: Cube = match self.gipsat.lift.solve_with_domain(&assumption, cls, false) {
-            SatResult::Sat(_) => panic!(),
-            SatResult::Unsat(conflict) => latchs.into_iter().filter(|l| conflict.has(*l)).collect(),
+        let SatResult::Unsat(conflict) =
+            self.gipsat.lift.solve_with_domain(&assumption, cls, false)
+        else {
+            panic!();
         };
-        res
+        latchs.into_iter().filter(|l| conflict.has(*l)).collect()
     }
 
     pub fn new_var(&mut self) -> Var {

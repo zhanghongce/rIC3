@@ -160,6 +160,8 @@ impl Activity {
     pub fn decay(&mut self) {
         self.act_inc *= 1.0 / Self::DECAY
     }
+
+    #[allow(unused)]
     pub fn sort_by_activity(&self, cube: &mut Cube, ascending: bool) {
         if ascending {
             cube.sort_by(|a, b| self.activity[*a].partial_cmp(&self.activity[*b]).unwrap());
