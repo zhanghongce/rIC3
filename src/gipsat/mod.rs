@@ -557,14 +557,24 @@ impl IC3 {
             }
         }
         self.activity.sort_by_activity(&mut latchs, false);
-        assumption.extend_from_slice(&latchs);
-        let cls = vec![cls];
-        let SatResult::Unsat(conflict) =
-            self.gipsat.lift.solve_with_domain(&assumption, cls, false)
-        else {
-            panic!();
-        };
-        latchs.into_iter().filter(|l| conflict.has(*l)).collect()
+        let mut res = latchs;
+        for i in 0..2 {
+            if i > 0 {
+                res.reverse();
+            }
+            let mut lift_assump = assumption.clone();
+            lift_assump.extend_from_slice(&res);
+            let constrain = vec![cls.clone()];
+            let SatResult::Unsat(conflict) =
+                self.gipsat
+                    .lift
+                    .solve_with_domain(&lift_assump, constrain, false)
+            else {
+                panic!();
+            };
+            res = res.into_iter().filter(|l| conflict.has(*l)).collect();
+        }
+        res
     }
 
     pub fn new_var(&mut self) -> Var {
