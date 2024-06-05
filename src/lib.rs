@@ -68,7 +68,6 @@ impl IC3 {
         let (frame, mic) = self.push_lemma(po.frame, mic);
         self.statistic.avg_po_cube_len += po.lemma.len();
         po.frame = frame;
-        po.num_unblock = 0;
         self.add_obligation(po);
         self.add_lemma(frame - 1, mic);
     }
@@ -85,7 +84,6 @@ impl IC3 {
             }
             if let Some(bf) = self.frame.trivial_contained(po.frame, &po.lemma) {
                 po.frame = bf + 1;
-                po.num_unblock = 0;
                 self.add_obligation(po);
                 continue;
             }
@@ -99,7 +97,6 @@ impl IC3 {
                     po.depth + 1,
                     Some(po.clone()),
                 ));
-                po.num_unblock += 1;
                 self.add_obligation(po);
             }
         }
