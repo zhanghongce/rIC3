@@ -17,7 +17,7 @@ use domain::Domain;
 use giputils::gvec::Gvec;
 use logic_form::{Clause, Cnf, Cube, Lit, LitSet, Var, VarMap};
 use propagate::Watchers;
-use rand::{rngs::StdRng, SeedableRng};
+use rand::{prelude::SliceRandom, rngs::StdRng, SeedableRng};
 use satif::{SatResult, SatifSat, SatifUnsat};
 use search::Value;
 use simplify::Simplify;
@@ -558,9 +558,11 @@ impl IC3 {
         }
         self.activity.sort_by_activity(&mut latchs, false);
         let mut res = latchs;
-        for i in 0..2 {
-            if i > 0 {
+        for i in 0..5 {
+            if i == 1 {
                 res.reverse();
+            } else if i > 1 {
+                res.shuffle(&mut self.gipsat.lift.rng);
             }
             let mut lift_assump = assumption.clone();
             lift_assump.extend_from_slice(&res);
@@ -572,7 +574,11 @@ impl IC3 {
             else {
                 panic!();
             };
+            let olen = res.len();
             res = res.into_iter().filter(|l| conflict.has(*l)).collect();
+            if res.len() == olen {
+                break;
+            }
         }
         res
     }
