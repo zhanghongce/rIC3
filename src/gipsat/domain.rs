@@ -62,8 +62,14 @@ impl Domain {
         self.fixed = self.domain.len();
     }
 
-    fn get_coi(&mut self, root: impl Iterator<Item = Var>, ts: &Rc<Transys>, value: &Value) {
-        for r in root {
+    pub fn enable_local(
+        &mut self,
+        domain: impl Iterator<Item = Var>,
+        ts: &Rc<Transys>,
+        value: &Value,
+    ) {
+        self.reset();
+        for r in domain {
             if value.v(r.lit()).is_none() {
                 self.domain.insert(r);
             }
@@ -78,16 +84,6 @@ impl Domain {
                 }
             }
         }
-    }
-
-    pub fn enable_local(
-        &mut self,
-        domain: impl Iterator<Item = Var>,
-        ts: &Rc<Transys>,
-        value: &Value,
-    ) {
-        self.reset();
-        self.get_coi(domain, ts, value);
     }
 
     #[inline]

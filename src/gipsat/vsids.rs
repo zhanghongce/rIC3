@@ -107,6 +107,7 @@ pub struct Activity {
     activity: VarMap<f64>,
     act_inc: f64,
     bucket_heap: BinaryHeap,
+    bucket_table: Gvec<u32>,
 }
 
 impl Index<Var> for Activity {
@@ -130,6 +131,9 @@ impl Activity {
         let act = unsafe { &mut *(self as *mut Activity) };
         if self.bucket_heap.pos[var].is_none() {
             self.bucket_heap.push(var, act);
+            let b = 32 - (self.bucket_table.len() - 1).leading_zeros();
+            *self.bucket_table.last_mut().unwrap() = b;
+            self.bucket_table.push(b + 1);
         }
         assert!(self.bucket_heap.pos[var].is_some())
     }
@@ -137,8 +141,8 @@ impl Activity {
     #[inline]
     fn bucket(&self, var: Var) -> u32 {
         match self.bucket_heap.pos[var] {
-            OptionU32::NONE => 33 - self.bucket_heap.len().leading_zeros(),
-            b => 32 - b.leading_zeros(),
+            OptionU32::NONE => self.bucket_table[self.bucket_table.len() - 1],
+            b => self.bucket_table[*b],
         }
     }
 
@@ -173,10 +177,13 @@ impl Activity {
 
 impl Default for Activity {
     fn default() -> Self {
+        let mut bucket_table = Gvec::new();
+        bucket_table.push(0);
         Self {
             act_inc: 1.0,
             activity: Default::default(),
             bucket_heap: Default::default(),
+            bucket_table,
         }
     }
 }
