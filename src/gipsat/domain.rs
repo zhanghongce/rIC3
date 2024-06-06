@@ -4,27 +4,23 @@ use std::{collections::HashSet, rc::Rc, slice};
 use transys::Transys;
 
 pub struct Domain {
-    pub lemma: VarSet,
-    pub local: VarSet,
-    pub constrain: u32,
+    pub domain: VarSet,
+    pub fixed: u32,
 }
 
 impl Domain {
     pub fn new() -> Self {
         Self {
-            lemma: Default::default(),
-            local: Default::default(),
-            constrain: 0,
+            domain: Default::default(),
+            fixed: 0,
         }
     }
 
     pub fn reserve(&mut self, var: Var) {
-        self.lemma.reserve(var);
-        self.local.reserve(var);
+        self.domain.reserve(var);
     }
 
     pub fn calculate_constrain(&mut self, ts: &Rc<Transys>, value: &Value) {
-        assert!(self.local.len() == 0);
         let mut marked = HashSet::new();
         let mut queue = Vec::new();
         for c in ts.constraints.iter() {
@@ -45,25 +41,40 @@ impl Domain {
         marked.sort();
         for v in marked.iter() {
             if value.v(v.lit()).is_none() {
-                self.local.insert(*v);
+                self.domain.insert(*v);
             }
         }
-        self.constrain = self.local.len();
+        self.fixed = self.domain.len();
+    }
+
+    #[inline]
+    pub fn reset(&mut self) {
+        while self.domain.len() > self.fixed {
+            let v = self.domain.set.pop().unwrap();
+            self.domain.has[v] = false;
+        }
+    }
+
+    #[inline]
+    pub fn add_domain(&mut self, var: Var) {
+        self.reset();
+        self.domain.insert(var);
+        self.fixed = self.domain.len();
     }
 
     fn get_coi(&mut self, root: impl Iterator<Item = Var>, ts: &Rc<Transys>, value: &Value) {
         for r in root {
             if value.v(r.lit()).is_none() {
-                self.local.insert(r);
+                self.domain.insert(r);
             }
         }
-        let mut now = self.constrain;
-        while now < self.local.len() {
-            let v = self.local[now];
+        let mut now = self.fixed;
+        while now < self.domain.len() {
+            let v = self.domain[now];
             now += 1;
             for d in ts.dependence[v].iter() {
                 if value.v(d.lit()).is_none() {
-                    self.local.insert(*d);
+                    self.domain.insert(*d);
                 }
             }
         }
@@ -75,24 +86,16 @@ impl Domain {
         ts: &Rc<Transys>,
         value: &Value,
     ) {
-        while self.local.len() > self.constrain {
-            let v = self.local.set.pop().unwrap();
-            self.local.has[v] = false;
-        }
+        self.reset();
         self.get_coi(domain, ts, value);
-        for l in self.lemma.iter() {
-            if value.v(l.lit()).is_none() {
-                self.local.insert(*l);
-            }
-        }
     }
 
     #[inline]
     pub fn has(&self, var: Var) -> bool {
-        self.local.has(var)
+        self.domain.has(var)
     }
 
     pub fn domains(&self) -> slice::Iter<Var> {
-        self.local.iter()
+        self.domain.iter()
     }
 }

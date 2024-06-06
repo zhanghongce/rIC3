@@ -172,17 +172,18 @@ impl Solver {
     pub fn add_lemma(&mut self, lemma: &[Lit]) -> CRef {
         self.reset();
         for l in lemma.iter() {
-            self.domain.lemma.insert(l.var());
-            let mut queue = Vec::new();
-            queue.push(l.var());
-            while let Some(v) = queue.pop() {
-                for d in self.ts.dependence[v].iter() {
-                    if !self.domain.lemma.has(*d) {
-                        self.domain.lemma.insert(*d);
-                        queue.push(*d);
-                    }
-                }
-            }
+            self.domain.add_domain(l.var());
+            assert!(self.ts.dependence[l.var()].is_empty());
+            // let mut queue = Vec::new();
+            // queue.push(l.var());
+            // while let Some(v) = queue.pop() {
+            //     for d in self.ts.dependence[v].iter() {
+            //         if !self.domain.domain.has(*d) {
+            //             self.domain.add_domain(*d);
+            //             queue.push(*d);
+            //         }
+            //     }
+            // }
         }
         self.add_clause_inner(lemma, ClauseKind::Lemma)
     }
@@ -191,6 +192,7 @@ impl Solver {
         self.backtrack(0, false);
         self.clean_temporary();
         self.prepared_vsids = false;
+        self.domain.reset();
         assert!(!self.temporary_domain);
     }
 
@@ -222,8 +224,8 @@ impl Solver {
 
         if !self.temporary_domain {
             self.domain.enable_local(domain, &self.ts, &self.value);
-            assert!(!self.domain.local.has(self.constrain_act));
-            self.domain.local.insert(self.constrain_act);
+            assert!(!self.domain.domain.has(self.constrain_act));
+            self.domain.domain.insert(self.constrain_act);
             if bucket {
                 self.vsids.enable_bucket = true;
                 self.vsids.bucket.clear();
@@ -283,8 +285,8 @@ impl Solver {
         self.temporary_domain = true;
         self.domain
             .enable_local(domain.map(|l| l.var()), &self.ts, &self.value);
-        assert!(!self.domain.local.has(self.constrain_act));
-        self.domain.local.insert(self.constrain_act);
+        assert!(!self.domain.domain.has(self.constrain_act));
+        self.domain.domain.insert(self.constrain_act);
         self.vsids.enable_bucket = true;
         self.vsids.bucket.clear();
         for d in self.domain.domains() {
