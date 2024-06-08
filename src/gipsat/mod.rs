@@ -453,12 +453,12 @@ impl GipSAT {
                 .solvers
                 .last_mut()
                 .unwrap()
-                .solve_with_domain(&self.ts.bad, vec![], false)
+                .solve_with_domain(&[self.ts.bad], vec![], false)
             {
                 SatResult::Sat(sat) => {
                     self.last_ind = Some(BlockResult::No(BlockResultNo {
                         sat,
-                        assumption: self.ts.bad.clone(),
+                        assumption: Cube::from([self.ts.bad]),
                     }));
                     true
                 }
