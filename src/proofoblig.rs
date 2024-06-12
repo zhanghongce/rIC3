@@ -1,5 +1,5 @@
 use crate::IC3;
-use logic_form::Lemma;
+use logic_form::{Cube, Lemma};
 use std::cmp::Ordering;
 use std::collections::BTreeSet;
 use std::fmt::{self, Debug};
@@ -11,6 +11,7 @@ pub struct ProofObligationInner {
     pub lemma: Lemma,
     pub depth: usize,
     pub next: Option<ProofObligation>,
+    pub last_pred_mic: Cube,
 }
 
 impl PartialEq for ProofObligationInner {
@@ -29,6 +30,7 @@ impl Debug for ProofObligationInner {
             .field("frame", &self.frame)
             .field("lemma", &self.lemma)
             .field("depth", &self.depth)
+            .field("last_pred_mic", &self.last_pred_mic)
             .finish()
     }
 }
@@ -46,6 +48,7 @@ impl ProofObligation {
                 lemma,
                 depth,
                 next,
+                last_pred_mic: Cube::new(),
             }),
         }
     }
