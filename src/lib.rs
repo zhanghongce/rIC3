@@ -139,12 +139,15 @@ impl IC3 {
         for frame_idx in self.frame.early..self.level() {
             self.frame[frame_idx].sort_by_key(|(x, _)| x.len());
             let frame = self.frame[frame_idx].clone();
-            for (lemma, po) in frame {
+            for (lemma, mut po) in frame {
                 if self.frame[frame_idx].iter().all(|(l, _)| l.ne(&lemma)) {
                     continue;
                 }
                 if self.blocked_with_ordered(frame_idx + 1, &lemma, false, false) {
                     let core = self.gipsat.inductive_core();
+                    self.obligations.remove(&po);
+                    po.frame = frame_idx + 2;
+                    self.obligations.add(po.clone());
                     self.add_lemma(frame_idx + 1, core, true, po);
                 }
             }

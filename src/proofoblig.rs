@@ -128,7 +128,7 @@ impl ProofObligationQueue {
         Self::default()
     }
 
-    fn add(&mut self, po: ProofObligation) {
+    pub fn add(&mut self, po: ProofObligation) {
         if self.num.len() <= po.frame {
             self.num.resize(po.frame + 1, 0);
         }
@@ -143,6 +143,10 @@ impl ProofObligationQueue {
         } else {
             None
         }
+    }
+
+    pub fn remove(&mut self, po: &ProofObligation) {
+        self.obligations.remove(po);
     }
 
     pub fn statistic(&self) {
