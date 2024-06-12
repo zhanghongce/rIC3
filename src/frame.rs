@@ -101,7 +101,7 @@ impl Frame {
 
 impl IC3 {
     #[inline]
-    pub fn add_lemma(&mut self, frame: usize, lemma: Cube) {
+    pub fn add_lemma(&mut self, frame: usize, lemma: Cube, subsume_check: bool) {
         let lemma = logic_form::Lemma::new(lemma);
         if frame == 0 {
             assert!(self.frame.len() == 1);

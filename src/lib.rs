@@ -47,7 +47,7 @@ impl IC3 {
         self.frame.push(Vec::new());
         if self.level() == 0 {
             for cube in self.ts.inits() {
-                self.add_lemma(0, cube)
+                self.add_lemma(0, cube, true)
             }
         }
     }
@@ -91,7 +91,7 @@ impl IC3 {
         po.frame = frame;
         po.last_pred_mic = Cube::default();
         self.add_obligation(po);
-        self.add_lemma(frame - 1, mic);
+        self.add_lemma(frame - 1, mic, false);
     }
 
     fn block(&mut self) -> bool {
@@ -136,7 +136,7 @@ impl IC3 {
                 }
                 if self.blocked_with_ordered(frame_idx + 1, &lemma, false, false) {
                     let core = self.gipsat.inductive_core();
-                    self.add_lemma(frame_idx + 1, core);
+                    self.add_lemma(frame_idx + 1, core, true);
                 }
             }
             if self.frame[frame_idx].is_empty() {
