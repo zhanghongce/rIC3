@@ -150,7 +150,7 @@ impl IC3 {
 
 impl IC3 {
     pub fn new(args: Args) -> Self {
-        let aig = Aig::from_file(args.model.as_ref().unwrap()).unwrap();
+        let aig = Aig::from_file(args.model.as_ref().unwrap());
         let ts = Rc::new(Transys::from_aig(&aig));
         let statistic = Statistic::new(args.model.as_ref().unwrap());
         let activity = Activity::new(&ts);
