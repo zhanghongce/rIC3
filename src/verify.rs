@@ -40,7 +40,7 @@ impl IC3 {
             .unwrap();
         let mut invariants = Vec::new();
         for i in invariant..self.frame.len() {
-            for cube in self.frame[i].iter() {
+            for (cube, _) in self.frame[i].iter() {
                 invariants.push(cube.clone());
             }
         }

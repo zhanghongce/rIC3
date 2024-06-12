@@ -18,6 +18,7 @@ use frame::Frame;
 use gipsat::{GipSAT, Solver};
 use logic_form::{Cube, Lemma};
 use std::collections::HashSet;
+use std::ops::Deref;
 use std::panic::{self, AssertUnwindSafe};
 use std::process::exit;
 use std::rc::Rc;
@@ -47,7 +48,7 @@ impl IC3 {
         self.frame.push(Vec::new());
         if self.level() == 0 {
             for cube in self.ts.inits() {
-                self.add_lemma(0, cube, true)
+                self.add_lemma(0, cube, true, ProofObligation::default())
             }
         }
     }
@@ -90,8 +91,8 @@ impl IC3 {
         self.statistic.avg_po_cube_len += po.lemma.len();
         po.frame = frame;
         po.last_pred_mic = Cube::default();
-        self.add_obligation(po);
-        self.add_lemma(frame - 1, mic, false);
+        self.add_obligation(po.clone());
+        self.add_lemma(frame - 1, mic, false, po);
     }
 
     fn block(&mut self) -> bool {
@@ -104,7 +105,15 @@ impl IC3 {
             if self.args.verbose_all {
                 self.statistic();
             }
-            if let Some(bf) = self.frame.trivial_contained(po.frame, &po.lemma) {
+            if let Some((bf, cpo)) = self.frame.trivial_contained(po.frame, &po.lemma) {
+                // if cpo.lemma.subsume(&po.lemma) && cpo.lemma.len() < po.lemma.len() {
+                //     println!("{:?}", cpo.lemma.deref());
+                //     println!("{:?}", po.lemma.deref());
+                //     // po.removed = true;
+                //     // po.set(&cpo);
+                // } else if po.lemma.subsume(&cpo.lemma) && po.lemma.len() < cpo.lemma.len() {
+                //     dbg!("yyy");
+                // }
                 po.frame = bf + 1;
                 po.last_pred_mic = Default::default();
                 self.add_obligation(po);
@@ -128,15 +137,15 @@ impl IC3 {
 
     pub fn propagate(&mut self) -> bool {
         for frame_idx in self.frame.early..self.level() {
-            self.frame[frame_idx].sort_by_key(|x| x.len());
+            self.frame[frame_idx].sort_by_key(|(x, _)| x.len());
             let frame = self.frame[frame_idx].clone();
-            for lemma in frame {
-                if self.frame[frame_idx].iter().all(|l| l.ne(&lemma)) {
+            for (lemma, po) in frame {
+                if self.frame[frame_idx].iter().all(|(l, _)| l.ne(&lemma)) {
                     continue;
                 }
                 if self.blocked_with_ordered(frame_idx + 1, &lemma, false, false) {
                     let core = self.gipsat.inductive_core();
-                    self.add_lemma(frame_idx + 1, core, true);
+                    self.add_lemma(frame_idx + 1, core, true, po);
                 }
             }
             if self.frame[frame_idx].is_empty() {

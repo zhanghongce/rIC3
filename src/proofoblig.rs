@@ -6,12 +6,14 @@ use std::fmt::{self, Debug};
 use std::ops::{Deref, DerefMut};
 use std::rc::Rc;
 
+#[derive(Default)]
 pub struct ProofObligationInner {
     pub frame: usize,
     pub lemma: Lemma,
     pub depth: usize,
     pub next: Option<ProofObligation>,
     pub last_pred_mic: Cube,
+    pub removed: bool,
 }
 
 impl PartialEq for ProofObligationInner {
@@ -35,7 +37,7 @@ impl Debug for ProofObligationInner {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Default)]
 pub struct ProofObligation {
     inner: Rc<ProofObligationInner>,
 }
@@ -49,8 +51,14 @@ impl ProofObligation {
                 depth,
                 next,
                 last_pred_mic: Cube::new(),
+                removed: false,
             }),
         }
+    }
+
+    #[inline]
+    pub fn set(&mut self, other: &ProofObligation) {
+        self.inner = other.inner.clone();
     }
 }
 
