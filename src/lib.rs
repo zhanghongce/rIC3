@@ -82,16 +82,7 @@ impl IC3 {
             if self.args.verbose_all {
                 self.statistic();
             }
-            if let Some((bf, cpo)) = self.frame.trivial_contained(po.frame, &po.lemma) {
-                // if cpo.lemma.subsume(&po.lemma) {
-                //     assert!(cpo.lemma.len() < po.lemma.len());
-                //     println!("{:?}", cpo.lemma.deref());
-                //     println!("{:?}", po.lemma.deref());
-                //     // po.removed = true;
-                //     // po.set(&cpo);
-                // } else if po.lemma.subsume(&cpo.lemma) && po.lemma.len() < cpo.lemma.len() {
-                //     dbg!("yyy");
-                // }
+            if let Some((bf, _)) = self.frame.trivial_contained(po.frame, &po.lemma) {
                 po.frame = bf + 1;
                 self.add_obligation(po);
                 continue;
@@ -125,7 +116,7 @@ impl IC3 {
                 if self.blocked_with_ordered(frame_idx + 1, &lemma, false, false) {
                     let core = self.gipsat.inductive_core();
                     if po.frame < frame_idx + 2 {
-                        self.obligations.remove(&po);
+                        assert!(self.obligations.remove(&po));
                         po.frame = frame_idx + 2;
                         self.obligations.add(po.clone());
                     }
@@ -178,7 +169,6 @@ impl IC3 {
                         return false;
                     }
                     None => {
-                        println!("XXXX");
                         self.statistic.overall_block_time += start.elapsed();
                         self.statistic();
                         if self.args.verify {

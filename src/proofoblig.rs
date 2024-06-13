@@ -142,8 +142,9 @@ impl ProofObligationQueue {
         }
     }
 
-    pub fn remove(&mut self, po: &ProofObligation) {
-        self.obligations.remove(po);
+    pub fn remove(&mut self, po: &ProofObligation) -> bool {
+        self.num[po.frame] -= 1;
+        self.obligations.remove(po)
     }
 
     pub fn statistic(&self) {
