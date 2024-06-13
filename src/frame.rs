@@ -112,19 +112,20 @@ impl IC3 {
         lemma: Cube,
         subsume_check: bool,
         po: ProofObligation,
-    ) {
+    ) -> bool {
         let lemma = logic_form::Lemma::new(lemma);
         if frame == 0 {
             assert!(self.frame.len() == 1);
             assert!(self.gipsat.solvers[0].add_lemma(&!lemma.cube()) == CREF_NONE);
             self.frame[0].push((lemma, po));
-            return;
+            return false;
         }
         if subsume_check && self.frame.trivial_contained(frame, &lemma).is_some() {
-            return;
+            return false;
         }
         assert!(!self.ts.cube_subsume_init(lemma.cube()));
         let mut begin = None;
+        let mut inv_found = false;
         'fl: for i in (1..=frame).rev() {
             let mut j = 0;
             while j < self.frame[i].len() {
@@ -138,7 +139,7 @@ impl IC3 {
                         }
                         self.frame[frame].push((lemma, po));
                         self.frame.early = self.frame.early.min(i + 1);
-                        return;
+                        return self.frame[i].is_empty();
                     } else {
                         begin = Some(i + 1);
                         break 'fl;
@@ -150,6 +151,9 @@ impl IC3 {
                 }
                 j += 1;
             }
+            if i != frame && self.frame[i].is_empty() {
+                inv_found = true;
+            }
         }
         let clause = !lemma.cube();
         let begin = begin.unwrap_or(1);
@@ -158,5 +162,6 @@ impl IC3 {
         }
         self.frame[frame].push((lemma, po));
         self.frame.early = self.frame.early.min(begin);
+        inv_found
     }
 }

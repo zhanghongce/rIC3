@@ -46,7 +46,7 @@ impl IC3 {
         self.frame.push(Vec::new());
         if self.level() == 0 {
             for cube in self.ts.inits() {
-                self.add_lemma(0, cube, true, ProofObligation::default())
+                self.add_lemma(0, cube, true, ProofObligation::default());
             }
         }
     }
@@ -62,21 +62,21 @@ impl IC3 {
         (self.level() + 1, cube)
     }
 
-    fn generalize(&mut self, mut po: ProofObligation) {
+    fn generalize(&mut self, mut po: ProofObligation) -> bool {
         let mut mic = self.gipsat.inductive_core();
         mic = self.mic(po.frame, mic, 0);
         let (frame, mic) = self.push_lemma(po.frame, mic);
         self.statistic.avg_po_cube_len += po.lemma.len();
         po.frame = frame;
         self.add_obligation(po.clone());
-        self.add_lemma(frame - 1, mic, false, po);
+        self.add_lemma(frame - 1, mic, false, po)
     }
 
-    fn block(&mut self) -> bool {
+    fn block(&mut self) -> Option<bool> {
         while let Some(mut po) = self.obligations.pop(self.level()) {
             if po.frame == 0 {
                 self.add_obligation(po);
-                return false;
+                return Some(false);
             }
             assert!(!self.ts.cube_subsume_init(&po.lemma));
             if self.args.verbose_all {
@@ -97,7 +97,9 @@ impl IC3 {
                 continue;
             }
             if self.blocked_with_ordered(po.frame, &po.lemma, false, false) {
-                self.generalize(po);
+                if self.generalize(po) {
+                    return None;
+                }
             } else {
                 let model = self.get_predecessor();
                 self.add_obligation(ProofObligation::new(
@@ -109,7 +111,7 @@ impl IC3 {
                 self.add_obligation(po);
             }
         }
-        true
+        Some(true)
     }
 
     pub fn propagate(&mut self) -> bool {
@@ -166,13 +168,25 @@ impl IC3 {
             let start = Instant::now();
             // fake_bad_proofoblig.frame = self.level() + 1;
             loop {
-                if !self.block() {
-                    self.statistic.overall_block_time += start.elapsed();
-                    self.statistic();
-                    if self.args.witness {
-                        dbg!(self.witness());
+                match self.block() {
+                    Some(false) => {
+                        self.statistic.overall_block_time += start.elapsed();
+                        self.statistic();
+                        if self.args.witness {
+                            dbg!(self.witness());
+                        }
+                        return false;
                     }
-                    return false;
+                    None => {
+                        println!("XXXX");
+                        self.statistic.overall_block_time += start.elapsed();
+                        self.statistic();
+                        if self.args.verify {
+                            assert!(self.verify());
+                        }
+                        return true;
+                    }
+                    _ => (),
                 }
                 if self.gipsat.has_bad() {
                     let bad = Lemma::new(self.get_predecessor());
