@@ -131,12 +131,12 @@ impl IC3 {
                 let (l, _) = &self.frame[i][j];
                 if begin.is_none() && l.subsume(&lemma) {
                     if l.eq(&lemma) {
-                        let eq_lemma = self.frame[i].swap_remove(j);
+                        self.frame[i].swap_remove(j);
                         let clause = !lemma.cube();
                         for k in i + 1..=frame {
                             self.gipsat.solvers[k].add_lemma(&clause);
                         }
-                        self.frame[frame].push(eq_lemma);
+                        self.frame[frame].push((lemma, po));
                         self.frame.early = self.frame.early.min(i + 1);
                         return;
                     } else {
