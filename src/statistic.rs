@@ -17,10 +17,6 @@ pub struct Statistic {
     pub overall_mic_time: Duration,
     pub overall_block_time: Duration,
     pub overall_propagate_time: Duration,
-
-    pub testa: Average,
-
-    pub testx: usize,
 }
 
 impl Statistic {

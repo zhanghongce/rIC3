@@ -17,11 +17,6 @@ impl BinaryHeap {
     }
 
     #[inline]
-    fn len(&self) -> u32 {
-        self.heap.len()
-    }
-
-    #[inline]
     pub fn clear(&mut self) {
         for v in self.heap.iter() {
             self.pos[*v] = OptionU32::NONE;

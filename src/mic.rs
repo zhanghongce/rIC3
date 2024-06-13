@@ -121,13 +121,7 @@ impl IC3 {
         (new_cube, new_i)
     }
 
-    pub fn mic(
-        &mut self,
-        frame: usize,
-        mut cube: Cube,
-        level: usize,
-        keep: &mut HashSet<Lit>,
-    ) -> Cube {
+    pub fn mic(&mut self, frame: usize, mut cube: Cube, level: usize) -> Cube {
         let mut cex = Vec::new();
         let start = Instant::now();
         self.gipsat.set_domain(
@@ -141,11 +135,11 @@ impl IC3 {
         self.statistic.avg_mic_cube_len += cube.len();
         self.statistic.num_mic += 1;
         self.activity.sort_by_activity(&mut cube, true);
+        let mut keep = HashSet::new();
         let mut i = 0;
         while i < cube.len() {
             if keep.contains(&cube[i]) {
                 i += 1;
-                self.statistic.testx += 1;
                 continue;
             }
             let mut removed_cube = cube.clone();

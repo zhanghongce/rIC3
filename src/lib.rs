@@ -17,8 +17,6 @@ pub use args::Args;
 use frame::Frame;
 use gipsat::{GipSAT, Solver};
 use logic_form::{Cube, Lemma};
-use std::collections::HashSet;
-use std::ops::Deref;
 use std::panic::{self, AssertUnwindSafe};
 use std::process::exit;
 use std::rc::Rc;
@@ -66,31 +64,10 @@ impl IC3 {
 
     fn generalize(&mut self, mut po: ProofObligation) {
         let mut mic = self.gipsat.inductive_core();
-        let poframe = po.frame;
-        // mic.sort();
-        // println!("b {:?}", mic);
-        let mut keep = HashSet::new();
-        if let Some(fa) = &mut po.next {
-            if fa.frame == poframe + 1 {
-                // fa.last_pred_mic.sort();
-                // println!("l {:?}", fa.last_pred_mic);
-                for l in fa.last_pred_mic.iter() {
-                    keep.insert(*l);
-                }
-            }
-        }
-        mic = self.mic(po.frame, mic, 0, &mut keep);
-        // mic.sort();
-        // println!("m {:?}", mic);
+        mic = self.mic(po.frame, mic, 0);
         let (frame, mic) = self.push_lemma(po.frame, mic);
-        if let Some(fa) = &mut po.next {
-            if fa.frame == poframe + 1 {
-                fa.last_pred_mic = mic.clone();
-            }
-        }
         self.statistic.avg_po_cube_len += po.lemma.len();
         po.frame = frame;
-        po.last_pred_mic = Cube::default();
         self.add_obligation(po.clone());
         self.add_lemma(frame - 1, mic, false, po);
     }
@@ -116,7 +93,6 @@ impl IC3 {
                 //     dbg!("yyy");
                 // }
                 po.frame = bf + 1;
-                po.last_pred_mic = Default::default();
                 self.add_obligation(po);
                 continue;
             }
