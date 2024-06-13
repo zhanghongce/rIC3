@@ -342,9 +342,9 @@ impl Solver {
         self.value.v(cls[0]).is_true() && self.reason[cls[0]] == cref
     }
 
-    pub fn clean_leanrt(&mut self) {
-        if (self.highest_level() == 0 && self.cdb.learnt.len() * 15 >= self.cdb.trans.len())
-            || self.cdb.learnt.len() * 3 >= self.cdb.trans.len()
+    pub fn clean_leanrt(&mut self, full: bool) {
+        if (full && self.cdb.learnt.len() * 15 >= self.cdb.trans.len())
+            || self.cdb.learnt.len() >= self.cdb.trans.len()
         {
             // dbg!(self.highest_level());
             // dbg!(self.cdb.learnt.len());

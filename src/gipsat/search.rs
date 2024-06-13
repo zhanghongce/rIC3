@@ -72,6 +72,7 @@ impl Solver {
     pub fn search_with_restart(&mut self, assumption: &[Lit]) -> SatResult<Sat, Unsat> {
         let mut restarts = 0;
         loop {
+            // dbg!(restarts);
             if restarts > 10 && self.vsids.enable_bucket {
                 self.vsids.enable_bucket = false;
                 self.vsids.heap.clear();
@@ -127,7 +128,7 @@ impl Solver {
                         return None;
                     }
                 }
-                self.clean_leanrt();
+                self.clean_leanrt(false);
                 while self.highest_level() < assumption.len() {
                     let a = assumption[self.highest_level()];
                     match self.value.v(a) {

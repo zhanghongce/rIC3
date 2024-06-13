@@ -274,7 +274,7 @@ impl Solver {
             assump
         };
         self.statistic.num_solve += 1;
-        self.clean_leanrt();
+        self.clean_leanrt(true);
         self.simplify();
         self.garbage_collect();
         self.search_with_restart(assump)
