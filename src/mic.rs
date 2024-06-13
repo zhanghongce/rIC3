@@ -31,70 +31,74 @@ impl IC3 {
                     return DownResult::Fail;
                 }
             }
-            if let Some(true) = self.blocked_with_ordered(frame, &cube, false, true, false) {
-                return DownResult::Success(self.gipsat.inductive_core());
-            } else {
-                // if level == 0 {
-                //     return DownResult::Fail;
-                // }
-                // // dbg!(&cube);
-                // let model = self.gipsat.get_predecessor();
-                // if ctgs < 3 && frame > 1 && !self.ts.cube_subsume_init(&model) {
-                //     if self.blocked_with_ordered(frame - 1, &model, false, true) {
-                //         ctgs += 1;
-                //         let conflict = self.gipsat.inductive_core();
-                //         let conflict = self.mic(frame - 1, conflict, level - 1);
-                //         let mut i = frame;
-                //         while i <= self.level() {
-                //             if !self.gipsat.inductive(i, &conflict, true) {
-                //                 break;
-                //             }
-                //             i += 1;
-                //         }
-                //         self.add_lemma(i - 1, conflict);
-                //         continue;
-                //     }
-                // }
-                // ctgs = 0;
-                // let cex_set: HashSet<Lit> = HashSet::from_iter(model);
-                let mut ret = false;
-                let mut cube_new = Cube::new();
-                // let mut tried = HashSet::new();
-                for lit in cube {
-                    if keep.contains(&lit) {
-                        if let Some(true) = self.gipsat.unblocked_value(lit) {
-                            // tried.insert(lit);
-                            cube_new.push(lit);
-                        } else {
-                            ret = true;
-                            break;
-                        }
-                    } else if let Some(true) = self.gipsat.unblocked_value(lit) {
-                        if !self.gipsat.solvers[frame - 1].flip_to_none(lit.var()) {
-                            // tried.insert(lit);
-                            cube_new.push(lit);
+            match self.blocked_with_ordered(frame, &cube, false, true, true) {
+                Some(true) => {
+                    return DownResult::Success(self.gipsat.inductive_core());
+                }
+                Some(false) => {
+                    // if level == 0 {
+                    //     return DownResult::Fail;
+                    // }
+                    // // dbg!(&cube);
+                    // let model = self.gipsat.get_predecessor();
+                    // if ctgs < 3 && frame > 1 && !self.ts.cube_subsume_init(&model) {
+                    //     if self.blocked_with_ordered(frame - 1, &model, false, true) {
+                    //         ctgs += 1;
+                    //         let conflict = self.gipsat.inductive_core();
+                    //         let conflict = self.mic(frame - 1, conflict, level - 1);
+                    //         let mut i = frame;
+                    //         while i <= self.level() {
+                    //             if !self.gipsat.inductive(i, &conflict, true) {
+                    //                 break;
+                    //             }
+                    //             i += 1;
+                    //         }
+                    //         self.add_lemma(i - 1, conflict);
+                    //         continue;
+                    //     }
+                    // }
+                    // ctgs = 0;
+                    // let cex_set: HashSet<Lit> = HashSet::from_iter(model);
+                    let mut ret = false;
+                    let mut cube_new = Cube::new();
+                    // let mut tried = HashSet::new();
+                    for lit in cube {
+                        if keep.contains(&lit) {
+                            if let Some(true) = self.gipsat.unblocked_value(lit) {
+                                // tried.insert(lit);
+                                cube_new.push(lit);
+                            } else {
+                                ret = true;
+                                break;
+                            }
+                        } else if let Some(true) = self.gipsat.unblocked_value(lit) {
+                            if !self.gipsat.solvers[frame - 1].flip_to_none(lit.var()) {
+                                // tried.insert(lit);
+                                cube_new.push(lit);
+                            }
                         }
                     }
-                }
-                cube = cube_new;
+                    cube = cube_new;
 
-                let mut s = Cube::new();
-                let mut t = Cube::new();
-                for l in full.iter() {
-                    if let Some(v) = self.gipsat.unblocked_value(*l) {
-                        if !self.gipsat.solvers[frame - 1].flip_to_none(l.var()) {
-                            s.push(l.not_if(!v));
+                    let mut s = Cube::new();
+                    let mut t = Cube::new();
+                    for l in full.iter() {
+                        if let Some(v) = self.gipsat.unblocked_value(*l) {
+                            if !self.gipsat.solvers[frame - 1].flip_to_none(l.var()) {
+                                s.push(l.not_if(!v));
+                            }
+                        }
+                        let lt = self.ts.lit_next(*l);
+                        if let Some(v) = self.gipsat.unblocked_value(lt) {
+                            t.push(l.not_if(!v));
                         }
                     }
-                    let lt = self.ts.lit_next(*l);
-                    if let Some(v) = self.gipsat.unblocked_value(lt) {
-                        t.push(l.not_if(!v));
+                    cex.push((Lemma::new(s), Lemma::new(t)));
+                    if ret {
+                        return DownResult::Fail;
                     }
                 }
-                cex.push((Lemma::new(s), Lemma::new(t)));
-                if ret {
-                    return DownResult::Fail;
-                }
+                None => return DownResult::Fail,
             }
         }
     }

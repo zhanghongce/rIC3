@@ -72,6 +72,9 @@ impl Solver {
         let mut restarts = 0;
         loop {
             // dbg!(restarts);
+            if limit && restarts > 20 {
+                return None;
+            }
             if restarts > 10 && self.vsids.enable_bucket {
                 self.vsids.enable_bucket = false;
                 self.vsids.heap.clear();

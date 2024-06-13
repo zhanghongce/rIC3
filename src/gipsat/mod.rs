@@ -416,10 +416,9 @@ impl GipSAT {
                 None => None,
             };
         self.statistic.avg_sat_time += start.elapsed();
-        Some(matches!(
-            self.last_ind.as_ref().unwrap(),
-            BlockResult::Yes(_)
-        ))
+        self.last_ind
+            .as_ref()
+            .map(|r| matches!(r, BlockResult::Yes(_)))
     }
 
     pub fn inductive(
