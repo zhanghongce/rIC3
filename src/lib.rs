@@ -53,7 +53,7 @@ impl IC3 {
 
     fn push_lemma(&mut self, frame: usize, mut cube: Cube) -> (usize, Cube) {
         for i in frame + 1..=self.level() {
-            if self.gipsat.inductive(i, &cube, true) {
+            if let Some(true) = self.gipsat.inductive(i, &cube, true, false) {
                 cube = self.gipsat.inductive_core();
             } else {
                 return (i, cube);
@@ -87,7 +87,8 @@ impl IC3 {
                 self.add_obligation(po);
                 continue;
             }
-            if self.blocked_with_ordered(po.frame, &po.lemma, false, false) {
+            if let Some(true) = self.blocked_with_ordered(po.frame, &po.lemma, false, false, false)
+            {
                 if self.generalize(po) {
                     return None;
                 }
@@ -113,7 +114,9 @@ impl IC3 {
                 if self.frame[frame_idx].iter().all(|(l, _)| l.ne(&lemma)) {
                     continue;
                 }
-                if self.blocked_with_ordered(frame_idx + 1, &lemma, false, false) {
+                if let Some(true) =
+                    self.blocked_with_ordered(frame_idx + 1, &lemma, false, false, false)
+                {
                     let core = self.gipsat.inductive_core();
                     if po.frame < frame_idx + 2 {
                         assert!(self.obligations.remove(&po));

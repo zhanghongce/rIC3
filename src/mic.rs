@@ -31,7 +31,7 @@ impl IC3 {
                     return DownResult::Fail;
                 }
             }
-            if self.blocked_with_ordered(frame, &cube, false, true) {
+            if let Some(true) = self.blocked_with_ordered(frame, &cube, false, true, false) {
                 return DownResult::Success(self.gipsat.inductive_core());
             } else {
                 // if level == 0 {

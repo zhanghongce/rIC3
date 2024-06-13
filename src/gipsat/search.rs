@@ -1,10 +1,9 @@
 use super::{
     cdb::{CRef, ClauseKind, CREF_NONE},
     utils::Lbool,
-    Sat, Solver, Unsat,
+    Solver,
 };
 use logic_form::{Lit, Var, VarMap};
-use satif::SatResult;
 
 #[derive(Default)]
 pub struct Value {
@@ -69,7 +68,7 @@ impl Solver {
         self.pos_in_trail.truncate(level);
     }
 
-    pub fn search_with_restart(&mut self, assumption: &[Lit]) -> SatResult<Sat, Unsat> {
+    pub fn search_with_restart(&mut self, assumption: &[Lit], limit: bool) -> Option<bool> {
         let mut restarts = 0;
         loop {
             // dbg!(restarts);
@@ -84,11 +83,10 @@ impl Solver {
             }
             let rest_base = luby(2.0, restarts);
             match self.search(assumption, Some(rest_base * 100.0)) {
-                Some(true) => return SatResult::Sat(Sat { solver: self }),
-                Some(false) => return SatResult::Unsat(Unsat { solver: self }),
                 None => {
                     restarts += 1;
                 }
+                r => return r,
             }
         }
     }

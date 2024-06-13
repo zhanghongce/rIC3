@@ -18,7 +18,6 @@ use giputils::gvec::Gvec;
 use logic_form::{Clause, Cnf, Cube, Lit, LitSet, Var, VarMap};
 use propagate::Watchers;
 use rand::{prelude::SliceRandom, rngs::StdRng, SeedableRng};
-use satif::{SatResult, SatifSat, SatifUnsat};
 use search::Value;
 use simplify::Simplify;
 use statistic::{GipSATStatistic, SolverStatistic};
@@ -244,7 +243,8 @@ impl Solver {
         assump: &[Lit],
         constrain: Vec<Clause>,
         bucket: bool,
-    ) -> SatResult<Sat, Unsat> {
+        limit: bool,
+    ) -> Option<bool> {
         assert!(!assump.is_empty());
         if self.temporary_domain {
             assert!(bucket);
@@ -266,7 +266,7 @@ impl Solver {
                 bucket,
             ) {
                 self.unsat_core.clear();
-                return SatResult::Unsat(Unsat { solver: self });
+                return Some(false);
             };
             &assumption
         } else {
@@ -277,7 +277,7 @@ impl Solver {
         self.clean_leanrt(true);
         self.simplify();
         self.garbage_collect();
-        self.search_with_restart(assump)
+        self.search_with_restart(assump, limit)
     }
 
     pub fn set_domain(&mut self, domain: impl Iterator<Item = Lit>) {
@@ -297,35 +297,49 @@ impl Solver {
     pub fn unset_domain(&mut self) {
         self.temporary_domain = false;
     }
-}
 
-pub struct Sat {
-    solver: *mut Solver,
-}
-
-impl SatifSat for Sat {
     #[inline]
-    fn lit_value(&self, lit: Lit) -> Option<bool> {
-        let solver = unsafe { &*self.solver };
-        match solver.value.v(lit) {
+    fn sat_value(&self, lit: Lit) -> Option<bool> {
+        match self.value.v(lit) {
             Lbool::TRUE => Some(true),
             Lbool::FALSE => Some(false),
             _ => None,
         }
     }
-}
 
-pub struct Unsat {
-    solver: *mut Solver,
-}
-
-impl SatifUnsat for Unsat {
     #[inline]
-    fn has(&self, lit: Lit) -> bool {
-        let solver = unsafe { &*self.solver };
-        solver.unsat_core.has(lit)
+    pub fn unsat_has(&self, lit: Lit) -> bool {
+        self.unsat_core.has(lit)
     }
 }
+
+// pub struct Sat {
+//     solver: *mut Solver,
+// }
+
+// impl SatifSat for Sat {
+//     #[inline]
+//     fn lit_value(&self, lit: Lit) -> Option<bool> {
+//         let solver = unsafe { &*self.solver };
+//         match solver.value.v(lit) {
+//             Lbool::TRUE => Some(true),
+//             Lbool::FALSE => Some(false),
+//             _ => None,
+//         }
+//     }
+// }
+
+// pub struct Unsat {
+//     solver: *mut Solver,
+// }
+
+// impl SatifUnsat for Unsat {
+//     #[inline]
+//     fn has(&self, lit: Lit) -> bool {
+//         let solver = unsafe { &*self.solver };
+//         solver.unsat_core.has(lit)
+//     }
+// }
 
 pub enum BlockResult {
     Yes(BlockResultYes),
@@ -333,22 +347,22 @@ pub enum BlockResult {
 }
 
 pub struct BlockResultYes {
-    pub unsat: Unsat,
+    pub frame: usize,
     pub cube: Cube,
     pub assumption: Cube,
 }
 
 pub struct BlockResultNo {
-    pub sat: Sat,
+    pub frame: usize,
     pub assumption: Cube,
 }
 
-impl BlockResultNo {
-    #[inline]
-    pub fn lit_value(&self, lit: Lit) -> Option<bool> {
-        self.sat.lit_value(lit)
-    }
-}
+// impl BlockResultNo {
+//     #[inline]
+//     pub fn lit_value(&self, lit: Lit) -> Option<bool> {
+//         self.sat.lit_value(lit)
+//     }
+// }
 
 pub struct GipSAT {
     ts: Rc<Transys>,
@@ -382,7 +396,8 @@ impl GipSAT {
         cube: &[Lit],
         strengthen: bool,
         mut constrain: Vec<Clause>,
-    ) -> bool {
+        limit: bool,
+    ) -> Option<bool> {
         let start = Instant::now();
         self.statistic.num_sat += 1;
         let solver_idx = frame - 1;
@@ -390,22 +405,31 @@ impl GipSAT {
         if strengthen {
             constrain.push(Clause::from_iter(cube.iter().map(|l| !*l)));
         }
-        self.last_ind = Some(
-            match self.solvers[solver_idx].solve_with_domain(&assumption, constrain, true) {
-                SatResult::Sat(sat) => BlockResult::No(BlockResultNo { sat, assumption }),
-                SatResult::Unsat(unsat) => BlockResult::Yes(BlockResultYes {
-                    unsat,
+        self.last_ind =
+            match self.solvers[solver_idx].solve_with_domain(&assumption, constrain, true, limit) {
+                Some(true) => Some(BlockResult::No(BlockResultNo { frame, assumption })),
+                Some(false) => Some(BlockResult::Yes(BlockResultYes {
+                    frame,
                     cube: Cube::from(cube),
                     assumption,
-                }),
-            },
-        );
+                })),
+                None => None,
+            };
         self.statistic.avg_sat_time += start.elapsed();
-        matches!(self.last_ind.as_ref().unwrap(), BlockResult::Yes(_))
+        Some(matches!(
+            self.last_ind.as_ref().unwrap(),
+            BlockResult::Yes(_)
+        ))
     }
 
-    pub fn inductive(&mut self, frame: usize, cube: &[Lit], strengthen: bool) -> bool {
-        self.inductive_with_constrain(frame, cube, strengthen, vec![])
+    pub fn inductive(
+        &mut self,
+        frame: usize,
+        cube: &[Lit],
+        strengthen: bool,
+        limit: bool,
+    ) -> Option<bool> {
+        self.inductive_with_constrain(frame, cube, strengthen, vec![], limit)
     }
 
     pub fn inductive_core(&mut self) -> Cube {
@@ -415,8 +439,9 @@ impl GipSAT {
             BlockResult::No(_) => panic!(),
         };
         let mut ans = Cube::new();
+        let solver = &self.solvers[block.frame - 1];
         for i in 0..block.cube.len() {
-            if block.unsat.has(block.assumption[i]) {
+            if solver.unsat_has(block.assumption[i]) {
                 ans.push(block.cube[i]);
             }
         }
@@ -428,7 +453,7 @@ impl GipSAT {
                 .find(|l| self.ts.init_map[l.var()].is_some_and(|i| i != l.polarity()))
                 .unwrap();
             for i in 0..block.cube.len() {
-                if block.unsat.has(block.assumption[i]) || block.cube[i] == new {
+                if solver.unsat_has(block.assumption[i]) || block.cube[i] == new {
                     ans.push(block.cube[i]);
                 }
             }
@@ -442,28 +467,28 @@ impl GipSAT {
             BlockResult::Yes(_) => panic!(),
             BlockResult::No(unblock) => unblock,
         };
-        unblock.lit_value(lit)
+        self.solvers[unblock.frame - 1].sat_value(lit)
     }
 
     pub fn has_bad(&mut self) -> bool {
         let start = Instant::now();
         self.statistic.num_sat += 1;
-        let res =
-            match self
-                .solvers
-                .last_mut()
-                .unwrap()
-                .solve_with_domain(&[self.ts.bad], vec![], false)
-            {
-                SatResult::Sat(sat) => {
-                    self.last_ind = Some(BlockResult::No(BlockResultNo {
-                        sat,
-                        assumption: Cube::from([self.ts.bad]),
-                    }));
-                    true
-                }
-                SatResult::Unsat(_) => false,
-            };
+        let res = match self.solvers.last_mut().unwrap().solve_with_domain(
+            &[self.ts.bad],
+            vec![],
+            false,
+            false,
+        ) {
+            Some(true) => {
+                self.last_ind = Some(BlockResult::No(BlockResultNo {
+                    frame: self.solvers.len(),
+                    assumption: Cube::from([self.ts.bad]),
+                }));
+                true
+            }
+            Some(false) => false,
+            _ => panic!(),
+        };
         self.statistic.avg_sat_time += start.elapsed();
         res
     }
@@ -510,10 +535,12 @@ impl IC3 {
         cube: &Cube,
         ascending: bool,
         strengthen: bool,
-    ) -> bool {
+        limit: bool,
+    ) -> Option<bool> {
         let mut ordered_cube = cube.clone();
         self.activity.sort_by_activity(&mut ordered_cube, ascending);
-        self.gipsat.inductive(frame, &ordered_cube, strengthen)
+        self.gipsat
+            .inductive(frame, &ordered_cube, strengthen, limit)
     }
 
     pub fn blocked_with_ordered_with_constrain(
@@ -523,11 +550,12 @@ impl IC3 {
         ascending: bool,
         strengthen: bool,
         constrain: Vec<Clause>,
-    ) -> bool {
+        limit: bool,
+    ) -> Option<bool> {
         let mut ordered_cube = cube.clone();
         self.activity.sort_by_activity(&mut ordered_cube, ascending);
         self.gipsat
-            .inductive_with_constrain(frame, &ordered_cube, strengthen, constrain)
+            .inductive_with_constrain(frame, &ordered_cube, strengthen, constrain, limit)
     }
 
     pub fn get_predecessor(&mut self) -> Cube {
@@ -535,6 +563,7 @@ impl IC3 {
         let BlockResult::No(unblock) = last_ind.unwrap() else {
             panic!()
         };
+        let solver = &mut self.gipsat.solvers[unblock.frame - 1];
         let mut assumption = Cube::new();
         let mut cls = unblock.assumption.clone();
         cls.extend_from_slice(&self.ts.constraints);
@@ -542,7 +571,7 @@ impl IC3 {
         let cls = !cls;
         for input in self.ts.inputs.iter() {
             let lit = input.lit();
-            match unblock.sat.lit_value(lit) {
+            match solver.sat_value(lit) {
                 Some(true) => assumption.push(lit),
                 Some(false) => assumption.push(!lit),
                 None => (),
@@ -551,8 +580,7 @@ impl IC3 {
         let mut latchs = Cube::new();
         for latch in self.ts.latchs.iter() {
             let lit = latch.lit();
-            if let Some(v) = unblock.sat.lit_value(lit) {
-                let solver = unsafe { &mut *unblock.sat.solver };
+            if let Some(v) = solver.sat_value(lit) {
                 if in_cls.contains(latch) || !solver.flip_to_none(*latch) {
                     latchs.push(lit.not_if(!v));
                 }
@@ -569,15 +597,18 @@ impl IC3 {
             let mut lift_assump = assumption.clone();
             lift_assump.extend_from_slice(&res);
             let constrain = vec![cls.clone()];
-            let SatResult::Unsat(conflict) =
+            let Some(false) =
                 self.gipsat
                     .lift
-                    .solve_with_domain(&lift_assump, constrain, false)
+                    .solve_with_domain(&lift_assump, constrain, false, false)
             else {
                 panic!();
             };
             let olen = res.len();
-            res = res.into_iter().filter(|l| conflict.has(*l)).collect();
+            res = res
+                .into_iter()
+                .filter(|l| self.gipsat.lift.unsat_has(*l))
+                .collect();
             if res.len() == olen {
                 break;
             }
