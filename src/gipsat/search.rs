@@ -71,7 +71,6 @@ impl Solver {
     pub fn search_with_restart(&mut self, assumption: &[Lit], limit: bool) -> Option<bool> {
         let mut restarts = 0;
         loop {
-            // dbg!(restarts);
             if limit && restarts > 20 {
                 return None;
             }
