@@ -299,7 +299,7 @@ impl Solver {
     }
 
     #[inline]
-    fn sat_value(&self, lit: Lit) -> Option<bool> {
+    pub fn sat_value(&self, lit: Lit) -> Option<bool> {
         match self.value.v(lit) {
             Lbool::TRUE => Some(true),
             Lbool::FALSE => Some(false),

@@ -119,9 +119,10 @@ impl IC3 {
                 {
                     let core = self.gipsat.inductive_core();
                     if po.frame < frame_idx + 2 {
-                        assert!(self.obligations.remove(&po));
+                        if self.obligations.remove(&po) {
                         po.frame = frame_idx + 2;
                         self.obligations.add(po.clone());
+                        }
                     }
                     self.add_lemma(frame_idx + 1, core, true, po);
                 }
