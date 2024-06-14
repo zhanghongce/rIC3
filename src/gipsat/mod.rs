@@ -15,7 +15,7 @@ use analyze::Analyze;
 use cdb::{ClauseDB, ClauseKind};
 use domain::Domain;
 use giputils::gvec::Gvec;
-use logic_form::{Clause, Cnf, Cube, Lit, LitSet, Var, VarMap};
+use logic_form::{Clause, Cnf, Cube, Lemma, Lit, LitSet, Var, VarMap};
 use propagate::Watchers;
 use rand::{prelude::SliceRandom, rngs::StdRng, SeedableRng};
 use search::Value;
@@ -528,6 +528,13 @@ impl DerefMut for GipSAT {
 }
 
 impl IC3 {
+    #[inline]
+    pub fn sat_contained<'a>(&'a mut self, frame: usize, lemma: &Lemma) -> bool {
+        !self.gipsat.solvers[frame]
+            .solve_with_domain(lemma, vec![], true, false)
+            .unwrap()
+    }
+
     pub fn blocked_with_ordered(
         &mut self,
         frame: usize,

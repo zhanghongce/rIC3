@@ -157,10 +157,8 @@ impl IC3 {
     }
 
     pub fn check(&mut self) -> bool {
-        // let mut fake_bad_proofoblig = ProofObligation::new(0, Lemma::default(), 0, None);
         loop {
             let start = Instant::now();
-            // fake_bad_proofoblig.frame = self.level() + 1;
             loop {
                 match self.block() {
                     Some(false) => {
