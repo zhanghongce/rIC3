@@ -8,11 +8,9 @@ mod statistic;
 mod utils;
 mod vsids;
 
-pub use cdb::{CRef, CREF_NONE};
-
 use crate::{frame::Frame, IC3};
 use analyze::Analyze;
-use cdb::{ClauseDB, ClauseKind};
+use cdb::{CRef, ClauseDB, ClauseKind, CREF_NONE};
 use domain::Domain;
 use giputils::gvec::Gvec;
 use logic_form::{Clause, Cnf, Cube, Lemma, Lit, LitSet, Var, VarMap};
@@ -322,14 +320,6 @@ pub struct BlockResultNo {
     pub frame: usize,
     pub assumption: Cube,
 }
-
-// pub struct GipSAT {
-//     ts: Rc<Transys>,
-//     pub solvers: Vec<Solver>,
-//     lift: Solver,
-//     last_ind: Option<BlockResult>,
-//     statistic: GipSATStatistic,
-// }
 
 impl IC3 {
     pub fn inductive_with_constrain(

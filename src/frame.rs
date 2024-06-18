@@ -1,4 +1,4 @@
-use crate::{gipsat::CREF_NONE, proofoblig::ProofObligation, IC3};
+use crate::{proofoblig::ProofObligation, IC3};
 use logic_form::{Cube, Lemma, LitSet};
 use std::{
     ops::{Deref, DerefMut},
@@ -116,7 +116,7 @@ impl IC3 {
         let lemma = logic_form::Lemma::new(lemma);
         if frame == 0 {
             assert!(self.frame.len() == 1);
-            assert!(self.solvers[0].add_lemma(&!lemma.cube()) == CREF_NONE);
+            self.solvers[0].add_lemma(&!lemma.cube());
             self.frame[0].push((lemma, po));
             return false;
         }
