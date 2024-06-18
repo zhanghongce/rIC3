@@ -424,14 +424,6 @@ impl IC3 {
         res
     }
 
-    pub fn set_domain(&mut self, frame: usize, domain: impl Iterator<Item = Lit>) {
-        self.solvers[frame].set_domain(domain)
-    }
-
-    pub fn unset_domain(&mut self, frame: usize) {
-        self.solvers[frame].unset_domain()
-    }
-
     // pub fn statistic(&self) {
     //     println!();
     //     let mut statistic = SolverStatistic::default();

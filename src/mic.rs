@@ -128,8 +128,7 @@ impl IC3 {
     pub fn mic(&mut self, frame: usize, mut cube: Cube, level: usize) -> Cube {
         let mut cex = Vec::new();
         let start = Instant::now();
-        self.set_domain(
-            frame - 1,
+        self.solvers[frame - 1].set_domain(
             self.ts
                 .cube_next(&cube)
                 .iter()
@@ -152,9 +151,8 @@ impl IC3 {
                 DownResult::Success(new_cube) => {
                     self.statistic.mic_drop.success();
                     (cube, i) = self.handle_down_success(frame, cube, i, new_cube);
-                    self.unset_domain(frame - 1);
-                    self.set_domain(
-                        frame - 1,
+                    self.solvers[frame - 1].unset_domain();
+                    self.solvers[frame - 1].set_domain(
                         self.ts
                             .cube_next(&cube)
                             .iter()
@@ -169,7 +167,7 @@ impl IC3 {
                 }
             }
         }
-        self.unset_domain(frame - 1);
+        self.solvers[frame - 1].unset_domain();
         self.activity.bump_cube_activity(&cube);
         self.statistic.overall_mic_time += start.elapsed();
         cube
