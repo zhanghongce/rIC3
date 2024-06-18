@@ -33,7 +33,7 @@ impl IC3 {
             }
             match self.blocked_with_ordered(frame, &cube, false, true, false) {
                 Some(true) => {
-                    return DownResult::Success(self.gipsat.inductive_core());
+                    return DownResult::Success(self.inductive_core());
                 }
                 Some(false) => {
                     // if level == 0 {
@@ -64,15 +64,15 @@ impl IC3 {
                     // let mut tried = HashSet::new();
                     for lit in cube {
                         if keep.contains(&lit) {
-                            if let Some(true) = self.gipsat.unblocked_value(lit) {
+                            if let Some(true) = self.unblocked_value(lit) {
                                 // tried.insert(lit);
                                 cube_new.push(lit);
                             } else {
                                 ret = true;
                                 break;
                             }
-                        } else if let Some(true) = self.gipsat.unblocked_value(lit) {
-                            if !self.gipsat.solvers[frame - 1].flip_to_none(lit.var()) {
+                        } else if let Some(true) = self.unblocked_value(lit) {
+                            if !self.solvers[frame - 1].flip_to_none(lit.var()) {
                                 // tried.insert(lit);
                                 cube_new.push(lit);
                             }
@@ -83,13 +83,13 @@ impl IC3 {
                     let mut s = Cube::new();
                     let mut t = Cube::new();
                     for l in full.iter() {
-                        if let Some(v) = self.gipsat.unblocked_value(*l) {
-                            if !self.gipsat.solvers[frame - 1].flip_to_none(l.var()) {
+                        if let Some(v) = self.unblocked_value(*l) {
+                            if !self.solvers[frame - 1].flip_to_none(l.var()) {
                                 s.push(l.not_if(!v));
                             }
                         }
                         let lt = self.ts.lit_next(*l);
-                        if let Some(v) = self.gipsat.unblocked_value(lt) {
+                        if let Some(v) = self.unblocked_value(lt) {
                             t.push(l.not_if(!v));
                         }
                     }
@@ -128,7 +128,7 @@ impl IC3 {
     pub fn mic(&mut self, frame: usize, mut cube: Cube, level: usize) -> Cube {
         let mut cex = Vec::new();
         let start = Instant::now();
-        self.gipsat.set_domain(
+        self.set_domain(
             frame - 1,
             self.ts
                 .cube_next(&cube)
@@ -152,8 +152,8 @@ impl IC3 {
                 DownResult::Success(new_cube) => {
                     self.statistic.mic_drop.success();
                     (cube, i) = self.handle_down_success(frame, cube, i, new_cube);
-                    self.gipsat.unset_domain(frame - 1);
-                    self.gipsat.set_domain(
+                    self.unset_domain(frame - 1);
+                    self.set_domain(
                         frame - 1,
                         self.ts
                             .cube_next(&cube)
@@ -169,7 +169,7 @@ impl IC3 {
                 }
             }
         }
-        self.gipsat.unset_domain(frame - 1);
+        self.unset_domain(frame - 1);
         self.activity.bump_cube_activity(&cube);
         self.statistic.overall_mic_time += start.elapsed();
         cube

@@ -1,5 +1,5 @@
 use crate::IC3;
-use giputils::statistic::{Average, Case, RunningTime, SuccessRate};
+use giputils::statistic::{Average, AverageDuration, Case, RunningTime, SuccessRate};
 use std::{fmt::Debug, time::Duration};
 
 #[allow(unused)]
@@ -7,6 +7,9 @@ use std::{fmt::Debug, time::Duration};
 pub struct Statistic {
     case: Case,
     time: RunningTime,
+
+    pub num_sat: usize,
+    pub avg_sat_time: AverageDuration,
 
     pub num_mic: usize,
     pub avg_mic_cube_len: Average,
@@ -37,7 +40,6 @@ impl IC3 {
         for f in self.frame.iter() {
             print!("{} ", f.len());
         }
-        self.gipsat.statistic();
         println!("{:#?}", self.statistic);
     }
 }

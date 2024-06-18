@@ -1,4 +1,4 @@
-use giputils::statistic::{Average, AverageDuration};
+use giputils::statistic::Average;
 use std::ops::Add;
 
 #[derive(Debug, Default, Clone, Copy)]
@@ -16,10 +16,4 @@ impl Add for SolverStatistic {
             avg_decide_var: self.avg_decide_var + rhs.avg_decide_var,
         }
     }
-}
-
-#[derive(Debug, Default, Clone, Copy)]
-pub struct GipSATStatistic {
-    pub num_sat: usize,
-    pub avg_sat_time: AverageDuration,
 }

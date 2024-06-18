@@ -20,14 +20,8 @@ use propagate::Watchers;
 use rand::{prelude::SliceRandom, rngs::StdRng, SeedableRng};
 use search::Value;
 use simplify::Simplify;
-use statistic::{GipSATStatistic, SolverStatistic};
-use std::{
-    collections::HashSet,
-    mem::take,
-    ops::{Deref, DerefMut},
-    rc::Rc,
-    time::Instant,
-};
+use statistic::SolverStatistic;
+use std::{collections::HashSet, mem::take, rc::Rc, time::Instant};
 use transys::Transys;
 use utils::Lbool;
 use vsids::Vsids;
@@ -313,34 +307,6 @@ impl Solver {
     }
 }
 
-// pub struct Sat {
-//     solver: *mut Solver,
-// }
-
-// impl SatifSat for Sat {
-//     #[inline]
-//     fn lit_value(&self, lit: Lit) -> Option<bool> {
-//         let solver = unsafe { &*self.solver };
-//         match solver.value.v(lit) {
-//             Lbool::TRUE => Some(true),
-//             Lbool::FALSE => Some(false),
-//             _ => None,
-//         }
-//     }
-// }
-
-// pub struct Unsat {
-//     solver: *mut Solver,
-// }
-
-// impl SatifUnsat for Unsat {
-//     #[inline]
-//     fn has(&self, lit: Lit) -> bool {
-//         let solver = unsafe { &*self.solver };
-//         solver.unsat_core.has(lit)
-//     }
-// }
-
 pub enum BlockResult {
     Yes(BlockResultYes),
     No(BlockResultNo),
@@ -357,39 +323,15 @@ pub struct BlockResultNo {
     pub assumption: Cube,
 }
 
-// impl BlockResultNo {
-//     #[inline]
-//     pub fn lit_value(&self, lit: Lit) -> Option<bool> {
-//         self.sat.lit_value(lit)
-//     }
+// pub struct GipSAT {
+//     ts: Rc<Transys>,
+//     pub solvers: Vec<Solver>,
+//     lift: Solver,
+//     last_ind: Option<BlockResult>,
+//     statistic: GipSATStatistic,
 // }
 
-pub struct GipSAT {
-    ts: Rc<Transys>,
-    pub solvers: Vec<Solver>,
-    lift: Solver,
-    last_ind: Option<BlockResult>,
-    statistic: GipSATStatistic,
-}
-
-impl GipSAT {
-    /// create a new GipSAT instance from a transition system
-    pub fn new(ts: Rc<Transys>, frame: Frame) -> Self {
-        let lift = Solver::new(None, &ts, &frame);
-        Self {
-            ts,
-            solvers: Default::default(),
-            lift,
-            last_ind: None,
-            statistic: Default::default(),
-        }
-    }
-
-    #[inline]
-    pub fn level(&self) -> usize {
-        self.solvers.len() - 1
-    }
-
+impl IC3 {
     pub fn inductive_with_constrain(
         &mut self,
         frame: usize,
@@ -500,37 +442,21 @@ impl GipSAT {
         self.solvers[frame].unset_domain()
     }
 
-    pub fn statistic(&self) {
-        println!();
-        let mut statistic = SolverStatistic::default();
-        for s in self.solvers.iter() {
-            statistic = statistic + s.statistic;
-        }
-        println!("{:#?}", statistic);
-        println!("{:#?}", self.statistic);
-    }
-}
-
-impl Deref for GipSAT {
-    type Target = [Solver];
-
-    #[inline]
-    fn deref(&self) -> &Self::Target {
-        &self.solvers
-    }
-}
-
-impl DerefMut for GipSAT {
-    #[inline]
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.solvers
-    }
+    // pub fn statistic(&self) {
+    //     println!();
+    //     let mut statistic = SolverStatistic::default();
+    //     for s in self.solvers.iter() {
+    //         statistic = statistic + s.statistic;
+    //     }
+    //     println!("{:#?}", statistic);
+    //     println!("{:#?}", self.statistic);
+    // }
 }
 
 impl IC3 {
     #[inline]
     pub fn sat_contained<'a>(&'a mut self, frame: usize, lemma: &Lemma) -> bool {
-        !self.gipsat.solvers[frame]
+        !self.solvers[frame]
             .solve_with_domain(lemma, vec![], true, false)
             .unwrap()
     }
@@ -545,8 +471,7 @@ impl IC3 {
     ) -> Option<bool> {
         let mut ordered_cube = cube.clone();
         self.activity.sort_by_activity(&mut ordered_cube, ascending);
-        self.gipsat
-            .inductive(frame, &ordered_cube, strengthen, limit)
+        self.inductive(frame, &ordered_cube, strengthen, limit)
     }
 
     pub fn blocked_with_ordered_with_constrain(
@@ -560,16 +485,15 @@ impl IC3 {
     ) -> Option<bool> {
         let mut ordered_cube = cube.clone();
         self.activity.sort_by_activity(&mut ordered_cube, ascending);
-        self.gipsat
-            .inductive_with_constrain(frame, &ordered_cube, strengthen, constrain, limit)
+        self.inductive_with_constrain(frame, &ordered_cube, strengthen, constrain, limit)
     }
 
     pub fn get_predecessor(&mut self) -> Cube {
-        let last_ind = take(&mut self.gipsat.last_ind);
+        let last_ind = take(&mut self.last_ind);
         let BlockResult::No(unblock) = last_ind.unwrap() else {
             panic!()
         };
-        let solver = &mut self.gipsat.solvers[unblock.frame - 1];
+        let solver = &mut self.solvers[unblock.frame - 1];
         let mut assumption = Cube::new();
         let mut cls = unblock.assumption.clone();
         cls.extend_from_slice(&self.ts.constraints);
@@ -598,22 +522,21 @@ impl IC3 {
             if i == 1 {
                 res.reverse();
             } else if i > 1 {
-                res.shuffle(&mut self.gipsat.lift.rng);
+                res.shuffle(&mut self.lift.rng);
             }
             let mut lift_assump = assumption.clone();
             lift_assump.extend_from_slice(&res);
             let constrain = vec![cls.clone()];
-            let Some(false) =
-                self.gipsat
-                    .lift
-                    .solve_with_domain(&lift_assump, constrain, false, false)
+            let Some(false) = self
+                .lift
+                .solve_with_domain(&lift_assump, constrain, false, false)
             else {
                 panic!();
             };
             let olen = res.len();
             res = res
                 .into_iter()
-                .filter(|l| self.gipsat.lift.unsat_has(*l))
+                .filter(|l| self.lift.unsat_has(*l))
                 .collect();
             if res.len() == olen {
                 break;
@@ -625,10 +548,10 @@ impl IC3 {
     pub fn new_var(&mut self) -> Var {
         let ts = unsafe { Rc::get_mut_unchecked(&mut self.ts) };
         let var = ts.new_var();
-        for s in self.gipsat.solvers.iter_mut() {
+        for s in self.solvers.iter_mut() {
             assert!(var == s.new_var());
         }
-        assert!(var == self.gipsat.lift.new_var());
+        assert!(var == self.lift.new_var());
         var
     }
 
@@ -645,13 +568,13 @@ impl IC3 {
         ts.add_latch(state, next, init, trans.clone(), dep, dep_next);
         let tmp_lit_set = unsafe { Rc::get_mut_unchecked(&mut self.frame.tmp_lit_set) };
         tmp_lit_set.reserve(self.ts.max_latch);
-        for s in self.gipsat.solvers.iter_mut() {
+        for s in self.solvers.iter_mut() {
             for cls in trans.iter() {
                 s.add_clause_inner(cls, ClauseKind::Trans);
             }
         }
         for cls in trans.iter() {
-            self.gipsat.lift.add_clause_inner(cls, ClauseKind::Trans);
+            self.lift.add_clause_inner(cls, ClauseKind::Trans);
         }
     }
 }

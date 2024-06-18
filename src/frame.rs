@@ -116,7 +116,7 @@ impl IC3 {
         let lemma = logic_form::Lemma::new(lemma);
         if frame == 0 {
             assert!(self.frame.len() == 1);
-            assert!(self.gipsat.solvers[0].add_lemma(&!lemma.cube()) == CREF_NONE);
+            assert!(self.solvers[0].add_lemma(&!lemma.cube()) == CREF_NONE);
             self.frame[0].push((lemma, po));
             return false;
         }
@@ -135,7 +135,7 @@ impl IC3 {
                         self.frame[i].swap_remove(j);
                         let clause = !lemma.cube();
                         for k in i + 1..=frame {
-                            self.gipsat.solvers[k].add_lemma(&clause);
+                            self.solvers[k].add_lemma(&clause);
                         }
                         self.frame[frame].push((lemma, po));
                         self.frame.early = self.frame.early.min(i + 1);
@@ -158,7 +158,7 @@ impl IC3 {
         let clause = !lemma.cube();
         let begin = begin.unwrap_or(1);
         for i in begin..=frame {
-            self.gipsat.solvers[i].add_lemma(&clause);
+            self.solvers[i].add_lemma(&clause);
         }
         self.frame[frame].push((lemma, po));
         self.frame.early = self.frame.early.min(begin);

@@ -15,7 +15,7 @@ use activity::Activity;
 use aig::Aig;
 pub use args::Args;
 use frame::Frame;
-use gipsat::{GipSAT, Solver};
+use gipsat::{BlockResult, Solver};
 use logic_form::{Cube, Lemma};
 use std::panic::{self, AssertUnwindSafe};
 use std::process::exit;
@@ -26,22 +26,24 @@ use transys::Transys;
 pub struct IC3 {
     args: Args,
     ts: Rc<Transys>,
-    gipsat: GipSAT,
-    activity: Activity,
-    obligations: ProofObligationQueue,
-    statistic: Statistic,
     frame: Frame,
+    solvers: Vec<Solver>,
+    lift: Solver,
+    obligations: ProofObligationQueue,
+    activity: Activity,
+    statistic: Statistic,
+
+    last_ind: Option<BlockResult>,
 }
 
 impl IC3 {
     #[inline]
     pub fn level(&self) -> usize {
-        self.gipsat.level()
+        self.solvers.len() - 1
     }
 
     fn extend(&mut self) {
-        self.gipsat
-            .solvers
+        self.solvers
             .push(Solver::new(Some(self.frame.len()), &self.ts, &self.frame));
         self.frame.push(Vec::new());
         if self.level() == 0 {
@@ -53,8 +55,8 @@ impl IC3 {
 
     fn push_lemma(&mut self, frame: usize, mut cube: Cube) -> (usize, Cube) {
         for i in frame + 1..=self.level() {
-            if let Some(true) = self.gipsat.inductive(i, &cube, true, false) {
-                cube = self.gipsat.inductive_core();
+            if let Some(true) = self.inductive(i, &cube, true, false) {
+                cube = self.inductive_core();
             } else {
                 return (i, cube);
             }
@@ -63,7 +65,7 @@ impl IC3 {
     }
 
     fn generalize(&mut self, mut po: ProofObligation) -> bool {
-        let mut mic = self.gipsat.inductive_core();
+        let mut mic = self.inductive_core();
         mic = self.mic(po.frame, mic, 0);
         let (frame, mic) = self.push_lemma(po.frame, mic);
         self.statistic.avg_po_cube_len += po.lemma.len();
@@ -117,11 +119,11 @@ impl IC3 {
                 if let Some(true) =
                     self.blocked_with_ordered(frame_idx + 1, &lemma, false, false, false)
                 {
-                    let core = self.gipsat.inductive_core();
+                    let core = self.inductive_core();
                     if po.frame < frame_idx + 2 {
                         if self.obligations.remove(&po) {
-                        po.frame = frame_idx + 2;
-                        self.obligations.add(po.clone());
+                            po.frame = frame_idx + 2;
+                            self.obligations.add(po.clone());
                         }
                     }
                     self.add_lemma(frame_idx + 1, core, true, po);
@@ -143,15 +145,17 @@ impl IC3 {
         let statistic = Statistic::new(args.model.as_ref().unwrap());
         let activity = Activity::new(&ts);
         let frame = Frame::new(&ts);
-        let gipsat = GipSAT::new(ts.clone(), frame.clone());
+        let lift = Solver::new(None, &ts, &frame);
         let mut res = Self {
             args,
             ts,
             activity,
-            gipsat,
+            solvers: Vec::new(),
+            lift,
             statistic,
             obligations: ProofObligationQueue::new(),
             frame,
+            last_ind: None,
         };
         res.extend();
         res
@@ -180,7 +184,7 @@ impl IC3 {
                     }
                     _ => (),
                 }
-                if self.gipsat.has_bad() {
+                if self.has_bad() {
                     let bad = Lemma::new(self.get_predecessor());
                     self.add_obligation(ProofObligation::new(self.level(), bad, 0, None))
                 } else {
