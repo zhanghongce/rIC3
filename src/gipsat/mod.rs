@@ -25,7 +25,7 @@ use utils::Lbool;
 use vsids::Vsids;
 
 pub struct Solver {
-    _id: Option<usize>,
+    id: Option<usize>,
     cdb: ClauseDB,
     watchers: Watchers,
     value: Value,
@@ -56,7 +56,7 @@ pub struct Solver {
 impl Solver {
     pub fn new(id: Option<usize>, ts: &Rc<Transys>, frame: &Frame) -> Self {
         let mut solver = Self {
-            _id: id,
+            id: id,
             ts: ts.clone(),
             _frame: frame.clone(),
             cdb: Default::default(),
@@ -86,7 +86,7 @@ impl Solver {
         for cls in ts.trans.iter() {
             solver.add_clause_inner(cls, ClauseKind::Trans);
         }
-        if id.is_some() {
+        if solver.id.is_some() {
             for c in ts.constraints.iter() {
                 solver.add_clause_inner(&[*c], ClauseKind::Trans);
             }
