@@ -163,10 +163,10 @@ impl Solver {
                     }
                 }
                 watchers[w] = new_watcher;
-                if self.value.v(cref[0]).is_false() {
-                    return cid;
-                }
                 if self.domain.has(cref[0].var()) {
+                    if self.value.v(cref[0]).is_false() {
+                        return cid;
+                    }
                     let assign = cref[0];
                     self.assign(assign, cid);
                 }
