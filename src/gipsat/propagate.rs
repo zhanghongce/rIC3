@@ -51,8 +51,63 @@ impl Watchers {
 }
 
 impl Solver {
-    pub fn propagate(&mut self) -> CRef {
-        let propagate_full = self.highest_level() == 0;
+    #[inline]
+    fn propagate_full(&mut self) -> CRef {
+        while self.propagated < self.trail.len() {
+            let p = self.trail[self.propagated];
+            self.propagated += 1;
+            let mut w = 0;
+            'next_cls: while w < self.watchers.wtrs[p].len() {
+                let watchers = &mut self.watchers.wtrs[p];
+                let blocker = watchers[w].blocker;
+                match self.value.v(blocker) {
+                    Lbool::TRUE => {
+                        w += 1;
+                        continue;
+                    }
+                    _ => (),
+                }
+                let cid = watchers[w].clause;
+                let mut cref = self.cdb.get(cid);
+                if cref[0] == !p {
+                    cref.swap(0, 1);
+                }
+                debug_assert!(cref[1] == !p);
+                let new_watcher = Watcher::new(cid, cref[0]);
+                if cref[0] != blocker {
+                    match self.value.v(cref[0]) {
+                        Lbool::TRUE => {
+                            watchers[w] = new_watcher;
+                            w += 1;
+                            continue;
+                        }
+                        _ => (),
+                    }
+                }
+
+                for i in 2..cref.len() {
+                    let lit = cref[i];
+                    if !self.value.v(lit).is_false() {
+                        cref.swap(1, i);
+                        watchers.swap_remove(w);
+                        self.watchers.wtrs[!cref[1]].push(new_watcher);
+                        continue 'next_cls;
+                    }
+                }
+                watchers[w] = new_watcher;
+                if self.value.v(cref[0]).is_false() {
+                    return cid;
+                }
+                let assign = cref[0];
+                self.assign(assign, cid);
+                w += 1;
+            }
+        }
+        CREF_NONE
+    }
+
+    #[inline]
+    fn propagate_domain(&mut self) -> CRef {
         while self.propagated < self.trail.len() {
             let p = self.trail[self.propagated];
             self.propagated += 1;
@@ -67,7 +122,7 @@ impl Solver {
                     }
                     Lbool::FALSE => (),
                     _ => {
-                        if !propagate_full && !self.domain.has(blocker.var()) {
+                        if !self.domain.has(blocker.var()) {
                             w += 1;
                             continue;
                         }
@@ -89,7 +144,7 @@ impl Solver {
                         }
                         Lbool::FALSE => (),
                         _ => {
-                            if !propagate_full && !self.domain.has(cref[0].var()) {
+                            if !self.domain.has(cref[0].var()) {
                                 watchers[w] = new_watcher;
                                 w += 1;
                                 continue;
@@ -111,7 +166,7 @@ impl Solver {
                 if self.value.v(cref[0]).is_false() {
                     return cid;
                 }
-                if propagate_full || self.domain.has(cref[0].var()) {
+                if self.domain.has(cref[0].var()) {
                     let assign = cref[0];
                     self.assign(assign, cid);
                 }
@@ -119,6 +174,15 @@ impl Solver {
             }
         }
         CREF_NONE
+    }
+
+    #[inline]
+    pub fn propagate(&mut self) -> CRef {
+        if self.highest_level() == 0 {
+            self.propagate_full()
+        } else {
+            self.propagate_domain()
+        }
     }
 
     pub fn flip_to_none(&mut self, var: Var) -> bool {
