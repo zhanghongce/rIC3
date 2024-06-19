@@ -131,15 +131,6 @@ impl Solver {
             Lbool::FALSE => !l,
             _ => return true,
         };
-        for w in self.watchers.wtrs[!l].iter() {
-            let clause = self.cdb.get(w.clause);
-            if !clause.slice().iter().filter(|l| l.var() != var).any(|l| {
-                let v = self.value.v(*l);
-                v.is_true() || (v.is_none() && !self.domain.has(l.var()))
-            }) {
-                return false;
-            }
-        }
         self.value.set_none(var);
         let mut w = 0;
         'next_cls: while w < self.watchers.wtrs[!l].len() {
@@ -176,7 +167,8 @@ impl Solver {
                     continue 'next_cls;
                 }
             }
-            panic!();
+            self.value.set(l);
+            return false;
         }
         true
     }
