@@ -19,7 +19,7 @@ use rand::{prelude::SliceRandom, rngs::StdRng, SeedableRng};
 use search::Value;
 use simplify::Simplify;
 use statistic::SolverStatistic;
-use std::{collections::HashSet, mem::take, rc::Rc, time::Instant};
+use std::{collections::HashSet, rc::Rc};
 use transys::Transys;
 use utils::Lbool;
 use vsids::Vsids;
@@ -47,6 +47,8 @@ pub struct Solver {
     ts: Rc<Transys>,
     _frame: Frame,
 
+    assump: Cube,
+
     rng: StdRng,
     statistic: SolverStatistic,
 }
@@ -73,8 +75,9 @@ impl Solver {
             domain: Domain::new(),
             temporary_domain: Default::default(),
             prepared_vsids: false,
-            statistic: Default::default(),
             constrain_act: Var(0),
+            assump: Default::default(),
+            statistic: Default::default(),
             rng: StdRng::seed_from_u64(0),
         };
         while solver.num_var() < solver.ts.num_var {
@@ -272,6 +275,55 @@ impl Solver {
         self.search_with_restart(assump, limit)
     }
 
+    pub fn inductive_with_constrain(
+        &mut self,
+        cube: &[Lit],
+        strengthen: bool,
+        mut constrain: Vec<Clause>,
+        limit: bool,
+    ) -> Option<bool> {
+        let assump = self.ts.cube_next(cube);
+        if strengthen {
+            constrain.push(Clause::from_iter(cube.iter().map(|l| !*l)));
+        }
+        let res = self
+            .solve_with_domain(&assump, constrain, true, limit)
+            .map(|l| !l);
+        self.assump = assump;
+        res
+    }
+
+    pub fn inductive(&mut self, cube: &[Lit], strengthen: bool, limit: bool) -> Option<bool> {
+        self.inductive_with_constrain(cube, strengthen, vec![], limit)
+    }
+
+    pub fn inductive_core(&mut self) -> Cube {
+        let mut ans = Cube::new();
+        for l in self.assump.iter() {
+            if self.unsat_has(*l) {
+                ans.push(self.ts.lit_prev(*l));
+            }
+        }
+        if self.ts.cube_subsume_init(&ans) {
+            ans = Cube::new();
+            let new = self
+                .assump
+                .iter()
+                .find(|l| {
+                    let l = self.ts.lit_prev(**l);
+                    self.ts.init_map[l.var()].is_some_and(|i| i != l.polarity())
+                })
+                .unwrap();
+            for l in self.assump.iter() {
+                if self.unsat_has(*l) || l.eq(new) {
+                    ans.push(self.ts.lit_prev(*l));
+                }
+            }
+            assert!(!self.ts.cube_subsume_init(&ans));
+        }
+        ans
+    }
+
     pub fn set_domain(&mut self, domain: impl Iterator<Item = Lit>) {
         self.reset();
         self.temporary_domain = true;
@@ -305,123 +357,18 @@ impl Solver {
     }
 }
 
-pub enum BlockResult {
-    Yes(BlockResultYes),
-    No(BlockResultNo),
-}
-
-pub struct BlockResultYes {
-    pub frame: usize,
-    pub cube: Cube,
-    pub assumption: Cube,
-}
-
-pub struct BlockResultNo {
-    pub frame: usize,
-    pub assumption: Cube,
-}
-
 impl IC3 {
-    pub fn inductive_with_constrain(
-        &mut self,
-        frame: usize,
-        cube: &[Lit],
-        strengthen: bool,
-        mut constrain: Vec<Clause>,
-        limit: bool,
-    ) -> Option<bool> {
-        let start = Instant::now();
-        self.statistic.num_sat += 1;
-        let solver_idx = frame - 1;
-        let assumption = self.ts.cube_next(cube);
-        if strengthen {
-            constrain.push(Clause::from_iter(cube.iter().map(|l| !*l)));
+    pub fn get_bad(&mut self) -> Option<Cube> {
+        let solver = self.solvers.last_mut().unwrap();
+        solver.assump = Cube::from([self.ts.bad]);
+        let res = solver
+            .solve_with_domain(&[self.ts.bad], vec![], false, false)
+            .unwrap();
+        if res {
+            Some(self.get_predecessor(self.solvers.len()))
+        } else {
+            None
         }
-        self.last_ind =
-            match self.solvers[solver_idx].solve_with_domain(&assumption, constrain, true, limit) {
-                Some(true) => Some(BlockResult::No(BlockResultNo { frame, assumption })),
-                Some(false) => Some(BlockResult::Yes(BlockResultYes {
-                    frame,
-                    cube: Cube::from(cube),
-                    assumption,
-                })),
-                None => None,
-            };
-        self.statistic.avg_sat_time += start.elapsed();
-        self.last_ind
-            .as_ref()
-            .map(|r| matches!(r, BlockResult::Yes(_)))
-    }
-
-    pub fn inductive(
-        &mut self,
-        frame: usize,
-        cube: &[Lit],
-        strengthen: bool,
-        limit: bool,
-    ) -> Option<bool> {
-        self.inductive_with_constrain(frame, cube, strengthen, vec![], limit)
-    }
-
-    pub fn inductive_core(&mut self) -> Cube {
-        let last_ind = take(&mut self.last_ind);
-        let block = match last_ind.unwrap() {
-            BlockResult::Yes(block) => block,
-            BlockResult::No(_) => panic!(),
-        };
-        let mut ans = Cube::new();
-        let solver = &self.solvers[block.frame - 1];
-        for i in 0..block.cube.len() {
-            if solver.unsat_has(block.assumption[i]) {
-                ans.push(block.cube[i]);
-            }
-        }
-        if self.ts.cube_subsume_init(&ans) {
-            ans = Cube::new();
-            let new = *block
-                .cube
-                .iter()
-                .find(|l| self.ts.init_map[l.var()].is_some_and(|i| i != l.polarity()))
-                .unwrap();
-            for i in 0..block.cube.len() {
-                if solver.unsat_has(block.assumption[i]) || block.cube[i] == new {
-                    ans.push(block.cube[i]);
-                }
-            }
-            assert!(!self.ts.cube_subsume_init(&ans));
-        }
-        ans
-    }
-
-    pub fn unblocked_value(&self, lit: Lit) -> Option<bool> {
-        let unblock = match self.last_ind.as_ref().unwrap() {
-            BlockResult::Yes(_) => panic!(),
-            BlockResult::No(unblock) => unblock,
-        };
-        self.solvers[unblock.frame - 1].sat_value(lit)
-    }
-
-    pub fn has_bad(&mut self) -> bool {
-        let start = Instant::now();
-        self.statistic.num_sat += 1;
-        let res = match self.solvers.last_mut().unwrap().solve_with_domain(
-            &[self.ts.bad],
-            vec![],
-            false,
-            false,
-        ) {
-            Some(true) => {
-                self.last_ind = Some(BlockResult::No(BlockResultNo {
-                    frame: self.solvers.len(),
-                    assumption: Cube::from([self.ts.bad]),
-                }));
-                true
-            }
-            Some(false) => false,
-            _ => panic!(),
-        };
-        self.statistic.avg_sat_time += start.elapsed();
-        res
     }
 
     // pub fn statistic(&self) {
@@ -437,7 +384,7 @@ impl IC3 {
 
 impl IC3 {
     #[inline]
-    pub fn sat_contained<'a>(&'a mut self, frame: usize, lemma: &Lemma) -> bool {
+    pub fn sat_contained(&mut self, frame: usize, lemma: &Lemma) -> bool {
         !self.solvers[frame]
             .solve_with_domain(lemma, vec![], true, false)
             .unwrap()
@@ -453,7 +400,7 @@ impl IC3 {
     ) -> Option<bool> {
         let mut ordered_cube = cube.clone();
         self.activity.sort_by_activity(&mut ordered_cube, ascending);
-        self.inductive(frame, &ordered_cube, strengthen, limit)
+        self.solvers[frame - 1].inductive(&ordered_cube, strengthen, limit)
     }
 
     pub fn blocked_with_ordered_with_constrain(
@@ -467,17 +414,18 @@ impl IC3 {
     ) -> Option<bool> {
         let mut ordered_cube = cube.clone();
         self.activity.sort_by_activity(&mut ordered_cube, ascending);
-        self.inductive_with_constrain(frame, &ordered_cube, strengthen, constrain, limit)
+        self.solvers[frame - 1].inductive_with_constrain(
+            &ordered_cube,
+            strengthen,
+            constrain,
+            limit,
+        )
     }
 
-    pub fn get_predecessor(&mut self) -> Cube {
-        let last_ind = take(&mut self.last_ind);
-        let BlockResult::No(unblock) = last_ind.unwrap() else {
-            panic!()
-        };
-        let solver = &mut self.solvers[unblock.frame - 1];
+    pub fn get_predecessor(&mut self, frame: usize) -> Cube {
+        let solver = &mut self.solvers[frame - 1];
         let mut assumption = Cube::new();
-        let mut cls = unblock.assumption.clone();
+        let mut cls = solver.assump.clone();
         cls.extend_from_slice(&self.ts.constraints);
         let in_cls: HashSet<Var> = HashSet::from_iter(cls.iter().map(|l| l.var()));
         let cls = !cls;

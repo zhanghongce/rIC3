@@ -33,7 +33,7 @@ impl IC3 {
             }
             match self.blocked_with_ordered(frame, &cube, false, true, false) {
                 Some(true) => {
-                    return DownResult::Success(self.inductive_core());
+                    return DownResult::Success(self.solvers[frame - 1].inductive_core());
                 }
                 Some(false) => {
                     // if level == 0 {
@@ -64,14 +64,14 @@ impl IC3 {
                     // let mut tried = HashSet::new();
                     for lit in cube {
                         if keep.contains(&lit) {
-                            if let Some(true) = self.unblocked_value(lit) {
+                            if let Some(true) = self.solvers[frame - 1].sat_value(lit) {
                                 // tried.insert(lit);
                                 cube_new.push(lit);
                             } else {
                                 ret = true;
                                 break;
                             }
-                        } else if let Some(true) = self.unblocked_value(lit) {
+                        } else if let Some(true) = self.solvers[frame - 1].sat_value(lit) {
                             if !self.solvers[frame - 1].flip_to_none(lit.var()) {
                                 // tried.insert(lit);
                                 cube_new.push(lit);
@@ -83,13 +83,13 @@ impl IC3 {
                     let mut s = Cube::new();
                     let mut t = Cube::new();
                     for l in full.iter() {
-                        if let Some(v) = self.unblocked_value(*l) {
+                        if let Some(v) = self.solvers[frame - 1].sat_value(*l) {
                             if !self.solvers[frame - 1].flip_to_none(l.var()) {
                                 s.push(l.not_if(!v));
                             }
                         }
                         let lt = self.ts.lit_next(*l);
-                        if let Some(v) = self.unblocked_value(lt) {
+                        if let Some(v) = self.solvers[frame - 1].sat_value(lt) {
                             t.push(l.not_if(!v));
                         }
                     }

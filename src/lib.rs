@@ -15,7 +15,7 @@ use activity::Activity;
 use aig::Aig;
 pub use args::Args;
 use frame::Frame;
-use gipsat::{BlockResult, Solver};
+use gipsat::Solver;
 use logic_form::{Cube, Lemma};
 use std::panic::{self, AssertUnwindSafe};
 use std::process::exit;
@@ -32,8 +32,6 @@ pub struct IC3 {
     obligations: ProofObligationQueue,
     activity: Activity,
     statistic: Statistic,
-
-    last_ind: Option<BlockResult>,
 }
 
 impl IC3 {
@@ -55,8 +53,8 @@ impl IC3 {
 
     fn push_lemma(&mut self, frame: usize, mut cube: Cube) -> (usize, Cube) {
         for i in frame + 1..=self.level() {
-            if let Some(true) = self.inductive(i, &cube, true, false) {
-                cube = self.inductive_core();
+            if let Some(true) = self.solvers[i - 1].inductive(&cube, true, false) {
+                cube = self.solvers[i - 1].inductive_core();
             } else {
                 return (i, cube);
             }
@@ -65,7 +63,7 @@ impl IC3 {
     }
 
     fn generalize(&mut self, mut po: ProofObligation) -> bool {
-        let mut mic = self.inductive_core();
+        let mut mic = self.solvers[po.frame - 1].inductive_core();
         mic = self.mic(po.frame, mic, 0);
         let (frame, mic) = self.push_lemma(po.frame, mic);
         self.statistic.avg_po_cube_len += po.lemma.len();
@@ -95,7 +93,7 @@ impl IC3 {
                     return None;
                 }
             } else {
-                let model = self.get_predecessor();
+                let model = self.get_predecessor(po.frame);
                 self.add_obligation(ProofObligation::new(
                     po.frame - 1,
                     Lemma::new(model),
@@ -119,7 +117,7 @@ impl IC3 {
                 if let Some(true) =
                     self.blocked_with_ordered(frame_idx + 1, &lemma, false, false, false)
                 {
-                    let core = self.inductive_core();
+                    let core = self.solvers[frame_idx].inductive_core();
                     if po.frame < frame_idx + 2 {
                         if self.obligations.remove(&po) {
                             po.frame = frame_idx + 2;
@@ -155,7 +153,6 @@ impl IC3 {
             statistic,
             obligations: ProofObligationQueue::new(),
             frame,
-            last_ind: None,
         };
         res.extend();
         res
@@ -184,8 +181,8 @@ impl IC3 {
                     }
                     _ => (),
                 }
-                if self.has_bad() {
-                    let bad = Lemma::new(self.get_predecessor());
+                if let Some(bad) = self.get_bad() {
+                    let bad = Lemma::new(bad);
                     self.add_obligation(ProofObligation::new(self.level(), bad, 0, None))
                 } else {
                     break;
