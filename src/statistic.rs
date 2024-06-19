@@ -1,4 +1,4 @@
-use crate::IC3;
+use crate::{gipsat::statistic::SolverStatistic, IC3};
 use giputils::statistic::{Average, Case, RunningTime, SuccessRate};
 use std::{fmt::Debug, time::Duration};
 
@@ -17,6 +17,8 @@ pub struct Statistic {
     pub overall_mic_time: Duration,
     pub overall_block_time: Duration,
     pub overall_propagate_time: Duration,
+
+    pub test: SuccessRate,
 }
 
 impl Statistic {
@@ -37,6 +39,12 @@ impl IC3 {
         for f in self.frame.iter() {
             print!("{} ", f.len());
         }
+        println!("");
+        let mut statistic = SolverStatistic::default();
+        for s in self.solvers.iter() {
+            statistic = statistic + s.statistic;
+        }
+        println!("{:#?}", statistic);
         println!("{:#?}", self.statistic);
     }
 }

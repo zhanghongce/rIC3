@@ -4,7 +4,7 @@ mod domain;
 mod propagate;
 mod search;
 mod simplify;
-mod statistic;
+pub mod statistic;
 mod utils;
 mod vsids;
 
@@ -50,7 +50,7 @@ pub struct Solver {
     assump: Cube,
 
     rng: StdRng,
-    statistic: SolverStatistic,
+    pub statistic: SolverStatistic,
 }
 
 impl Solver {
@@ -370,16 +370,6 @@ impl IC3 {
             None
         }
     }
-
-    // pub fn statistic(&self) {
-    //     println!();
-    //     let mut statistic = SolverStatistic::default();
-    //     for s in self.solvers.iter() {
-    //         statistic = statistic + s.statistic;
-    //     }
-    //     println!("{:#?}", statistic);
-    //     println!("{:#?}", self.statistic);
-    // }
 }
 
 impl IC3 {
