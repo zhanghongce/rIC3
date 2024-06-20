@@ -150,13 +150,11 @@ impl Solver {
                     }
                 }
                 watchers[w] = new_watcher;
-                if self.domain.has(cref[0].var()) {
-                    if self.value.v(cref[0]).is_false() {
-                        return cid;
-                    }
-                    let assign = cref[0];
-                    self.assign(assign, cid);
+                if self.value.v(cref[0]).is_false() {
+                    return cid;
                 }
+                let assign = cref[0];
+                self.assign(assign, cid);
                 w += 1;
             }
         }
