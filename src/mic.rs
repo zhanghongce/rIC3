@@ -36,36 +36,11 @@ impl IC3 {
                     return DownResult::Success(self.solvers[frame - 1].inductive_core());
                 }
                 Some(false) => {
-                    // if level == 0 {
-                    //     return DownResult::Fail;
-                    // }
-                    // // dbg!(&cube);
-                    // let model = self.gipsat.get_predecessor();
-                    // if ctgs < 3 && frame > 1 && !self.ts.cube_subsume_init(&model) {
-                    //     if self.blocked_with_ordered(frame - 1, &model, false, true) {
-                    //         ctgs += 1;
-                    //         let conflict = self.gipsat.inductive_core();
-                    //         let conflict = self.mic(frame - 1, conflict, level - 1);
-                    //         let mut i = frame;
-                    //         while i <= self.level() {
-                    //             if !self.gipsat.inductive(i, &conflict, true) {
-                    //                 break;
-                    //             }
-                    //             i += 1;
-                    //         }
-                    //         self.add_lemma(i - 1, conflict);
-                    //         continue;
-                    //     }
-                    // }
-                    // ctgs = 0;
-                    // let cex_set: HashSet<Lit> = HashSet::from_iter(model);
                     let mut ret = false;
                     let mut cube_new = Cube::new();
-                    // let mut tried = HashSet::new();
                     for lit in cube {
                         if keep.contains(&lit) {
                             if let Some(true) = self.solvers[frame - 1].sat_value(lit) {
-                                // tried.insert(lit);
                                 cube_new.push(lit);
                             } else {
                                 ret = true;
@@ -73,7 +48,6 @@ impl IC3 {
                             }
                         } else if let Some(true) = self.solvers[frame - 1].sat_value(lit) {
                             if !self.solvers[frame - 1].flip_to_none(lit.var()) {
-                                // tried.insert(lit);
                                 cube_new.push(lit);
                             }
                         }

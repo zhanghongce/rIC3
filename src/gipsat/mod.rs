@@ -49,6 +49,7 @@ pub struct Solver {
 
     assump: Cube,
 
+    mark: LitSet,
     rng: StdRng,
     pub statistic: SolverStatistic,
 }
@@ -79,6 +80,7 @@ impl Solver {
             assump: Default::default(),
             statistic: Default::default(),
             rng: StdRng::seed_from_u64(0),
+            mark: Default::default(),
         };
         while solver.num_var() < solver.ts.num_var {
             solver.new_var();
@@ -113,6 +115,7 @@ impl Solver {
         self.analyze.reserve(var);
         self.unsat_core.reserve(var);
         self.domain.reserve(var);
+        self.mark.reserve(var);
         self.constrain_act = var;
         v
     }
