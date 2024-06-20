@@ -57,7 +57,7 @@ pub struct Solver {
 impl Solver {
     pub fn new(id: Option<usize>, ts: &Rc<Transys>, frame: &Frame) -> Self {
         let mut solver = Self {
-            id: id,
+            id,
             ts: ts.clone(),
             _frame: frame.clone(),
             cdb: Default::default(),

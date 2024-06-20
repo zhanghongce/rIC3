@@ -118,11 +118,9 @@ impl IC3 {
                     self.blocked_with_ordered(frame_idx + 1, &lemma, false, false, false)
                 {
                     let core = self.solvers[frame_idx].inductive_core();
-                    if po.frame < frame_idx + 2 {
-                        if self.obligations.remove(&po) {
-                            po.frame = frame_idx + 2;
-                            self.obligations.add(po.clone());
-                        }
+                    if po.frame < frame_idx + 2 && self.obligations.remove(&po) {
+                        po.frame = frame_idx + 2;
+                        self.obligations.add(po.clone());
                     }
                     self.add_lemma(frame_idx + 1, core, true, po);
                 }

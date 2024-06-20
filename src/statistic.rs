@@ -39,7 +39,7 @@ impl IC3 {
         for f in self.frame.iter() {
             print!("{} ", f.len());
         }
-        println!("");
+        println!();
         let mut statistic = SolverStatistic::default();
         for s in self.solvers.iter() {
             statistic = statistic + s.statistic;

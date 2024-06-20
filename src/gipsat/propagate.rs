@@ -70,24 +70,21 @@ impl Solver {
                     cref.swap(0, 1);
                 }
                 debug_assert!(cref[1] == !p);
-                let new_watcher = Watcher::new(cid, cref[0]);
-                if cref[0] != blocker {
-                    if self.value.v(cref[0]) == Lbool::TRUE {
-                        watchers[w] = new_watcher;
-                        w += 1;
-                        continue;
-                    }
+                if cref[0] != blocker && self.value.v(cref[0]) == Lbool::TRUE {
+                    watchers[w].blocker = cref[0];
+                    w += 1;
+                    continue;
                 }
                 for i in 2..cref.len() {
                     let lit = cref[i];
                     if !self.value.v(lit).is_false() {
                         cref.swap(1, i);
                         watchers.swap_remove(w);
-                        self.watchers.wtrs[!cref[1]].push(new_watcher);
+                        self.watchers.wtrs[!cref[1]].push(Watcher::new(cid, cref[0]));
                         continue 'next_cls;
                     }
                 }
-                watchers[w] = new_watcher;
+                watchers[w].blocker = cref[0];
                 if self.value.v(cref[0]).is_false() {
                     return cid;
                 }
@@ -109,14 +106,9 @@ impl Solver {
                 let watchers = &mut self.watchers.wtrs[p];
                 let blocker = watchers[w].blocker;
                 let v = self.value.v(blocker);
-                if v == Lbool::TRUE {
+                if v == Lbool::TRUE || (v != Lbool::FALSE && !self.domain.has(blocker.var())) {
                     w += 1;
                     continue;
-                } else if v != Lbool::FALSE {
-                    if !self.domain.has(blocker.var()) {
-                        w += 1;
-                        continue;
-                    }
                 }
                 let cid = watchers[w].clause;
                 let mut cref = self.cdb.get(cid);
@@ -124,32 +116,24 @@ impl Solver {
                     cref.swap(0, 1);
                 }
                 debug_assert!(cref[1] == !p);
-                let new_watcher = Watcher::new(cid, cref[0]);
                 if cref[0] != blocker {
                     let v = self.value.v(cref[0]);
-                    if v == Lbool::TRUE {
-                        watchers[w] = new_watcher;
+                    if v == Lbool::TRUE || (v != Lbool::FALSE && !self.domain.has(cref[0].var())) {
+                        watchers[w].blocker = cref[0];
                         w += 1;
                         continue;
-                    } else if v != Lbool::FALSE {
-                        if !self.domain.has(cref[0].var()) {
-                            watchers[w] = new_watcher;
-                            w += 1;
-                            continue;
-                        }
                     }
                 }
-
                 for i in 2..cref.len() {
                     let lit = cref[i];
                     if !self.value.v(lit).is_false() {
                         cref.swap(1, i);
                         watchers.swap_remove(w);
-                        self.watchers.wtrs[!cref[1]].push(new_watcher);
+                        self.watchers.wtrs[!cref[1]].push(Watcher::new(cid, cref[0]));
                         continue 'next_cls;
                     }
                 }
-                watchers[w] = new_watcher;
+                watchers[w].blocker = cref[0];
                 if self.value.v(cref[0]).is_false() {
                     return cid;
                 }
@@ -192,16 +176,10 @@ impl Solver {
             assert!(cref[1] == l);
             let new_watcher = Watcher::new(cid, cref[0]);
             let v = self.value.v(cref[0]);
-            if v == Lbool::TRUE {
-                watchers[w] = new_watcher;
+            if v == Lbool::TRUE || (v != Lbool::FALSE && !self.domain.has(cref[0].var())) {
+                watchers[w].blocker = cref[0];
                 w += 1;
                 continue;
-            } else if v != Lbool::FALSE {
-                if !self.domain.has(cref[0].var()) {
-                    watchers[w] = new_watcher;
-                    w += 1;
-                    continue;
-                }
             }
             for i in 2..cref.len() {
                 let lit = cref[i];
