@@ -108,7 +108,7 @@ impl Index<usize> for Clause {
     }
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub struct CRef(u32);
 
 pub const CREF_NONE: CRef = CRef(u32::MAX);
@@ -439,5 +439,31 @@ impl Solver {
 
             self.cdb.allocator = to;
         }
+    }
+
+    pub fn verify(&self, assump: &[Lit]) -> bool {
+        for l in assump.iter() {
+            if !self.value.v(*l).is_true() {
+                return false;
+            }
+        }
+        for cls in self
+            .cdb
+            .lemmas
+            .iter()
+            .chain(self.cdb.trans.iter())
+            .chain(self.cdb.learnt.iter())
+            .chain(self.cdb.temporary.iter())
+        {
+            let cls = self.cdb.get(*cls);
+            if !cls
+                .slice()
+                .iter()
+                .any(|l| self.value.v(*l).is_true() || !self.domain.has(l.var()))
+            {
+                return false;
+            }
+        }
+        true
     }
 }
