@@ -193,19 +193,16 @@ impl Solver {
             }
             assert!(cref[1] == l);
             let new_watcher = Watcher::new(cid, cref[0]);
-            match self.value.v(cref[0]) {
-                Lbool::TRUE => {
+            let v = self.value.v(cref[0]);
+            if v == Lbool::TRUE {
+                watchers[w] = new_watcher;
+                w += 1;
+                continue;
+            } else if v != Lbool::FALSE {
+                if !self.domain.has(cref[0].var()) {
                     watchers[w] = new_watcher;
                     w += 1;
                     continue;
-                }
-                Lbool::FALSE => (),
-                _ => {
-                    if !self.domain.has(cref[0].var()) {
-                        watchers[w] = new_watcher;
-                        w += 1;
-                        continue;
-                    }
                 }
             }
             for i in 2..cref.len() {
