@@ -11,7 +11,7 @@ impl Solver {
         assert!(self.propagate() == CREF_NONE);
         if self.statistic.num_solve > self.simplify.last_simplify + 1000 {
             if self.simplify.last_num_assign < self.trail.len() {
-            self.simplify_satisfied();
+                self.simplify_satisfied();
                 self.simplify.last_simplify = self.statistic.num_solve;
             }
         }
