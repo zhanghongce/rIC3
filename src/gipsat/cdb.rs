@@ -396,15 +396,13 @@ impl Solver {
 
     pub fn simplify_satisfied(&mut self) {
         assert!(self.highest_level() == 0);
-        if self.simplify.last_num_assign < self.trail.len() {
-            self.simplify.last_num_assign = self.trail.len();
-            let lemmas = take(&mut self.cdb.lemmas);
-            self.cdb.lemmas = self.simplify_clauses(lemmas);
-            let learnt = take(&mut self.cdb.learnt);
-            self.cdb.learnt = self.simplify_clauses(learnt);
-            let trans = take(&mut self.cdb.trans);
-            self.cdb.trans = self.simplify_clauses(trans);
-        }
+        self.simplify.last_num_assign = self.trail.len();
+        let lemmas = take(&mut self.cdb.lemmas);
+        self.cdb.lemmas = self.simplify_clauses(lemmas);
+        let learnt = take(&mut self.cdb.learnt);
+        self.cdb.learnt = self.simplify_clauses(learnt);
+        let trans = take(&mut self.cdb.trans);
+        self.cdb.trans = self.simplify_clauses(trans);
         self.garbage_collect();
     }
 
