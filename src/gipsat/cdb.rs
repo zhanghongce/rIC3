@@ -147,10 +147,7 @@ impl Allocator {
     #[inline]
     pub fn get(&self, cref: CRef) -> Clause {
         Clause {
-            #[cfg(feature = "no_bound_check")]
-            data: unsafe { self.data.get_unchecked(cref.0 as usize) as *const Data as *mut Data },
-            #[cfg(not(feature = "no_bound_check"))]
-            data: &self.data[cref.0 as usize] as *const Data as *mut Data,
+            data: unsafe { self.data.as_ptr().add(cref.0 as usize) as *mut Data },
         }
     }
 
