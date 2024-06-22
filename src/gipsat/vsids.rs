@@ -195,8 +195,8 @@ impl Vsids {
     #[inline]
     pub fn reserve(&mut self, var: Var) {
         self.heap.reserve(var);
-        self.bucket.reserve(var);
         self.activity.reserve(var);
+        self.bucket.reserve(var);
     }
 
     #[inline]
@@ -221,6 +221,9 @@ impl Vsids {
         if !self.enable_bucket {
             self.heap.up(var, &self.activity);
         }
+        self.bucket
+            .buckets
+            .reserve(self.activity.bucket_table[self.activity.bucket_table.len() - 1] + 1);
     }
 
     #[inline]
@@ -234,13 +237,12 @@ impl Default for Vsids {
         Self {
             activity: Default::default(),
             heap: Default::default(),
-            bucket: Default::default(),
+            bucket: Bucket::new(),
             enable_bucket: true,
         }
     }
 }
 
-#[derive(Default)]
 pub struct Bucket {
     buckets: Gvec<Gvec<Var>>,
     in_bucket: VarMap<bool>,
@@ -248,6 +250,17 @@ pub struct Bucket {
 }
 
 impl Bucket {
+    #[inline]
+    pub fn new() -> Self {
+        let mut buckets: Gvec<_> = Gvec::new();
+        buckets.reserve(10);
+        Self {
+            buckets,
+            in_bucket: Default::default(),
+            head: Default::default(),
+        }
+    }
+
     #[inline]
     pub fn reserve(&mut self, var: Var) {
         self.in_bucket.reserve(var);
@@ -262,7 +275,6 @@ impl Bucket {
         if self.head > bucket {
             self.head = bucket;
         }
-        self.buckets.reserve(bucket + 1);
         self.buckets[bucket].push(var);
         self.in_bucket[var] = true;
     }
@@ -288,7 +300,9 @@ impl Bucket {
             }
             self.head += 1;
         }
-        self.buckets.clear();
+        for b in self.buckets.iter_mut() {
+            b.clear();
+        }
         self.head = 0;
     }
 }
