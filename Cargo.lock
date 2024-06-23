@@ -77,6 +77,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "327762f6e5a765692301e5bb513e0d9fef63be86bbc14528052b1cd3e6f03e07"
 
 [[package]]
+name = "cadical"
+version = "0.1.0"
+dependencies = [
+ "cmake",
+ "logic-form",
+ "satif",
+]
+
+[[package]]
 name = "cc"
 version = "1.0.99"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -246,6 +255,7 @@ version = "1.0.0"
 dependencies = [
  "aig",
  "bitfield-struct",
+ "cadical",
  "clap",
  "ctrlc",
  "giputils",

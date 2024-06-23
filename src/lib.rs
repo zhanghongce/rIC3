@@ -2,6 +2,7 @@
 
 mod activity;
 mod args;
+pub mod bmc;
 mod frame;
 mod gipsat;
 mod mic;
@@ -45,8 +46,8 @@ impl IC3 {
             .push(Solver::new(Some(self.frame.len()), &self.ts, &self.frame));
         self.frame.push(Vec::new());
         if self.level() == 0 {
-            for cube in self.ts.inits() {
-                self.add_lemma(0, cube, true, ProofObligation::default());
+            for init in self.ts.init.clone() {
+                self.add_lemma(0, Cube::from([!init]), true, ProofObligation::default());
             }
         }
     }
@@ -136,9 +137,9 @@ impl IC3 {
 
 impl IC3 {
     pub fn new(args: Args) -> Self {
-        let aig = Aig::from_file(args.model.as_ref().unwrap());
+        let aig = Aig::from_file(&args.model);
         let ts = Rc::new(Transys::from_aig(&aig));
-        let statistic = Statistic::new(args.model.as_ref().unwrap());
+        let statistic = Statistic::new(&args.model);
         let activity = Activity::new(&ts);
         let frame = Frame::new(&ts);
         let lift = Solver::new(None, &ts, &frame);

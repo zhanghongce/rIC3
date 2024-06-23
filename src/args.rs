@@ -4,7 +4,7 @@ use clap::Parser;
 /// IC3
 pub struct Args {
     /// input aiger file
-    pub model: Option<String>,
+    pub model: String,
 
     /// verbose
     #[arg(short, default_value_t = false)]
@@ -29,6 +29,10 @@ pub struct Args {
     /// save frames
     #[arg(long, default_value_t = false)]
     pub save_frames: bool,
+
+    /// bmc engine
+    #[arg(long, default_value_t = false)]
+    pub bmc: bool,
 }
 
 impl Default for Args {
