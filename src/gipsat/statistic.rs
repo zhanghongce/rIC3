@@ -5,6 +5,8 @@ use std::ops::Add;
 pub struct SolverStatistic {
     pub num_solve: usize,
     pub avg_decide_var: Average,
+    pub a: usize,
+    pub b: usize,
 }
 
 impl Add for SolverStatistic {
@@ -14,6 +16,8 @@ impl Add for SolverStatistic {
         Self {
             num_solve: self.num_solve + rhs.num_solve,
             avg_decide_var: self.avg_decide_var + rhs.avg_decide_var,
+            a: self.a + rhs.a,
+            b: self.b + rhs.b,
         }
     }
 }

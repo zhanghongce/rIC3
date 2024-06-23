@@ -231,8 +231,8 @@ impl Solver {
                 self.vsids.heap.clear();
             }
         }
-        self.statistic.avg_decide_var += self.domain.domains().len() as f64
-            / (self.ts.num_var - self.trail.len() as usize) as f64;
+        self.statistic.avg_decide_var +=
+            self.domain.len() as f64 / (self.ts.num_var - self.trail.len() as usize) as f64;
         true
     }
 
@@ -336,9 +336,7 @@ impl Solver {
         self.domain.domain.insert(self.constrain_act);
         self.vsids.enable_bucket = true;
         self.vsids.bucket.clear();
-        for d in self.domain.domains() {
-            self.vsids.push(*d);
-        }
+        self.push_to_vsids();
     }
 
     pub fn unset_domain(&mut self) {

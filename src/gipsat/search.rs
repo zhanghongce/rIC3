@@ -77,7 +77,7 @@ impl Solver {
             if restarts > 10 && self.vsids.enable_bucket {
                 self.vsids.enable_bucket = false;
                 self.vsids.heap.clear();
-                for d in self.domain.domains() {
+                for d in self.domain.domain.iter() {
                     if self.value.v(d.lit()).is_none() {
                         self.vsids.push(*d);
                     }

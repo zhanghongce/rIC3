@@ -1,6 +1,6 @@
-use super::search::Value;
+use super::{search::Value, Solver};
 use logic_form::{Var, VarSet};
-use std::{collections::HashSet, rc::Rc, slice};
+use std::{collections::HashSet, rc::Rc};
 use transys::Transys;
 
 pub struct Domain {
@@ -91,7 +91,42 @@ impl Domain {
         self.domain.has(var)
     }
 
-    pub fn domains(&self) -> slice::Iter<Var> {
-        self.domain.iter()
+    #[inline]
+    pub fn len(&self) -> u32 {
+        self.domain.len()
+    }
+}
+
+impl Solver {
+    #[inline]
+    pub fn push_to_vsids(&mut self) {
+        let mut now = 0;
+        while now < self.domain.fixed {
+            let d = self.domain.domain[now];
+            if self.value.v(d.lit()).is_none() {
+                self.vsids.push(d);
+                now += 1;
+            } else {
+                self.domain.domain.swap(now, self.domain.fixed - 1);
+                self.domain.domain.remove(self.domain.fixed - 1);
+                self.domain.fixed -= 1;
+            }
+        }
+        while now < self.domain.domain.len() {
+            self.vsids.push(self.domain.domain[now]);
+            now += 1;
+        }
+    }
+
+    #[inline]
+    pub fn prepare_vsids(&mut self) {
+        if !self.prepared_vsids && !self.temporary_domain {
+            self.prepared_vsids = true;
+            for d in self.domain.domain.iter() {
+                if self.value.v(d.lit()).is_none() {
+                    self.vsids.push(*d);
+                }
+            }
+        }
     }
 }
