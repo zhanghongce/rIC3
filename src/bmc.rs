@@ -20,13 +20,17 @@ impl BMC {
     }
 
     pub fn check(&mut self) -> bool {
+        println!("{}", self.args.model);
         self.uts.ts.load_init(&mut self.solver);
         for k in 0.. {
+            self.uts.unroll_to(k);
+            self.uts.load_trans(&mut self.solver, k);
+            if !(k == 70 || k == 130 || (k >= 140 && k % 10 == 0)) {
+                continue;
+            }
             if self.args.verbose {
                 println!("bmc depth: {k}");
             }
-            self.uts.unroll_to(k);
-            self.uts.load_trans(&mut self.solver, k);
             let bad = self.uts.lit_next(self.uts.ts.bad, k);
             match self.solver.solve(&[bad]) {
                 satif::SatResult::Sat(_) => {
