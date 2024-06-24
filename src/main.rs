@@ -1,9 +1,12 @@
 use clap::Parser;
-use rIC3::{bmc::BMC, Args, IC3};
+use rIC3::{bmc::BMC, portfolio::Portfolio, Args, IC3};
 
 fn main() {
     let args = Args::parse();
-    if args.bmc {
+    if args.portfolio {
+        let mut portfolio = Portfolio::new(args);
+        println!("bmc result: {}", portfolio.check());
+    } else if args.bmc {
         let mut bmc = BMC::new(args);
         println!("bmc result: {}", !bmc.check_no_incremental());
     } else {

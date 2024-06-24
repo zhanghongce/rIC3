@@ -19,7 +19,7 @@ pub struct Args {
     pub random: Option<usize>,
 
     /// print witness
-    #[arg(short, long, default_value_t = false)]
+    #[arg(long, default_value_t = false)]
     pub witness: bool,
 
     /// verify
@@ -33,6 +33,10 @@ pub struct Args {
     /// bmc engine
     #[arg(long, default_value_t = false)]
     pub bmc: bool,
+
+    /// portfolio
+    #[arg(short, long, default_value_t = false)]
+    pub portfolio: bool,
 }
 
 impl Default for Args {

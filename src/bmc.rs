@@ -6,7 +6,6 @@ use transys::{Transys, TransysUnroll};
 
 pub struct BMC {
     uts: TransysUnroll,
-    solver: Solver,
     args: Args,
 }
 
@@ -15,49 +14,49 @@ impl BMC {
         let aig = Aig::from_file(&args.model);
         let ts = Transys::from_aig(&aig);
         let uts = TransysUnroll::new(&ts);
-        let solver = Solver::new();
-        Self { uts, solver, args }
+        Self { uts, args }
     }
 
-    pub fn check(&mut self) -> bool {
-        println!("{}", self.args.model);
-        self.uts.ts.load_init(&mut self.solver);
-        for k in 0.. {
-            self.uts.unroll_to(k);
-            self.uts.load_trans(&mut self.solver, k);
-            if !(k == 70 || k == 130 || (k >= 140 && k % 10 == 0)) {
-                continue;
-            }
-            if self.args.verbose {
-                println!("bmc depth: {k}");
-            }
-            let bad = self.uts.lit_next(self.uts.ts.bad, k);
-            match self.solver.solve(&[bad]) {
-                satif::SatResult::Sat(_) => {
-                    println!("bmc found cex in depth {k}");
-                    return true;
-                }
-                satif::SatResult::Unsat(_) => (),
-            }
-        }
-        unreachable!();
-    }
+    // pub fn check(&mut self) -> bool {
+    //     println!("{}", self.args.model);
+    //     self.uts.ts.load_init(&mut self.solver);
+    //     for k in 0.. {
+    //         self.uts.unroll_to(k);
+    //         self.uts.load_trans(&mut self.solver, k);
+    //         if !(k == 70 || k == 130 || (k >= 140 && k % 10 == 0)) {
+    //             continue;
+    //         }
+    //         if self.args.verbose {
+    //             println!("bmc depth: {k}");
+    //         }
+    //         let bad = self.uts.lit_next(self.uts.ts.bad, k);
+    //         match self.solver.solve(&[bad]) {
+    //             satif::SatResult::Sat(_) => {
+    //                 println!("bmc found cex in depth {k}");
+    //                 return true;
+    //             }
+    //             satif::SatResult::Unsat(_) => (),
+    //         }
+    //     }
+    //     unreachable!();
+    // }
 
     pub fn check_in_depth(&mut self, depth: usize) -> bool {
         println!("{}", self.args.model);
-        self.uts.ts.load_init(&mut self.solver);
+        let mut solver = Solver::new();
+        self.uts.ts.load_init(&mut solver);
         for k in 0..=depth {
             self.uts.unroll_to(k);
-            self.uts.load_trans(&mut self.solver, k);
+            self.uts.load_trans(&mut solver, k);
             if k != depth {
                 continue;
             }
-            if self.args.verbose {
-                println!("bmc depth: {k}");
-            }
+            // if self.args.verbose {
+            println!("bmc depth: {k}");
+            // }
             let bad = self.uts.lit_next(self.uts.ts.bad, k);
-            self.solver.add_clause(&[bad]);
-            match self.solver.solve(&[]) {
+            solver.add_clause(&[bad]);
+            match solver.solve(&[]) {
                 satif::SatResult::Sat(_) => {
                     println!("bmc found cex in depth {k}");
                     return true;

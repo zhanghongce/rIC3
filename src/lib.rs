@@ -6,6 +6,7 @@ pub mod bmc;
 mod frame;
 mod gipsat;
 mod mic;
+pub mod portfolio;
 mod proofoblig;
 mod statistic;
 mod verify;
