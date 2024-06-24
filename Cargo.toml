@@ -9,6 +9,7 @@ edition = "2021"
 aig = { path = "../aig-rs" }
 minisat = { path = "../minisat-rs" }
 cadical = { path = "../cadical-rs" }
+kissat = { path = "../kissat-rs" }
 logic-form = { path = "../logic-form" }
 clap = { version = "4.3.0", features = ["derive"] }
 rand = "0.8.5"
