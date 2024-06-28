@@ -1,6 +1,15 @@
+use std::{
+    io::Write,
+    process::{Command, Stdio},
+};
+
 use crate::Args;
 use aig::Aig;
 use kissat::Solver;
+use logic_form::{
+    dimacs::{from_dimacs_str, to_dimacs},
+    Clause,
+};
 use satif::Satif;
 use transys::{Transys, TransysUnroll};
 
@@ -43,24 +52,15 @@ impl BMC {
         println!("{}", self.args.model);
         let mut solver = Solver::new();
         self.uts.ts.load_init(&mut solver);
+        self.uts.unroll_to(depth);
         for k in 0..=depth {
-            self.uts.unroll_to(k);
             self.uts.load_trans(&mut solver, k);
-            if k != depth {
-                continue;
-            }
-            // if self.args.verbose {
-            println!("bmc depth: {k}");
-            // }
-            let bad = self.uts.lit_next(self.uts.ts.bad, k);
-            solver.add_clause(&[bad]);
-            match solver.solve(&[]) {
-                satif::SatResult::Sat(_) => {
-                    println!("bmc found cex in depth {k}");
-                    return true;
-                }
-                satif::SatResult::Unsat(_) => (),
-            }
+        }
+        println!("bmc depth: {depth}");
+        solver.add_clause(&[self.uts.lit_next(self.uts.ts.bad, depth)]);
+        if let satif::SatResult::Sat(_) = solver.solve(&[]) {
+            println!("bmc found cex in depth {depth}");
+            return true;
         }
         false
     }
@@ -81,4 +81,20 @@ impl BMC {
         }
         unreachable!()
     }
+}
+
+#[allow(unused)]
+fn sbva(cnf: &[Clause]) -> Vec<Clause> {
+    let mut command = Command::new("../SBVA/sbva");
+    let mut sbva = command
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .spawn()
+        .unwrap();
+    let stdin = sbva.stdin.as_mut().unwrap();
+    let cnf = to_dimacs(cnf);
+    stdin.write_all(cnf.as_bytes()).unwrap();
+    let out = sbva.wait_with_output().unwrap();
+    let simp = String::from_utf8(out.stdout).unwrap();
+    from_dimacs_str(&simp)
 }
