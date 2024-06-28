@@ -13,7 +13,7 @@ use analyze::Analyze;
 use cdb::{CRef, ClauseDB, ClauseKind, CREF_NONE};
 use domain::Domain;
 use giputils::gvec::Gvec;
-use logic_form::{Clause, Cnf, Cube, Lemma, Lit, LitSet, Var, VarMap};
+use logic_form::{Clause, Cube, Lemma, Lit, LitSet, Var, VarMap};
 use propagate::Watchers;
 use rand::{prelude::SliceRandom, rngs::StdRng, SeedableRng};
 use search::Value;
@@ -481,7 +481,7 @@ impl IC3 {
         state: Var,
         next: Lit,
         init: Option<bool>,
-        trans: Cnf,
+        trans: Vec<Clause>,
         dep: Vec<Var>,
         dep_next: Vec<Var>,
     ) {
