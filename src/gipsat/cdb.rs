@@ -1,8 +1,9 @@
 use super::Solver;
 use bitfield_struct::bitfield;
 use giputils::gvec::Gvec;
-use logic_form::Lit;
+use logic_form::{Lemma, Lit};
 use std::{
+    collections::HashMap,
     mem::take,
     ops::{AddAssign, Index, MulAssign},
     ptr,
@@ -288,6 +289,11 @@ impl ClauseDB {
     pub fn num_leanrt(&self) -> u32 {
         self.learnt.len()
     }
+
+    #[inline]
+    pub fn num_lemma(&self) -> u32 {
+        self.lemmas.len()
+    }
 }
 
 impl Default for ClauseDB {
@@ -322,7 +328,7 @@ impl Solver {
         id
     }
 
-    pub fn remove_clause(&mut self, cref: CRef) {
+    fn remove_clause(&mut self, cref: CRef) {
         self.watchers.detach(cref, self.cdb.get(cref));
         self.cdb.free(cref);
     }
@@ -401,6 +407,38 @@ impl Solver {
         let trans = take(&mut self.cdb.trans);
         self.cdb.trans = self.simplify_clauses(trans);
         self.garbage_collect();
+    }
+
+    pub fn simplify_lazy_removed(&mut self) {
+        if self.simplify.lazy_remove.len() as u32 * 10 <= self.cdb.num_lemma() {
+            return;
+        }
+        let mut lazy_remove_map: HashMap<Lemma, u32> = HashMap::new();
+        for mut lr in take(&mut self.simplify.lazy_remove) {
+            if lr.iter().any(|l| self.value.v(*l).is_false()) {
+                continue;
+            }
+            lr.retain(|l| !self.value.v(*l).is_true());
+            let lr = Lemma::new(lr);
+            let entry = lazy_remove_map.entry(lr).or_default();
+            *entry += 1;
+        }
+        let lemmas = take(&mut self.cdb.lemmas);
+        self.cdb.lemmas = self.simplify_clauses(lemmas);
+        for cref in take(&mut self.cdb.lemmas) {
+            let cls = self.cdb.get(cref);
+            let lemma = Lemma::new(!logic_form::Clause::from(cls.slice()));
+            if let Some(r) = lazy_remove_map.get_mut(&lemma) {
+                *r -= 1;
+                if *r == 0 {
+                    lazy_remove_map.remove(&lemma);
+                }
+                self.remove_clause(cref);
+            } else {
+                self.cdb.lemmas.push(cref);
+            }
+        }
+        assert!(lazy_remove_map.is_empty());
     }
 
     pub fn garbage_collect(&mut self) {

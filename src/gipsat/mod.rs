@@ -185,6 +185,11 @@ impl Solver {
         self.add_clause_inner(lemma, ClauseKind::Lemma)
     }
 
+    #[inline]
+    pub fn remove_lemma(&mut self, lemma: &[Lit]) {
+        self.simplify.lazy_remove.push(Cube::from(lemma));
+    }
+
     fn reset(&mut self) {
         self.backtrack(0, false);
         self.clean_temporary();

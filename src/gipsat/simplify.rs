@@ -1,9 +1,11 @@
 use super::{cdb::CREF_NONE, Solver};
+use logic_form::Cube;
 
 #[derive(Default)]
 pub struct Simplify {
     pub last_num_assign: u32,
     pub last_simplify: usize,
+    pub lazy_remove: Vec<Cube>,
 }
 
 impl Solver {
@@ -15,5 +17,6 @@ impl Solver {
                 self.simplify.last_simplify = self.statistic.num_solve;
             }
         }
+        self.simplify_lazy_removed();
     }
 }

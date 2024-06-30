@@ -146,7 +146,8 @@ impl IC3 {
                     }
                 }
                 if lemma.subsume(l) {
-                    self.frame[i].swap_remove(j);
+                    let (remove, _) = self.frame[i].swap_remove(j);
+                    self.solvers[i].remove_lemma(&remove);
                     continue;
                 }
                 j += 1;
