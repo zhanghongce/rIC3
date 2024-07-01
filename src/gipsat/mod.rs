@@ -8,7 +8,7 @@ pub mod statistic;
 mod utils;
 mod vsids;
 
-use crate::{frame::Frame, IC3};
+use crate::{bmc, frame::Frame, IC3};
 use analyze::Analyze;
 use cdb::{CRef, ClauseDB, ClauseKind, CREF_NONE};
 use domain::Domain;
@@ -23,6 +23,7 @@ use statistic::SolverStatistic;
 use std::{
     collections::{HashMap, HashSet},
     rc::Rc,
+    time::Instant,
 };
 use transys::Transys;
 use utils::Lbool;
@@ -535,9 +536,12 @@ impl IC3 {
         if last.len() < self.last_sbva {
             return;
         }
-        let cnf: Vec<Clause> = last.iter().map(|(l, _)| !&**l).collect();
+        let start = Instant::now();
         println!("name {}", self.args.model);
+        let cnf: Vec<Clause> = last.iter().map(|(l, _)| !&**l).collect();
         println!("inorigin: {}", cnf.len());
+        let bmc_sbva = bmc::sbva(&cnf);
+        println!("bmc_sbva: {}", bmc_sbva.len());
         let mut sbva = SBVA::new(&cnf, Var::new(self.ts.num_var));
         sbva.sbva();
         println!(
@@ -607,5 +611,6 @@ impl IC3 {
         }
         self.last_sbva = self.frame.last().unwrap().len() + 1000;
         println!("sbva end: {}", self.frame.last().unwrap().len());
+        self.statistic.sbva += start.elapsed();
     }
 }

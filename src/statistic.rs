@@ -19,6 +19,7 @@ pub struct Statistic {
     pub overall_propagate_time: Duration,
 
     pub test: SuccessRate,
+    pub sbva: Duration,
 }
 
 impl Statistic {

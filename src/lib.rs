@@ -168,7 +168,7 @@ impl IC3 {
             statistic,
             obligations: ProofObligationQueue::new(),
             frame,
-            last_sbva: 500,
+            last_sbva: 2000,
             auxiliary_var: Vec::new(),
         };
         res.extend();
