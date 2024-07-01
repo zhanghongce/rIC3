@@ -47,7 +47,7 @@ impl Solver {
     }
 
     #[inline]
-    fn new_level(&mut self) {
+    pub fn new_level(&mut self) {
         self.pos_in_trail.push(self.trail.len())
     }
 

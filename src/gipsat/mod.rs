@@ -332,6 +332,23 @@ impl Solver {
         ans
     }
 
+    pub fn imply<'a>(
+        &mut self,
+        domain: impl Iterator<Item = Var>,
+        assump: impl Iterator<Item = &'a Lit>,
+    ) {
+        self.reset();
+        self.domain.enable_local(domain, &self.ts, &self.value);
+        self.new_level();
+        for a in assump {
+            if let Lbool::FALSE = self.value.v(*a) {
+                panic!();
+            }
+            self.assign(*a, CREF_NONE);
+        }
+        assert!(self.propagate() == CREF_NONE);
+    }
+
     pub fn set_domain(&mut self, domain: impl Iterator<Item = Lit>) {
         self.reset();
         self.temporary_domain = true;
