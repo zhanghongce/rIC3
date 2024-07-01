@@ -18,7 +18,7 @@ use aig::Aig;
 pub use args::Args;
 use frame::Frame;
 use gipsat::Solver;
-use logic_form::{Cube, Lemma};
+use logic_form::{Cube, Lemma, Var};
 use std::panic::{self, AssertUnwindSafe};
 use std::process::exit;
 use std::rc::Rc;
@@ -34,6 +34,9 @@ pub struct IC3 {
     obligations: ProofObligationQueue,
     activity: Activity,
     statistic: Statistic,
+
+    last_sbva: usize,
+    auxiliary_var: Vec<Var>,
 }
 
 impl IC3 {
@@ -43,8 +46,14 @@ impl IC3 {
     }
 
     fn extend(&mut self) {
-        self.solvers
-            .push(Solver::new(Some(self.frame.len()), &self.ts, &self.frame));
+        let mut solver = Solver::new(Some(self.frame.len()), &self.ts, &self.frame);
+        for v in self.auxiliary_var.iter() {
+            solver.add_domain(*v);
+            for d in self.ts.dependence[*v].iter() {
+                solver.add_domain(*d);
+            }
+        }
+        self.solvers.push(solver);
         self.frame.push(Vec::new());
         if self.level() == 0 {
             for init in self.ts.init.clone() {
@@ -76,6 +85,7 @@ impl IC3 {
 
     fn block(&mut self) -> Option<bool> {
         while let Some(mut po) = self.obligations.pop(self.level()) {
+            self.sbva();
             if po.frame == 0 {
                 self.add_obligation(po);
                 return Some(false);
@@ -153,6 +163,8 @@ impl IC3 {
             statistic,
             obligations: ProofObligationQueue::new(),
             frame,
+            last_sbva: 500,
+            auxiliary_var: Vec::new(),
         };
         res.extend();
         res

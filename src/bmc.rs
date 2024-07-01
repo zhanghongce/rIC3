@@ -1,8 +1,3 @@
-use std::{
-    io::Write,
-    process::{Command, Stdio},
-};
-
 use crate::Args;
 use aig::Aig;
 use kissat::Solver;
@@ -11,6 +6,10 @@ use logic_form::{
     Clause,
 };
 use satif::Satif;
+use std::{
+    io::Write,
+    process::{Command, Stdio},
+};
 use transys::{Transys, TransysUnroll};
 
 pub struct BMC {
@@ -83,8 +82,7 @@ impl BMC {
     }
 }
 
-#[allow(unused)]
-fn sbva(cnf: &[Clause]) -> Vec<Clause> {
+pub fn sbva(cnf: &[Clause]) -> Vec<Clause> {
     let mut command = Command::new("../SBVA/sbva");
     let mut sbva = command
         .stdin(Stdio::piped())

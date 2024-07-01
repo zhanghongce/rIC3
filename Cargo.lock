@@ -291,6 +291,7 @@ dependencies = [
  "minisat",
  "rand",
  "satif",
+ "sbva",
  "transys",
 ]
 
@@ -335,6 +336,15 @@ name = "satif"
 version = "0.1.0"
 dependencies = [
  "logic-form",
+]
+
+[[package]]
+name = "sbva"
+version = "0.1.0"
+dependencies = [
+ "cadical",
+ "logic-form",
+ "satif",
 ]
 
 [[package]]

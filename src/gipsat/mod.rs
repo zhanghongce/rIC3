@@ -16,10 +16,14 @@ use giputils::gvec::Gvec;
 use logic_form::{Clause, Cube, Lemma, Lit, LitSet, Var, VarMap};
 use propagate::Watchers;
 use rand::{prelude::SliceRandom, rngs::StdRng, SeedableRng};
+use sbva::{SBVAClauseType, SBVA};
 use search::Value;
 use simplify::Simplify;
 use statistic::SolverStatistic;
-use std::{collections::HashSet, rc::Rc};
+use std::{
+    collections::{HashMap, HashSet},
+    rc::Rc,
+};
 use transys::Transys;
 use utils::Lbool;
 use vsids::Vsids;
@@ -39,7 +43,7 @@ pub struct Solver {
     analyze: Analyze,
     simplify: Simplify,
     unsat_core: LitSet,
-    domain: Domain,
+    pub domain: Domain,
     temporary_domain: bool,
     prepared_vsids: bool,
     constrain_act: Var,
@@ -169,18 +173,10 @@ impl Solver {
     pub fn add_lemma(&mut self, lemma: &[Lit]) -> CRef {
         self.reset();
         for l in lemma.iter() {
-            self.domain.add_domain(l.var());
-            assert!(self.ts.dependence[l.var()].is_empty());
-            // let mut queue = Vec::new();
-            // queue.push(l.var());
-            // while let Some(v) = queue.pop() {
-            //     for d in self.ts.dependence[v].iter() {
-            //         if !self.domain.domain.has(*d) {
-            //             self.domain.add_domain(*d);
-            //             queue.push(*d);
-            //         }
-            //     }
-            // }
+            self.add_domain(l.var());
+            assert!(self.ts.dependence[l.var()]
+                .iter()
+                .all(|v| self.domain.domain.has(*v) || !self.value.v(v.lit()).is_none()),);
         }
         self.add_clause_inner(lemma, ClauseKind::Lemma)
     }
@@ -454,9 +450,9 @@ impl IC3 {
         for latch in self.ts.latchs.iter() {
             let lit = latch.lit();
             if let Some(v) = solver.sat_value(lit) {
-                if in_cls.contains(latch) || !solver.flip_to_none(*latch) {
-                    latchs.push(lit.not_if(!v));
-                }
+                // if in_cls.contains(latch) || !solver.flip_to_none(*latch) {
+                latchs.push(lit.not_if(!v));
+                // }
             }
         }
         self.activity.sort_by_activity(&mut latchs, false);
@@ -508,16 +504,83 @@ impl IC3 {
         dep_next: Vec<Var>,
     ) {
         let ts = unsafe { Rc::get_mut_unchecked(&mut self.ts) };
-        ts.add_latch(state, next, init, trans.clone(), dep, dep_next);
+        ts.add_latch(state, next, init, trans.clone(), dep.clone(), dep_next);
         let tmp_lit_set = unsafe { Rc::get_mut_unchecked(&mut self.frame.tmp_lit_set) };
-        tmp_lit_set.reserve(self.ts.max_latch);
-        for s in self.solvers.iter_mut() {
+        tmp_lit_set.reserve(ts.max_latch);
+        for s in self.solvers.iter_mut().chain(Some(&mut self.lift)) {
             for cls in trans.iter() {
                 s.add_clause_inner(cls, ClauseKind::Trans);
             }
+            s.add_domain(state);
+            for d in dep.iter() {
+                s.add_domain(*d);
+            }
         }
-        for cls in trans.iter() {
-            self.lift.add_clause_inner(cls, ClauseKind::Trans);
+        if !self.solvers[0].value.v(state.lit()).is_none() {
+            if self.solvers[0].value.v(state.lit()).is_true() {
+                ts.init.push(state.lit());
+                ts.init_map[state] = Some(true);
+            } else {
+                ts.init.push(!state.lit());
+                ts.init_map[state] = Some(false);
+            }
         }
+        self.activity.reserve(state);
+        self.activity.set_max_act(state);
+        self.auxiliary_var.push(state);
+    }
+
+    pub fn sbva(&mut self) {
+        let last = self.frame.last().unwrap();
+        if last.len() < self.last_sbva {
+            return;
+        }
+        let cnf: Vec<Clause> = last.iter().map(|(l, _)| !&**l).collect();
+        println!("name {}", self.args.model);
+        println!("inorigin: {}", cnf.len());
+        let mut sbva = SBVA::new(&cnf, Var::new(self.ts.num_var));
+        sbva.sbva();
+        println!(
+            "insbva: {}",
+            sbva.cnf.iter().filter(|cls| !cls.is_removed()).count()
+        );
+        self.last_sbva = cnf.len() + 1000;
+        let mut ties: HashMap<Var, Vec<Lit>> = HashMap::new();
+        for cls in sbva.cnf.iter() {
+            if let SBVAClauseType::Relation(tie, lit) = cls.kind {
+                if let Some(deps) = ties.get_mut(&tie) {
+                    deps.push(lit);
+                } else {
+                    let nv = self.new_var();
+                    assert!(tie == nv);
+                    ties.insert(tie, vec![lit]);
+                }
+            }
+        }
+        let mut ties = Vec::from_iter(ties.into_iter());
+        ties.sort_by_key(|(v, _)| *v);
+        for (tie, deps) in ties {
+            assert!(deps.iter().all(|l| self.ts.is_latch(l.var())));
+            let tie = tie.lit();
+            let tie_next = self.new_var().lit();
+            let mut trans = Vec::new();
+            let mut rel = Clause::from([!tie]);
+            let mut rel_next = Clause::from([!tie_next]);
+            for lit in deps.iter() {
+                trans.push(Clause::from([tie, *lit]));
+                rel.push(!*lit);
+                trans.push(Clause::from([tie_next, self.ts.lit_next(*lit)]));
+                rel_next.push(!self.ts.lit_next(*lit));
+            }
+            trans.push(rel);
+            trans.push(rel_next);
+            let deps: Vec<Var> = deps.into_iter().map(|l| l.var()).collect();
+            let deps_next: Vec<Var> = deps
+                .iter()
+                .map(|v| self.ts.lit_next(v.lit()).var())
+                .collect();
+            self.add_latch(tie.var(), tie_next, None, trans, deps, deps_next);
+        }
+        println!("sbva end");
     }
 }

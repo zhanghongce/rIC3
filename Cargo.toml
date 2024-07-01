@@ -18,9 +18,10 @@ giputils = { path = "../giputils" }
 satif = { path = "../satif" }
 transys = { path = "../transys" }
 bitfield-struct = "0.5.6"
+sbva = { path = "../sbva-rs" }
 
 [features]
-default = ["no_bound_check"]
+default = []
 no_bound_check = [
     "logic-form/no_bound_check",
     "giputils/no_bound_check",
