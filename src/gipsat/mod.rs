@@ -544,7 +544,6 @@ impl IC3 {
             "insbva: {}",
             sbva.cnf.iter().filter(|cls| !cls.is_removed()).count()
         );
-        self.last_sbva = cnf.len() + 1000;
         let mut ties: HashMap<Var, Vec<Lit>> = HashMap::new();
         for cls in sbva.cnf.iter() {
             if let SBVAClauseType::Relation(tie, lit) = cls.kind {
@@ -581,6 +580,32 @@ impl IC3 {
                 .collect();
             self.add_latch(tie.var(), tie_next, None, trans, deps, deps_next);
         }
-        println!("sbva end");
+        for cls in sbva.cnf.iter() {
+            let lemma = !&**cls;
+            // println!("{:?}", lemma);
+            if cls.is_removed() {
+                continue;
+            }
+            if let SBVAClauseType::Simplify = cls.kind {
+                // println!("s{:?}", lemma);
+                self.add_lemma(self.frame.len() - 1, lemma, true, None);
+            }
+        }
+        let mut removed_lemmas = Vec::new();
+        for cls in sbva.cnf.iter() {
+            if cls.is_removed() {
+                if let SBVAClauseType::Origin = cls.kind {
+                    let lemma = !&**cls;
+                    removed_lemmas.push(lemma);
+                }
+            }
+        }
+        self.remove_lemma(self.frame.len() - 1, removed_lemmas);
+        for s in self.solvers.iter_mut() {
+            s.reset();
+            s.simplify_lazy_removed();
+        }
+        self.last_sbva = self.frame.last().unwrap().len() + 1000;
+        println!("sbva end: {}", self.frame.last().unwrap().len());
     }
 }

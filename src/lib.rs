@@ -86,6 +86,9 @@ impl IC3 {
     fn block(&mut self) -> Option<bool> {
         while let Some(mut po) = self.obligations.pop(self.level()) {
             self.sbva();
+            if po.removed {
+                continue;
+            }
             if po.frame == 0 {
                 self.add_obligation(po);
                 return Some(false);

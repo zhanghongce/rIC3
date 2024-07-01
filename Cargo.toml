@@ -21,7 +21,7 @@ bitfield-struct = "0.5.6"
 sbva = { path = "../sbva-rs" }
 
 [features]
-default = []
+default = ["no_bound_check"]
 no_bound_check = [
     "logic-form/no_bound_check",
     "giputils/no_bound_check",

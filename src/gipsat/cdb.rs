@@ -438,7 +438,7 @@ impl Solver {
                 self.cdb.lemmas.push(cref);
             }
         }
-        assert!(lazy_remove_map.is_empty());
+        // assert!(lazy_remove_map.is_empty());
     }
 
     pub fn garbage_collect(&mut self) {

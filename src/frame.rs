@@ -180,6 +180,9 @@ impl IC3 {
         for i in (1..=frame).rev() {
             let mut j = 0;
             while j < self.frame[i].len() {
+                if let Some(po) = &mut self.frame[i][j].1 {
+                    po.removed = true;
+                }
                 if lemmas.contains(&self.frame[i][j].0) {
                     for s in self.solvers[..=frame].iter_mut() {
                         s.remove_lemma(&self.frame[i][j].0);
