@@ -5,6 +5,7 @@ use transys::Transys;
 
 pub struct Activity {
     activity: VarMap<f64>,
+    max_act: f64,
     act_inc: f64,
 }
 
@@ -14,17 +15,30 @@ impl Activity {
         activity.reserve(ts.max_latch);
         Self {
             activity,
+            max_act: 0.0,
             act_inc: 1.0,
         }
     }
 
     #[inline]
+    pub fn reserve(&mut self, var: Var) {
+        self.activity.reserve(var);
+    }
+
+    #[inline]
     fn bump(&mut self, var: Var) {
         self.activity[var] += self.act_inc;
+        self.max_act = self.max_act.max(self.activity[var]);
         if self.activity[var] > 1e100 {
             self.activity.iter_mut().for_each(|a| a.mul_assign(1e-100));
             self.act_inc *= 1e-100;
+            self.max_act *= 1e-100;
         }
+    }
+
+    #[inline]
+    pub fn set_max_act(&mut self, var: Var) {
+        self.activity[var] = self.max_act;
     }
 
     #[inline]

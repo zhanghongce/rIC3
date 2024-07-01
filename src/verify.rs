@@ -1,5 +1,5 @@
 use crate::IC3;
-use logic_form::{dimacs::to_dimacs_file, Clause, Lemma};
+use logic_form::{Clause, Lemma};
 use minisat::Solver;
 use satif::{SatResult, Satif};
 use std::ops::Deref;
@@ -44,9 +44,6 @@ impl IC3 {
                 invariants.push(cube.clone());
             }
         }
-
-        let cnf: Vec<Clause> = invariants.iter().map(|l| !&**l).collect();
-        to_dimacs_file(&cnf, "test");
 
         if !self.verify_invariant(&invariants) {
             println!("invariant varify failed");

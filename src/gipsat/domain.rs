@@ -55,13 +55,6 @@ impl Domain {
         }
     }
 
-    #[inline]
-    pub fn add_domain(&mut self, var: Var) {
-        self.reset();
-        self.domain.insert(var);
-        self.fixed = self.domain.len();
-    }
-
     pub fn enable_local(
         &mut self,
         domain: impl Iterator<Item = Var>,
@@ -98,6 +91,17 @@ impl Domain {
 }
 
 impl Solver {
+    #[inline]
+    pub fn add_domain(&mut self, var: Var) {
+        assert!(self.highest_level() == 0);
+        if !self.value.v(var.lit()).is_none() {
+            return;
+        }
+        self.domain.reset();
+        self.domain.domain.insert(var);
+        self.domain.fixed = self.domain.len();
+    }
+
     #[inline]
     pub fn push_to_vsids(&mut self) {
         let mut now = 0;
