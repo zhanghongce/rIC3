@@ -1,6 +1,7 @@
 use crate::{proofoblig::ProofObligation, IC3};
 use logic_form::{Cube, Lemma, LitSet};
 use std::{
+    collections::HashSet,
     ops::{Deref, DerefMut},
     rc::Rc,
 };
@@ -78,6 +79,14 @@ impl Frame {
             }
         }
         res
+    }
+
+    #[inline]
+    pub fn statistic(&self) {
+        for f in self.frames.iter() {
+            print!("{} ", f.len());
+        }
+        println!();
     }
 }
 
@@ -164,5 +173,22 @@ impl IC3 {
         self.frame[frame].push((lemma, po));
         self.frame.early = self.frame.early.min(begin);
         inv_found
+    }
+
+    pub fn remove_lemma(&mut self, frame: usize, lemmas: Vec<Cube>) {
+        let lemmas: HashSet<Lemma> = HashSet::from_iter(lemmas.into_iter().map(|l| Lemma::new(l)));
+        for i in (1..=frame).rev() {
+            let mut j = 0;
+            while j < self.frame[i].len() {
+                if lemmas.contains(&self.frame[i][j].0) {
+                    for s in self.solvers[..=frame].iter_mut() {
+                        s.remove_lemma(&self.frame[i][j].0);
+                    }
+                    self.frame[i].swap_remove(j);
+                } else {
+                    j += 1;
+                }
+            }
+        }
     }
 }
