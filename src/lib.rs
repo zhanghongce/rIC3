@@ -57,7 +57,7 @@ impl IC3 {
         self.frame.push(Vec::new());
         if self.level() == 0 {
             for init in self.ts.init.clone() {
-                self.add_lemma(0, Cube::from([!init]), true, ProofObligation::default());
+                self.add_lemma(0, Cube::from([!init]), true, None);
             }
         }
     }
@@ -80,7 +80,7 @@ impl IC3 {
         self.statistic.avg_po_cube_len += po.lemma.len();
         po.frame = frame;
         self.add_obligation(po.clone());
-        self.add_lemma(frame - 1, mic, false, po)
+        self.add_lemma(frame - 1, mic, false, Some(po))
     }
 
     fn block(&mut self) -> Option<bool> {
@@ -130,9 +130,11 @@ impl IC3 {
                     self.blocked_with_ordered(frame_idx + 1, &lemma, false, false, false)
                 {
                     let core = self.solvers[frame_idx].inductive_core();
-                    if po.frame < frame_idx + 2 && self.obligations.remove(&po) {
-                        po.frame = frame_idx + 2;
-                        self.obligations.add(po.clone());
+                    if let Some(po) = &mut po {
+                        if po.frame < frame_idx + 2 && self.obligations.remove(&po) {
+                            po.frame = frame_idx + 2;
+                            self.obligations.add(po.clone());
+                        }
                     }
                     self.add_lemma(frame_idx + 1, core, true, po);
                 }

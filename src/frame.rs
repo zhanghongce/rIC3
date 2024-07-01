@@ -8,7 +8,7 @@ use transys::Transys;
 
 #[derive(Clone)]
 pub struct Frame {
-    frames: Rc<Vec<Vec<(Lemma, ProofObligation)>>>,
+    frames: Rc<Vec<Vec<(Lemma, Option<ProofObligation>)>>>,
     pub early: usize,
     pub tmp_lit_set: Rc<LitSet>,
 }
@@ -29,7 +29,7 @@ impl Frame {
         &'a mut self,
         frame: usize,
         lemma: &logic_form::Lemma,
-    ) -> Option<(usize, &'a mut ProofObligation)> {
+    ) -> Option<(usize, &'a mut Option<ProofObligation>)> {
         let tmp_lit_set = unsafe { Rc::get_mut_unchecked(&mut self.tmp_lit_set) };
         let frames = unsafe { Rc::get_mut_unchecked(&mut self.frames) };
         for l in lemma.iter() {
@@ -82,7 +82,7 @@ impl Frame {
 }
 
 impl Deref for Frame {
-    type Target = Vec<Vec<(Lemma, ProofObligation)>>;
+    type Target = Vec<Vec<(Lemma, Option<ProofObligation>)>>;
 
     #[inline]
     fn deref(&self) -> &Self::Target {
@@ -99,7 +99,7 @@ impl DerefMut for Frame {
 
 impl Frame {
     #[inline]
-    pub fn get_mut(&mut self) -> &mut Vec<Vec<(Lemma, ProofObligation)>> {
+    pub fn get_mut(&mut self) -> &mut Vec<Vec<(Lemma, Option<ProofObligation>)>> {
         unsafe { Rc::get_mut_unchecked(&mut self.frames) }
     }
 }
@@ -111,7 +111,7 @@ impl IC3 {
         frame: usize,
         lemma: Cube,
         subsume_check: bool,
-        po: ProofObligation,
+        po: Option<ProofObligation>,
     ) -> bool {
         let lemma = logic_form::Lemma::new(lemma);
         if frame == 0 {
