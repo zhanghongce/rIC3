@@ -85,7 +85,6 @@ impl IC3 {
 
     fn block(&mut self) -> Option<bool> {
         while let Some(mut po) = self.obligations.pop(self.level()) {
-            // self.sbva();
             if po.removed {
                 continue;
             }
@@ -93,6 +92,7 @@ impl IC3 {
                 self.add_obligation(po);
                 return Some(false);
             }
+            self.sbva();
             assert!(!self.ts.cube_subsume_init(&po.lemma));
             if self.args.verbose_all {
                 self.statistic();
@@ -168,7 +168,7 @@ impl IC3 {
             statistic,
             obligations: ProofObligationQueue::new(),
             frame,
-            last_sbva: 2000,
+            last_sbva: 1000,
             auxiliary_var: Vec::new(),
         };
         res.extend();

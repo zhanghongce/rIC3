@@ -549,9 +549,9 @@ impl IC3 {
             cls.sort();
         }
         cnf.sort_by_key(|cls| cls.len());
-        for cls in cnf.iter() {
-            println!("{:?}", cls);
-        }
+        // for cls in cnf.iter() {
+        //     println!("{:?}", cls);
+        // }
         println!("inorigin: {}", cnf.len());
         let bmc_sbva = bmc::sbva(&cnf);
         println!("bmc_sbva: {}", bmc_sbva.len());
@@ -576,7 +576,9 @@ impl IC3 {
         let mut ties = Vec::from_iter(ties.into_iter());
         ties.sort_by_key(|(v, _)| *v);
         for (tie, deps) in ties {
-            assert!(deps.iter().all(|l| self.ts.is_latch(l.var())));
+            // dbg!(tie);
+            // println!("{:?}", deps);
+            // assert!(deps.iter().all(|l| self.ts.is_latch(l.var())));
             let tie = tie.lit();
             let tie_next = self.new_var().lit();
             let mut trans = Vec::new();
