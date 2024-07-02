@@ -8,7 +8,7 @@ pub mod statistic;
 mod utils;
 mod vsids;
 
-use crate::{bmc, frame::Frame, IC3};
+use crate::{bmc, frame::Frames, IC3};
 use analyze::Analyze;
 use cdb::{CRef, ClauseDB, ClauseKind, CREF_NONE};
 use domain::Domain;
@@ -50,7 +50,7 @@ pub struct Solver {
     constrain_act: Var,
 
     ts: Rc<Transys>,
-    _frame: Frame,
+    _frame: Frames,
 
     assump: Cube,
 
@@ -60,7 +60,7 @@ pub struct Solver {
 }
 
 impl Solver {
-    pub fn new(id: Option<usize>, ts: &Rc<Transys>, frame: &Frame) -> Self {
+    pub fn new(id: Option<usize>, ts: &Rc<Transys>, frame: &Frames) -> Self {
         let mut solver = Self {
             id,
             ts: ts.clone(),
@@ -375,6 +375,12 @@ impl Solver {
     pub fn unsat_has(&self, lit: Lit) -> bool {
         self.unsat_core.has(lit)
     }
+
+    #[inline]
+    pub fn assert_value(&mut self, lit: Lit) -> Option<bool> {
+        self.reset();
+        self.value.v(lit).into()
+    }
 }
 
 impl IC3 {
@@ -538,7 +544,14 @@ impl IC3 {
         }
         let start = Instant::now();
         println!("name {}", self.args.model);
-        let cnf: Vec<Clause> = last.iter().map(|(l, _)| !&**l).collect();
+        let mut cnf: Vec<Clause> = last.iter().map(|(l, _)| !&**l).collect();
+        for cls in cnf.iter_mut() {
+            cls.sort();
+        }
+        cnf.sort_by_key(|cls| cls.len());
+        for cls in cnf.iter() {
+            println!("{:?}", cls);
+        }
         println!("inorigin: {}", cnf.len());
         let bmc_sbva = bmc::sbva(&cnf);
         println!("bmc_sbva: {}", bmc_sbva.len());

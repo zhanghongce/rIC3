@@ -31,6 +31,17 @@ impl From<bool> for Lbool {
     }
 }
 
+impl Into<Option<bool>> for Lbool {
+    #[inline]
+    fn into(self) -> Option<bool> {
+        match self {
+            Lbool::TRUE => Some(true),
+            Lbool::FALSE => Some(false),
+            _ => None,
+        }
+    }
+}
+
 impl Default for Lbool {
     fn default() -> Self {
         Self::NONE

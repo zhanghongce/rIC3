@@ -16,7 +16,7 @@ use crate::statistic::Statistic;
 use activity::Activity;
 use aig::Aig;
 pub use args::Args;
-use frame::Frame;
+use frame::{Frame, Frames};
 use gipsat::Solver;
 use logic_form::{Cube, Lemma, Var};
 use std::panic::{self, AssertUnwindSafe};
@@ -28,7 +28,7 @@ use transys::Transys;
 pub struct IC3 {
     args: Args,
     ts: Rc<Transys>,
-    frame: Frame,
+    frame: Frames,
     solvers: Vec<Solver>,
     lift: Solver,
     obligations: ProofObligationQueue,
@@ -54,7 +54,7 @@ impl IC3 {
             }
         }
         self.solvers.push(solver);
-        self.frame.push(Vec::new());
+        self.frame.push(Frame::new());
         if self.level() == 0 {
             for init in self.ts.init.clone() {
                 self.add_lemma(0, Cube::from([!init]), true, None);
@@ -85,7 +85,7 @@ impl IC3 {
 
     fn block(&mut self) -> Option<bool> {
         while let Some(mut po) = self.obligations.pop(self.level()) {
-            self.sbva();
+            // self.sbva();
             if po.removed {
                 continue;
             }
@@ -157,7 +157,7 @@ impl IC3 {
         let ts = Rc::new(Transys::from_aig(&aig));
         let statistic = Statistic::new(&args.model);
         let activity = Activity::new(&ts);
-        let frame = Frame::new(&ts);
+        let frame = Frames::new(&ts);
         let lift = Solver::new(None, &ts, &frame);
         let mut res = Self {
             args,

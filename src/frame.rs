@@ -7,14 +7,40 @@ use std::{
 };
 use transys::Transys;
 
-#[derive(Clone)]
 pub struct Frame {
-    frames: Rc<Vec<Vec<(Lemma, Option<ProofObligation>)>>>,
+    lemmas: Vec<(Lemma, Option<ProofObligation>)>,
+}
+
+impl Frame {
+    pub fn new() -> Self {
+        Self { lemmas: Vec::new() }
+    }
+}
+
+impl Deref for Frame {
+    type Target = Vec<(Lemma, Option<ProofObligation>)>;
+
+    #[inline]
+    fn deref(&self) -> &Self::Target {
+        &self.lemmas
+    }
+}
+
+impl DerefMut for Frame {
+    #[inline]
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.lemmas
+    }
+}
+
+#[derive(Clone)]
+pub struct Frames {
+    frames: Rc<Vec<Frame>>,
     pub early: usize,
     pub tmp_lit_set: Rc<LitSet>,
 }
 
-impl Frame {
+impl Frames {
     pub fn new(ts: &Rc<Transys>) -> Self {
         let mut tmp_lit_set = LitSet::new();
         tmp_lit_set.reserve(ts.max_latch);
@@ -90,8 +116,8 @@ impl Frame {
     }
 }
 
-impl Deref for Frame {
-    type Target = Vec<Vec<(Lemma, Option<ProofObligation>)>>;
+impl Deref for Frames {
+    type Target = Vec<Frame>;
 
     #[inline]
     fn deref(&self) -> &Self::Target {
@@ -99,16 +125,16 @@ impl Deref for Frame {
     }
 }
 
-impl DerefMut for Frame {
+impl DerefMut for Frames {
     #[inline]
     fn deref_mut(&mut self) -> &mut Self::Target {
         self.get_mut()
     }
 }
 
-impl Frame {
+impl Frames {
     #[inline]
-    pub fn get_mut(&mut self) -> &mut Vec<Vec<(Lemma, Option<ProofObligation>)>> {
+    pub fn get_mut(&mut self) -> &mut Vec<Frame> {
         unsafe { Rc::get_mut_unchecked(&mut self.frames) }
     }
 }
