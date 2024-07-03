@@ -7,8 +7,38 @@ use std::{
 };
 use transys::Transys;
 
+#[derive(Clone)]
+pub struct FrameLemma {
+    lemma: Lemma,
+    pub po: Option<ProofObligation>,
+    pub ctp: Option<Cube>,
+}
+
+impl FrameLemma {
+    #[inline]
+    pub fn new(lemma: Lemma, po: Option<ProofObligation>, ctp: Option<Cube>) -> Self {
+        Self { lemma, po, ctp }
+    }
+}
+
+impl Deref for FrameLemma {
+    type Target = Lemma;
+
+    #[inline]
+    fn deref(&self) -> &Self::Target {
+        &self.lemma
+    }
+}
+
+impl DerefMut for FrameLemma {
+    #[inline]
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.lemma
+    }
+}
+
 pub struct Frame {
-    lemmas: Vec<(Lemma, Option<ProofObligation>)>,
+    lemmas: Vec<FrameLemma>,
 }
 
 impl Frame {
@@ -18,7 +48,7 @@ impl Frame {
 }
 
 impl Deref for Frame {
-    type Target = Vec<(Lemma, Option<ProofObligation>)>;
+    type Target = Vec<FrameLemma>;
 
     #[inline]
     fn deref(&self) -> &Self::Target {
@@ -64,9 +94,9 @@ impl Frames {
         }
         for i in frame..frames.len() {
             for j in 0..frames[i].len() {
-                if frames[i][j].0.subsume_set(lemma, tmp_lit_set) {
+                if frames[i][j].lemma.subsume_set(lemma, tmp_lit_set) {
                     tmp_lit_set.clear();
-                    return Some((i, &mut frames[i][j].1));
+                    return Some((i, &mut frames[i][j].po));
                 }
             }
         }
@@ -78,9 +108,9 @@ impl Frames {
         if frame == 1 {
             return None;
         }
-        for (c, _) in self.frames[frame - 1].iter() {
+        for c in self.frames[frame - 1].iter() {
             if c.subsume(lemma) {
-                return Some(c.clone());
+                return Some(c.lemma.clone());
             }
         }
         None
@@ -91,9 +121,9 @@ impl Frames {
         if frame == 1 {
             return res;
         }
-        for (c, _) in self.frames[frame - 1].iter() {
+        for c in self.frames[frame - 1].iter() {
             if c.subsume(lemma) {
-                res.push(c.clone());
+                res.push(c.lemma.clone());
             }
         }
         res
@@ -144,7 +174,7 @@ impl IC3 {
         if frame == 0 {
             assert!(self.frame.len() == 1);
             self.solvers[0].add_lemma(&!lemma.cube());
-            self.frame[0].push((lemma, po));
+            self.frame[0].push(FrameLemma::new(lemma, po, None));
             return false;
         }
         if subsume_check && self.frame.trivial_contained(frame, &lemma).is_some() {
@@ -156,7 +186,7 @@ impl IC3 {
         'fl: for i in (1..=frame).rev() {
             let mut j = 0;
             while j < self.frame[i].len() {
-                let (l, _) = &self.frame[i][j];
+                let l = &self.frame[i][j];
                 if begin.is_none() && l.subsume(&lemma) {
                     if l.eq(&lemma) {
                         self.frame[i].swap_remove(j);
@@ -164,7 +194,7 @@ impl IC3 {
                         for k in i + 1..=frame {
                             self.solvers[k].add_lemma(&clause);
                         }
-                        self.frame[frame].push((lemma, po));
+                        self.frame[frame].push(FrameLemma::new(lemma, po, None));
                         self.frame.early = self.frame.early.min(i + 1);
                         return self.frame[i].is_empty();
                     } else {
@@ -173,7 +203,7 @@ impl IC3 {
                     }
                 }
                 if lemma.subsume(l) {
-                    let (remove, _) = self.frame[i].swap_remove(j);
+                    let remove = self.frame[i].swap_remove(j);
                     self.solvers[i].remove_lemma(&remove);
                     continue;
                 }
@@ -188,7 +218,7 @@ impl IC3 {
         for i in begin..=frame {
             self.solvers[i].add_lemma(&clause);
         }
-        self.frame[frame].push((lemma, po));
+        self.frame[frame].push(FrameLemma::new(lemma, po, None));
         self.frame.early = self.frame.early.min(begin);
         inv_found
     }
@@ -198,12 +228,12 @@ impl IC3 {
         for i in (1..=frame).rev() {
             let mut j = 0;
             while j < self.frame[i].len() {
-                if let Some(po) = &mut self.frame[i][j].1 {
+                if let Some(po) = &mut self.frame[i][j].po {
                     po.removed = true;
                 }
-                if lemmas.contains(&self.frame[i][j].0) {
+                if lemmas.contains(&self.frame[i][j]) {
                     for s in self.solvers[..=frame].iter_mut() {
-                        s.remove_lemma(&self.frame[i][j].0);
+                        s.remove_lemma(&self.frame[i][j]);
                     }
                     self.frame[i].swap_remove(j);
                 } else {
@@ -216,7 +246,7 @@ impl IC3 {
     pub fn symmetry_lemma(&self, lemma: &Lemma, frame: usize) -> Option<Lemma> {
         let groups: HashSet<u32> =
             HashSet::from_iter(lemma.iter().map(|l| self.ts.latch_group[*l]));
-        for (c, _) in self.frame[frame].iter() {
+        for c in self.frame[frame].iter() {
             let mut its = c.intersection(&lemma);
             its.sort();
             if c.len() < 5 || its.is_empty() || its.len() + 1 < c.len() {
@@ -226,7 +256,7 @@ impl IC3 {
                 println!("l {:?}", lemma.deref());
                 println!("its {:?}", its);
                 println!("s {:?}", c.deref());
-                return Some(c.clone());
+                return Some(c.lemma.clone());
             }
         }
         None

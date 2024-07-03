@@ -123,23 +123,23 @@ impl IC3 {
 
     pub fn propagate(&mut self) -> bool {
         for frame_idx in self.frame.early..self.level() {
-            self.frame[frame_idx].sort_by_key(|(x, _)| x.len());
+            self.frame[frame_idx].sort_by_key(|x| x.len());
             let frame = self.frame[frame_idx].clone();
-            for (lemma, mut po) in frame {
-                if self.frame[frame_idx].iter().all(|(l, _)| l.ne(&lemma)) {
+            for mut lemma in frame {
+                if self.frame[frame_idx].iter().all(|l| l.ne(&lemma)) {
                     continue;
                 }
                 if let Some(true) =
                     self.blocked_with_ordered(frame_idx + 1, &lemma, false, false, false)
                 {
                     let core = self.solvers[frame_idx].inductive_core();
-                    if let Some(po) = &mut po {
+                    if let Some(po) = &mut lemma.po {
                         if po.frame < frame_idx + 2 && self.obligations.remove(&po) {
                             po.frame = frame_idx + 2;
                             self.obligations.add(po.clone());
                         }
                     }
-                    self.add_lemma(frame_idx + 1, core, true, po);
+                    self.add_lemma(frame_idx + 1, core, true, lemma.po);
                 }
             }
             if self.frame[frame_idx].is_empty() {

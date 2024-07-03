@@ -546,7 +546,7 @@ impl IC3 {
         }
         let start = Instant::now();
         println!("name {}", self.args.model);
-        let mut cnf: Vec<Clause> = last.iter().map(|(l, _)| !&**l).collect();
+        let mut cnf: Vec<Clause> = last.iter().map(|l| !&***l).collect();
         for cls in cnf.iter_mut() {
             cls.sort();
         }
