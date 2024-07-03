@@ -31,6 +31,7 @@ impl IC3 {
                     return DownResult::Fail;
                 }
             }
+            self.statistic.num_down_sat += 1;
             match self.blocked_with_ordered(frame, &cube, false, true, false) {
                 Some(true) => {
                     return DownResult::Success(self.solvers[frame - 1].inductive_core());

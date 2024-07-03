@@ -55,7 +55,7 @@ impl Frames {
     pub fn trivial_contained<'a>(
         &'a mut self,
         frame: usize,
-        lemma: &logic_form::Lemma,
+        lemma: &Lemma,
     ) -> Option<(usize, &'a mut Option<ProofObligation>)> {
         let tmp_lit_set = unsafe { Rc::get_mut_unchecked(&mut self.tmp_lit_set) };
         let frames = unsafe { Rc::get_mut_unchecked(&mut self.frames) };
@@ -74,11 +74,7 @@ impl Frames {
         None
     }
 
-    pub fn _parent_lemma(
-        &self,
-        lemma: &logic_form::Lemma,
-        frame: usize,
-    ) -> Option<logic_form::Lemma> {
+    pub fn _parent_lemma(&self, lemma: &Lemma, frame: usize) -> Option<Lemma> {
         if frame == 1 {
             return None;
         }
@@ -90,11 +86,7 @@ impl Frames {
         None
     }
 
-    pub fn _parent_lemmas(
-        &self,
-        lemma: &logic_form::Lemma,
-        frame: usize,
-    ) -> Vec<logic_form::Lemma> {
+    pub fn _parent_lemmas(&self, lemma: &Lemma, frame: usize) -> Vec<Lemma> {
         let mut res = Vec::new();
         if frame == 1 {
             return res;
@@ -148,7 +140,7 @@ impl IC3 {
         subsume_check: bool,
         po: Option<ProofObligation>,
     ) -> bool {
-        let lemma = logic_form::Lemma::new(lemma);
+        let lemma = Lemma::new(lemma);
         if frame == 0 {
             assert!(self.frame.len() == 1);
             self.solvers[0].add_lemma(&!lemma.cube());
@@ -219,5 +211,24 @@ impl IC3 {
                 }
             }
         }
+    }
+
+    pub fn symmetry_lemma(&self, lemma: &Lemma, frame: usize) -> Option<Lemma> {
+        let groups: HashSet<u32> =
+            HashSet::from_iter(lemma.iter().map(|l| self.ts.latch_group[*l]));
+        for (c, _) in self.frame[frame].iter() {
+            let mut its = c.intersection(&lemma);
+            its.sort();
+            if c.len() < 5 || its.is_empty() || its.len() + 1 < c.len() {
+                continue;
+            }
+            if c.iter().all(|l| groups.contains(&self.ts.latch_group[*l])) {
+                println!("l {:?}", lemma.deref());
+                println!("its {:?}", its);
+                println!("s {:?}", c.deref());
+                return Some(c.clone());
+            }
+        }
+        None
     }
 }

@@ -13,6 +13,7 @@ pub struct Statistic {
     pub avg_po_cube_len: Average,
     pub mic_drop: SuccessRate,
     pub num_down: usize,
+    pub num_down_sat: usize,
 
     pub overall_mic_time: Duration,
     pub overall_block_time: Duration,
@@ -20,6 +21,7 @@ pub struct Statistic {
 
     pub test: SuccessRate,
     pub sbva: Duration,
+    pub symmetry: SuccessRate,
 }
 
 impl Statistic {

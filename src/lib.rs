@@ -75,7 +75,20 @@ impl IC3 {
 
     fn generalize(&mut self, mut po: ProofObligation) -> bool {
         let mut mic = self.solvers[po.frame - 1].inductive_core();
+        // let sym = self.symmetry_lemma(&po.lemma, po.frame);
+        // self.statistic.symmetry.statistic(sym.is_some());
+
+        let mut mmic = mic.clone();
+        mmic.sort();
+        println!("l {:?}", mmic);
+        let o = self.statistic.num_down_sat;
         mic = self.mic(po.frame, mic, 0);
+        // if sym.is_some() {
+        let mut mmic = mic.clone();
+        mmic.sort();
+        println!("num_mic_sat: {}", self.statistic.num_down_sat - o);
+        println!("m {:?}", mmic);
+        // }
         let (frame, mic) = self.push_lemma(po.frame, mic);
         self.statistic.avg_po_cube_len += po.lemma.len();
         po.frame = frame;
