@@ -457,9 +457,9 @@ impl IC3 {
         for latch in self.ts.latchs.iter() {
             let lit = latch.lit();
             if let Some(v) = solver.sat_value(lit) {
-                // if in_cls.contains(latch) || !solver.flip_to_none(*latch) {
-                latchs.push(lit.not_if(!v));
-                // }
+                if in_cls.contains(latch) || !solver.flip_to_none(*latch) {
+                    latchs.push(lit.not_if(!v));
+                }
             }
         }
         self.activity.sort_by_activity(&mut latchs, false);

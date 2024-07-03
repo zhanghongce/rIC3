@@ -92,7 +92,7 @@ impl IC3 {
                 self.add_obligation(po);
                 return Some(false);
             }
-            self.sbva();
+            // self.sbva();
             assert!(!self.ts.cube_subsume_init(&po.lemma));
             if self.args.verbose_all {
                 self.statistic();

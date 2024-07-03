@@ -18,11 +18,37 @@ pub struct ProofObligationInner {
 impl PartialEq for ProofObligationInner {
     #[inline]
     fn eq(&self, other: &Self) -> bool {
-        self.lemma == other.lemma
+        self.lemma == other.lemma && self.removed == other.removed
     }
 }
 
 impl Eq for ProofObligationInner {}
+
+impl PartialOrd for ProofObligationInner {
+    #[inline]
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl Ord for ProofObligationInner {
+    #[inline]
+    fn cmp(&self, other: &Self) -> Ordering {
+        match other.frame.cmp(&self.frame) {
+            Ordering::Equal => match self.depth.cmp(&other.depth) {
+                Ordering::Equal => match other.lemma.len().cmp(&self.lemma.len()) {
+                    Ordering::Equal => match other.lemma.cmp(&self.lemma) {
+                        Ordering::Equal => self.removed.cmp(&other.removed),
+                        ord => ord,
+                    },
+                    ord => ord,
+                },
+                ord => ord,
+            },
+            ord => ord,
+        }
+    }
+}
 
 impl Debug for ProofObligationInner {
     #[inline]
@@ -94,16 +120,7 @@ impl PartialOrd for ProofObligation {
 impl Ord for ProofObligation {
     #[inline]
     fn cmp(&self, other: &Self) -> Ordering {
-        match other.frame.cmp(&self.frame) {
-            Ordering::Equal => match self.depth.cmp(&other.depth) {
-                Ordering::Equal => match other.lemma.len().cmp(&self.lemma.len()) {
-                    Ordering::Equal => other.lemma.cmp(&self.lemma),
-                    ord => ord,
-                },
-                ord => ord,
-            },
-            ord => ord,
-        }
+        self.inner.cmp(&other.inner)
     }
 }
 
