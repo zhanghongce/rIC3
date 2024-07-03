@@ -94,13 +94,13 @@ impl IC3 {
             }
             // self.sbva();
             assert!(!self.ts.cube_subsume_init(&po.lemma));
-            if self.args.verbose_all {
-                self.statistic();
-            }
             if let Some((bf, _)) = self.frame.trivial_contained(po.frame, &po.lemma) {
                 po.frame = bf + 1;
                 self.add_obligation(po);
                 continue;
+            }
+            if self.args.verbose_all {
+                self.frame.statistic();
             }
             if let Some(true) = self.blocked_with_ordered(po.frame, &po.lemma, false, false, false)
             {
@@ -199,6 +199,7 @@ impl IC3 {
                     _ => (),
                 }
                 if let Some(bad) = self.get_bad() {
+                    dbg!("get bad");
                     let bad = Lemma::new(bad);
                     self.add_obligation(ProofObligation::new(self.level(), bad, 0, None))
                 } else {
