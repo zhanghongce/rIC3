@@ -464,6 +464,7 @@ impl IC3 {
         }
         self.activity.sort_by_activity(&mut latchs, false);
         let mut res = latchs;
+        // self.lift.set_domain(cls.iter().cloned());
         for i in 0..5 {
             if i == 1 {
                 res.reverse();
@@ -475,7 +476,7 @@ impl IC3 {
             let constrain = vec![cls.clone()];
             let Some(false) = self
                 .lift
-                .solve_with_domain(&lift_assump, constrain, false, false)
+                .solve_with_domain(&lift_assump, constrain, true, false)
             else {
                 panic!();
             };
@@ -488,6 +489,7 @@ impl IC3 {
                 break;
             }
         }
+        // self.lift.unset_domain();
         res
     }
 

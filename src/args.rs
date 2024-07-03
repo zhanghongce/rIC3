@@ -23,7 +23,7 @@ pub struct Args {
     pub witness: bool,
 
     /// verify
-    #[arg(long, default_value_t = true)]
+    #[arg(long, default_value_t = false)]
     pub verify: bool,
 
     /// save frames
