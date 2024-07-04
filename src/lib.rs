@@ -198,8 +198,8 @@ impl IC3 {
                     }
                     _ => (),
                 }
+                self.statistic.num_get_bad += 1;
                 if let Some(bad) = self.get_bad() {
-                    dbg!("get bad");
                     let bad = Lemma::new(bad);
                     self.add_obligation(ProofObligation::new(self.level(), bad, 0, None))
                 } else {
