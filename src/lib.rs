@@ -92,7 +92,7 @@ impl IC3 {
                 self.add_obligation(po);
                 return Some(false);
             }
-            // self.sbva();
+            // self.sbvb();
             assert!(!self.ts.cube_subsume_init(&po.lemma));
             if let Some((bf, _)) = self.frame.trivial_contained(po.frame, &po.lemma) {
                 po.frame = bf + 1;

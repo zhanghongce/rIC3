@@ -22,6 +22,7 @@ use simplify::Simplify;
 use statistic::SolverStatistic;
 use std::{
     collections::{HashMap, HashSet},
+    ops::Deref,
     rc::Rc,
     time::Instant,
 };
@@ -638,7 +639,7 @@ impl IC3 {
         if last.len() < self.last_sbva {
             return;
         }
-        self.last_sbva = last.len() + 1000;
+        println!("sbvb b {}", last.len());
         let mut dnf: Vec<Cube> = last.iter().map(|l| (***l).clone()).collect();
         for cube in dnf.iter_mut() {
             cube.sort();
@@ -658,6 +659,11 @@ impl IC3 {
                 entry.push(r);
             }
         }
+        let mut removed_lemmas = Vec::new();
+        let mut partial_cls = Vec::from_iter(partial_cls);
+        partial_cls.sort_by(|a, b| b.0.cmp(&a.0));
+        partial_cls.sort_by_key(|(_, lits)| lits.len());
+        partial_cls.reverse();
         for (pcls, lits) in partial_cls {
             if lits.len() >= 4 {
                 if lits
@@ -693,18 +699,23 @@ impl IC3 {
                     let trans = cnf_lits_or(tie, &bva);
                     let dep = bva.iter().map(|l| l.var()).collect();
                     self.add_latch(tie.var(), tie_next, None, trans, dep);
-                    let mut pcls = (*pcls).clone();
-                    pcls.push(tie);
+                    let mut pcls_tie = (*pcls).clone();
+                    pcls_tie.push(tie);
                     let f = self.level() - 1;
-                    assert!(self.solvers[f].inductive(&pcls, true, false).unwrap());
-                    // for l in bva.iter() {
-                    //     let mut pcls = pcls.clone();
-                    //     pcls.push(*l);
-                    //     let f = self.level() - 1;
-                    //     assert!(self.solvers[f].inductive(&pcls, true, false).unwrap());
-                    // }
+                    assert!(self.solvers[f].inductive(&pcls_tie, true, false).unwrap());
+                    self.add_lemma(f, pcls_tie, false, None);
+                    for lit in bva {
+                        let mut pcls = (*pcls).clone();
+                        pcls.push(lit);
+                        removed_lemmas.push(pcls);
+                    }
                 }
             }
         }
+        self.remove_lemma(self.frame.len() - 1, removed_lemmas);
+        let last = self.frame.last().unwrap();
+        println!("sbvb a {}", last.len());
+        self.last_sbva = last.len() + 1000;
+        todo!();
     }
 }
