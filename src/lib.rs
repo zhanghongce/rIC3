@@ -102,7 +102,9 @@ impl IC3 {
             if self.args.verbose_all {
                 self.frame.statistic();
             }
-            if let Some(true) = self.blocked_with_ordered(po.frame, &po.lemma, false, false, false)
+            if self
+                .blocked_with_ordered(po.frame, &po.lemma, false, false, false)
+                .unwrap()
             {
                 if self.generalize(po) {
                     return None;
@@ -121,7 +123,40 @@ impl IC3 {
         Some(true)
     }
 
-    pub fn propagate(&mut self) -> bool {
+    fn trivial_block(&mut self, frame: usize, lemma: Lemma, limit: &mut usize) -> bool {
+        if frame == 0 {
+            return false;
+        }
+        if self.ts.cube_subsume_init(&lemma) {
+            return false;
+        }
+        if self.frame.trivial_contained(frame, &lemma).is_some() {
+            return true;
+        }
+        if *limit == 0 {
+            return false;
+        }
+        *limit -= 1;
+        loop {
+            if self
+                .blocked_with_ordered(frame, &lemma, false, true, false)
+                .unwrap()
+            {
+                let mut mic = self.solvers[frame - 1].inductive_core();
+                mic = self.mic(frame, mic, 0);
+                let (frame, mic) = self.push_lemma(frame, mic);
+                self.add_lemma(frame - 1, mic, false, None);
+                return true;
+            } else {
+                let model = Lemma::new(self.get_predecessor(frame));
+                if !self.trivial_block(frame - 1, model, limit) {
+                    return false;
+                }
+            }
+        }
+    }
+
+    fn propagate(&mut self) -> bool {
         for frame_idx in self.frame.early..self.level() {
             self.frame[frame_idx].sort_by_key(|x| x.len());
             let frame = self.frame[frame_idx].clone();
