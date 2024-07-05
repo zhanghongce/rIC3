@@ -342,9 +342,11 @@ dependencies = [
 name = "sbva"
 version = "0.1.0"
 dependencies = [
+ "aig",
  "cadical",
  "logic-form",
  "satif",
+ "transys",
 ]
 
 [[package]]

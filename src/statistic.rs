@@ -24,6 +24,7 @@ pub struct Statistic {
     pub test: SuccessRate,
     pub sbva: Duration,
     pub symmetry: SuccessRate,
+    pub sbvb: usize,
 }
 
 impl Statistic {

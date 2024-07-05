@@ -13,7 +13,7 @@ use analyze::Analyze;
 use cdb::{CRef, ClauseDB, ClauseKind, CREF_NONE};
 use domain::Domain;
 use giputils::gvec::Gvec;
-use logic_form::{Clause, Cube, Lemma, Lit, LitSet, Var, VarMap};
+use logic_form::{cnf_lits_or, Clause, Cube, Lemma, Lit, LitSet, Var, VarMap};
 use propagate::Watchers;
 use rand::{prelude::SliceRandom, rngs::StdRng, SeedableRng};
 use sbva::{SBVAClauseType, SBVA};
@@ -508,12 +508,22 @@ impl IC3 {
         state: Var,
         next: Lit,
         init: Option<bool>,
-        trans: Vec<Clause>,
+        mut trans: Vec<Clause>,
         dep: Vec<Var>,
-        dep_next: Vec<Var>,
     ) {
+        for i in 0..trans.len() {
+            let mut nt = Clause::new();
+            for l in trans[i].iter() {
+                nt.push(if l.var() == state {
+                    next.not_if(!l.polarity())
+                } else {
+                    self.ts.lit_next(*l)
+                });
+            }
+            trans.push(nt);
+        }
         let ts = unsafe { Rc::get_mut_unchecked(&mut self.ts) };
-        ts.add_latch(state, next, init, trans.clone(), dep.clone(), dep_next);
+        ts.add_latch(state, next, init, trans.clone(), dep.clone());
         let tmp_lit_set = unsafe { Rc::get_mut_unchecked(&mut self.frame.tmp_lit_set) };
         tmp_lit_set.reserve(ts.max_latch);
         for s in self.solvers.iter_mut().chain(Some(&mut self.lift)) {
@@ -578,28 +588,20 @@ impl IC3 {
         let mut ties = Vec::from_iter(ties.into_iter());
         ties.sort_by_key(|(v, _)| *v);
         for (tie, deps) in ties {
-            // dbg!(tie);
-            // println!("{:?}", deps);
+            dbg!(tie);
+            println!("{:?}", deps);
             // assert!(deps.iter().all(|l| self.ts.is_latch(l.var())));
             let tie = tie.lit();
             let tie_next = self.new_var().lit();
             let mut trans = Vec::new();
             let mut rel = Clause::from([!tie]);
-            let mut rel_next = Clause::from([!tie_next]);
             for lit in deps.iter() {
                 trans.push(Clause::from([tie, *lit]));
                 rel.push(!*lit);
-                trans.push(Clause::from([tie_next, self.ts.lit_next(*lit)]));
-                rel_next.push(!self.ts.lit_next(*lit));
             }
             trans.push(rel);
-            trans.push(rel_next);
             let deps: Vec<Var> = deps.into_iter().map(|l| l.var()).collect();
-            let deps_next: Vec<Var> = deps
-                .iter()
-                .map(|v| self.ts.lit_next(v.lit()).var())
-                .collect();
-            self.add_latch(tie.var(), tie_next, None, trans, deps, deps_next);
+            self.add_latch(tie.var(), tie_next, None, trans, deps);
         }
         for cls in sbva.cnf.iter() {
             let lemma = !&**cls;
@@ -629,5 +631,80 @@ impl IC3 {
         self.last_sbva = self.frame.last().unwrap().len() + 1000;
         println!("sbva end: {}", self.frame.last().unwrap().len());
         self.statistic.sbva += start.elapsed();
+    }
+
+    pub fn sbvb(&mut self) {
+        let last = self.frame.last().unwrap();
+        if last.len() < self.last_sbva {
+            return;
+        }
+        self.last_sbva = last.len() + 1000;
+        let mut dnf: Vec<Cube> = last.iter().map(|l| (***l).clone()).collect();
+        for cube in dnf.iter_mut() {
+            cube.sort();
+        }
+        dnf.sort_by_key(|cls| cls.len());
+        let mut partial_cls: HashMap<Lemma, Vec<Lit>> = HashMap::new();
+        for i in 0..dnf.len() {
+            if dnf[i].len() == 1 {
+                continue;
+            }
+            for j in 0..dnf[i].len() {
+                let mut pcls = dnf[i].clone();
+                let r = pcls.remove(j);
+                let pcls = Cube::from_iter(pcls.into_iter());
+                let lemma = Lemma::new(pcls);
+                let entry = partial_cls.entry(lemma).or_default();
+                entry.push(r);
+            }
+        }
+        for (pcls, lits) in partial_cls {
+            if lits.len() >= 4 {
+                if lits
+                    .iter()
+                    .all(|x| self.ts.latch_group[*x] == self.ts.latch_group[lits[0]])
+                {
+                    println!("{:?}", lits);
+                    for l in lits.iter() {
+                        print!("{} ", self.ts.latch_group[*l]);
+                    }
+                    println!();
+                    let mut bva = Vec::new();
+                    for gi in 0..self.ts.groups[&self.ts.latch_group[lits[0]]].len() {
+                        let gl = self.ts.groups[&self.ts.latch_group[lits[0]]][gi].lit();
+                        gl.not_if(!lits[0].polarity());
+                        let mut pcls = (*pcls).clone();
+                        pcls.push(gl);
+                        let f = self.level() - 1;
+                        let pcls = Lemma::new(pcls);
+                        if self.frame.trivial_contained(f, &pcls).is_none() {
+                            if self.solvers[f].inductive(&pcls, true, false).unwrap() {
+                                self.add_lemma(f, (*pcls).clone(), false, None);
+                                self.statistic.sbvb += 1;
+                                bva.push(gl);
+                            }
+                        } else {
+                            bva.push(gl);
+                        }
+                    }
+                    println!("{:?}", bva);
+                    let tie = self.new_var().lit();
+                    let tie_next = self.new_var().lit();
+                    let trans = cnf_lits_or(tie, &bva);
+                    let dep = bva.iter().map(|l| l.var()).collect();
+                    self.add_latch(tie.var(), tie_next, None, trans, dep);
+                    let mut pcls = (*pcls).clone();
+                    pcls.push(tie);
+                    let f = self.level() - 1;
+                    assert!(self.solvers[f].inductive(&pcls, true, false).unwrap());
+                    // for l in bva.iter() {
+                    //     let mut pcls = pcls.clone();
+                    //     pcls.push(*l);
+                    //     let f = self.level() - 1;
+                    //     assert!(self.solvers[f].inductive(&pcls, true, false).unwrap());
+                    // }
+                }
+            }
+        }
     }
 }
