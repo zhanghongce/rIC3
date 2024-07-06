@@ -8,7 +8,7 @@ fn main() {
         println!("bmc result: {}", portfolio.check());
     } else if args.bmc {
         let mut bmc = BMC::new(args);
-        println!("bmc result: {}", !bmc.check_no_incremental());
+        println!("bmc result: {}", !bmc.check());
     } else {
         let mut ic3 = IC3::new(args);
         println!("ic3 result: {}", ic3.check_with_int_hanlder());

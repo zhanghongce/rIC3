@@ -1,6 +1,5 @@
 use crate::Args;
 use aig::Aig;
-use kissat::Solver;
 use logic_form::{
     dimacs::{from_dimacs_str, to_dimacs},
     Clause,
@@ -27,7 +26,7 @@ impl BMC {
 
     pub fn check(&mut self) -> bool {
         println!("{}", self.args.model);
-        let mut solver = Solver::new();
+        let mut solver = cadical::Solver::new();
         self.uts.ts.load_init(&mut solver);
         for k in 0.. {
             self.uts.unroll_to(k);
@@ -49,7 +48,7 @@ impl BMC {
 
     pub fn check_in_depth(&mut self, depth: usize) -> bool {
         println!("{}", self.args.model);
-        let mut solver = Solver::new();
+        let mut solver = kissat::Solver::new();
         self.uts.ts.load_init(&mut solver);
         self.uts.unroll_to(depth);
         for k in 0..=depth {
