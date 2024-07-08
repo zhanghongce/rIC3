@@ -123,6 +123,7 @@ impl IC3 {
         Some(true)
     }
 
+    #[allow(unused)]
     fn trivial_block(&mut self, frame: usize, lemma: Lemma, limit: &mut usize) -> bool {
         if frame == 0 {
             return false;
@@ -169,7 +170,7 @@ impl IC3 {
                 {
                     let core = self.solvers[frame_idx].inductive_core();
                     if let Some(po) = &mut lemma.po {
-                        if po.frame < frame_idx + 2 && self.obligations.remove(&po) {
+                        if po.frame < frame_idx + 2 && self.obligations.remove(po) {
                             po.frame = frame_idx + 2;
                             self.obligations.add(po.clone());
                         }

@@ -224,7 +224,7 @@ impl IC3 {
     }
 
     pub fn remove_lemma(&mut self, frame: usize, lemmas: Vec<Cube>) {
-        let lemmas: HashSet<Lemma> = HashSet::from_iter(lemmas.into_iter().map(|l| Lemma::new(l)));
+        let lemmas: HashSet<Lemma> = HashSet::from_iter(lemmas.into_iter().map(Lemma::new));
         for i in (1..=frame).rev() {
             let mut j = 0;
             while j < self.frame[i].len() {

@@ -586,7 +586,7 @@ impl IC3 {
                 }
             }
         }
-        let mut ties = Vec::from_iter(ties.into_iter());
+        let mut ties = Vec::from_iter(ties);
         ties.sort_by_key(|(v, _)| *v);
         for (tie, deps) in ties {
             dbg!(tie);
