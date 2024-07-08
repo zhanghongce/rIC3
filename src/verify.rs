@@ -44,6 +44,10 @@ impl IC3 {
                 invariants.push(cube.deref().clone());
             }
         }
+        invariants.sort();
+        // for c in invariants.iter() {
+        //     println!("{:?}", **c);
+        // }
 
         if !self.verify_invariant(&invariants) {
             println!("invariant varify failed");
