@@ -18,7 +18,8 @@ use aig::Aig;
 pub use args::Args;
 use frame::{Frame, Frames};
 use gipsat::Solver;
-use logic_form::{Cube, Lemma, Var};
+use logic_form::{Cube, Lemma, Lit, Var};
+use std::collections::HashMap;
 use std::panic::{self, AssertUnwindSafe};
 use std::process::exit;
 use std::rc::Rc;
@@ -37,6 +38,8 @@ pub struct IC3 {
 
     last_sbva: usize,
     auxiliary_var: Vec<Var>,
+
+    xor_var: HashMap<(Lit, Lit), Lit>,
 }
 
 impl IC3 {
@@ -80,7 +83,9 @@ impl IC3 {
         self.statistic.avg_po_cube_len += po.lemma.len();
         po.frame = frame;
         self.add_obligation(po.clone());
-        self.add_lemma(frame - 1, mic, false, Some(po))
+        let res = self.add_lemma(frame - 1, mic.clone(), false, Some(po));
+        // self.xor_generalize(frame - 1, mic);
+        res
     }
 
     fn block(&mut self) -> Option<bool> {
@@ -93,7 +98,12 @@ impl IC3 {
                 return Some(false);
             }
             // self.sbvb();
-            assert!(!self.ts.cube_subsume_init(&po.lemma));
+            if self.ts.cube_subsume_init(&po.lemma) {
+                assert!(!self.solvers[0]
+                    .solve_with_domain(&po.lemma, vec![], true, false)
+                    .unwrap());
+                todo!();
+            }
             if let Some((bf, _)) = self.frame.trivial_contained(po.frame, &po.lemma) {
                 po.frame = bf + 1;
                 self.add_obligation(po);
@@ -206,6 +216,7 @@ impl IC3 {
             frame,
             last_sbva: 1000,
             auxiliary_var: Vec::new(),
+            xor_var: HashMap::new(),
         };
         res.extend();
         res

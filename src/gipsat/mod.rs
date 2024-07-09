@@ -22,7 +22,6 @@ use simplify::Simplify;
 use statistic::SolverStatistic;
 use std::{
     collections::{HashMap, HashSet},
-    ops::Deref,
     rc::Rc,
     time::Instant,
 };
@@ -528,6 +527,7 @@ impl IC3 {
         let tmp_lit_set = unsafe { Rc::get_mut_unchecked(&mut self.frame.tmp_lit_set) };
         tmp_lit_set.reserve(ts.max_latch);
         for s in self.solvers.iter_mut().chain(Some(&mut self.lift)) {
+            s.reset();
             for cls in trans.iter() {
                 s.add_clause_inner(cls, ClauseKind::Trans);
             }
@@ -544,9 +544,23 @@ impl IC3 {
                 ts.init.push(!state.lit());
                 ts.init_map[state] = Some(false);
             }
+        } else {
+            if !self.solvers[0]
+                .solve_with_domain(&[state.lit()], vec![], true, false)
+                .unwrap()
+            {
+                ts.init.push(!state.lit());
+                ts.init_map[state] = Some(false);
+            } else if !self.solvers[0]
+                .solve_with_domain(&[!state.lit()], vec![], true, false)
+                .unwrap()
+            {
+                ts.init.push(state.lit());
+                ts.init_map[state] = Some(true);
+            }
         }
         self.activity.reserve(state);
-        self.activity.set_max_act(state);
+        // self.activity.set_max_act(state);
         self.auxiliary_var.push(state);
     }
 
