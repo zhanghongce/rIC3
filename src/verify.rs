@@ -1,10 +1,27 @@
 use crate::IC3;
-use logic_form::{Clause, Lemma};
+use aig::{AigEdge, AigNode};
+use logic_form::{Clause, Cube, Lemma};
 use minisat::Solver;
 use satif::{SatResult, Satif};
-use std::ops::Deref;
+use std::{ops::Deref, process::Command};
 
 impl IC3 {
+    fn invariant(&self) -> Vec<Lemma> {
+        let invariant = self
+            .frame
+            .iter()
+            .position(|frame| frame.is_empty())
+            .unwrap();
+        let mut invariants = Vec::new();
+        for i in invariant..self.frame.len() {
+            for cube in self.frame[i].iter() {
+                invariants.push(cube.deref().clone());
+            }
+        }
+        invariants.sort();
+        invariants
+    }
+
     fn verify_invariant(&mut self, invariants: &[Lemma]) -> bool {
         let mut solver = Solver::new();
         while solver.num_var() < self.ts.num_var {
@@ -33,18 +50,7 @@ impl IC3 {
     }
 
     pub fn verify(&mut self) -> bool {
-        let invariant = self
-            .frame
-            .iter()
-            .position(|frame| frame.is_empty())
-            .unwrap();
-        let mut invariants = Vec::new();
-        for i in invariant..self.frame.len() {
-            for cube in self.frame[i].iter() {
-                invariants.push(cube.deref().clone());
-            }
-        }
-        invariants.sort();
+        let invariants = self.invariant();
         // for c in invariants.iter() {
         //     println!("{:?}", **c);
         // }
@@ -58,5 +64,34 @@ impl IC3 {
             invariants.len()
         );
         true
+    }
+
+    pub fn certifaiger(&self) {
+        let invariants = self.invariant();
+        let invariants = invariants
+            .iter()
+            .map(|l| Cube::from_iter(l.iter().map(|l| self.ts_restore.restore(*l))));
+        let mut certifaiger = self.aig.clone();
+        let mut certifaiger_dnf = vec![];
+        for cube in invariants {
+            certifaiger_dnf
+                .push(certifaiger.new_ands_node(cube.into_iter().map(|l| AigEdge::from_lit(l))));
+        }
+        let invariants = certifaiger.new_ors_node(certifaiger_dnf.into_iter());
+        certifaiger.bads.clear();
+        certifaiger.outputs.clear();
+        certifaiger.outputs.push(invariants);
+        certifaiger.to_file("./certifaiger.aig");
+        let output = Command::new("/root/certifaiger/build/check")
+            .arg(&self.args.model)
+            .arg("./certifaiger.aig")
+            .output()
+            .expect("certifaiger not found");
+
+        if output.status.success() {
+            println!("certifaiger check passed");
+        } else {
+            println!("certifaiger check failed");
+        }
     }
 }

@@ -24,7 +24,7 @@ use std::panic::{self, AssertUnwindSafe};
 use std::process::exit;
 use std::rc::Rc;
 use std::time::Instant;
-use transys::Transys;
+use transys::{AigRestore, Transys};
 
 pub struct IC3 {
     args: Args,
@@ -35,6 +35,9 @@ pub struct IC3 {
     obligations: ProofObligationQueue,
     activity: Activity,
     statistic: Statistic,
+
+    aig: Aig,
+    ts_restore: AigRestore,
 
     last_sbva: usize,
     auxiliary_var: Vec<Var>,
@@ -200,7 +203,8 @@ impl IC3 {
 impl IC3 {
     pub fn new(args: Args) -> Self {
         let aig = Aig::from_file(&args.model);
-        let ts = Rc::new(Transys::from_aig(&aig));
+        let (ts, ts_restore) = Transys::from_aig(&aig);
+        let ts = Rc::new(ts);
         let statistic = Statistic::new(&args.model);
         let activity = Activity::new(&ts);
         let frame = Frames::new(&ts);
@@ -214,6 +218,8 @@ impl IC3 {
             statistic,
             obligations: ProofObligationQueue::new(),
             frame,
+            aig,
+            ts_restore,
             last_sbva: 1000,
             auxiliary_var: Vec::new(),
             xor_var: HashMap::new(),

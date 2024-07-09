@@ -19,7 +19,7 @@ pub struct BMC {
 impl BMC {
     pub fn new(args: Args) -> Self {
         let aig = Aig::from_file(&args.model);
-        let ts = Transys::from_aig(&aig);
+        let (ts, _) = Transys::from_aig(&aig);
         let uts = TransysUnroll::new(&ts);
         Self { uts, args }
     }
