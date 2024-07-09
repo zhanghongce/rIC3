@@ -71,10 +71,8 @@ impl BMC {
             return true;
         }
         for k in 140.. {
-            if k % 10 == 0 {
-                if self.check_in_depth(k) {
-                    return true;
-                }
+            if k % 10 == 0 && self.check_in_depth(k) {
+                return true;
             }
         }
         unreachable!()

@@ -11,13 +11,17 @@ use transys::Transys;
 pub struct FrameLemma {
     lemma: Lemma,
     pub po: Option<ProofObligation>,
-    pub ctp: Option<Cube>,
+    pub _ctp: Option<Cube>,
 }
 
 impl FrameLemma {
     #[inline]
     pub fn new(lemma: Lemma, po: Option<ProofObligation>, ctp: Option<Cube>) -> Self {
-        Self { lemma, po, ctp }
+        Self {
+            lemma,
+            po,
+            _ctp: ctp,
+        }
     }
 }
 

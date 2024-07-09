@@ -1,3 +1,4 @@
+#![allow(non_snake_case)]
 #![feature(assert_matches, is_sorted, get_mut_unchecked, format_args_nl)]
 
 mod activity;

@@ -1,5 +1,5 @@
 use crate::IC3;
-use aig::{AigEdge, AigNode};
+use aig::AigEdge;
 use logic_form::{Clause, Cube, Lemma};
 use minisat::Solver;
 use satif::{SatResult, Satif};
