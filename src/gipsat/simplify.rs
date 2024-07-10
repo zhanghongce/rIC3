@@ -120,18 +120,16 @@ impl Solver {
                     self.statistic.num_simplify_subsume += 1;
                 } else if let Some(diff) = diff {
                     self.statistic.num_simplify_self_subsume += 1;
-                    // println!("{}", lemma);
-                    // println!("{}", clauses[*subsumed].1);
-                    // println!("{}", diff);
                     if lemma.len() == clauses[*subsumed].1.len() {
-                        // println!("{}", lemma);
-                        // println!("{}", clauses[*subsumed].1);
-                        // println!("{}", diff);
                         if lemma.len() > 2 {
                             self.detach_clause(clauses[*subsumed].0);
                             self.strengthen_clause(clauses[cls_idx].0, diff);
                             let strengthen = self.cdb.get(clauses[cls_idx].0);
                             clauses[cls_idx].1 = Lemma::new(Cube::from(strengthen.slice()));
+                        } else {
+                            // println!("{}", lemma);
+                            // println!("{}", clauses[*subsumed].1);
+                            // println!("{}", diff);
                         }
                     } else {
                         self.strengthen_clause(clauses[*subsumed].0, !diff);

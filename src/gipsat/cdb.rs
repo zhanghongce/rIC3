@@ -390,11 +390,10 @@ impl Solver {
     #[inline]
     pub fn strengthen_clause(&mut self, cref: CRef, lit: Lit) {
         let mut cls = self.cdb.get(cref);
+        assert!(cls.len() > 2);
         let pos = cls.slice().iter().position(|l| l.eq(&lit)).unwrap();
         self.watchers.detach(cref, self.cdb.get(cref));
         cls.swap_remove(pos);
-        assert!(self.value.v(cls[0]).is_none());
-        assert!(self.value.v(cls[1]).is_none());
         self.watchers.attach(cref, cls);
     }
 
