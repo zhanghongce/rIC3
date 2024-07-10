@@ -16,7 +16,8 @@ struct Header {
     learnt: bool,
     reloced: bool,
     marked: bool,
-    #[bits(28)]
+    removed: bool,
+    #[bits(27)]
     len: usize,
 }
 
@@ -49,6 +50,16 @@ impl Clause {
     #[inline]
     pub fn is_learnt(&self) -> bool {
         unsafe { (*self.data).header.learnt() }
+    }
+
+    #[inline]
+    pub fn is_removed(&self) -> bool {
+        unsafe { (*self.data).header.removed() }
+    }
+
+    #[inline]
+    pub fn remove(&mut self) {
+        unsafe { (*self.data).header.set_removed(true) }
     }
 
     #[inline]
@@ -183,6 +194,8 @@ impl Allocator {
     }
 
     pub fn free(&mut self, cref: CRef) {
+        let mut cls = self.get(cref);
+        cls.remove();
         let cref = cref.0 as usize;
         let mut len = unsafe { self.data[cref].header.len() } + 1;
         if unsafe { self.data[cref].header.learnt() } {
@@ -226,8 +239,8 @@ pub enum ClauseKind {
 
 pub struct ClauseDB {
     allocator: Allocator,
-    lemmas: Gvec<CRef>,
-    trans: Gvec<CRef>,
+    pub lemmas: Gvec<CRef>,
+    pub trans: Gvec<CRef>,
     learnt: Gvec<CRef>,
     temporary: Gvec<CRef>,
     act_inc: f32,
@@ -328,7 +341,7 @@ impl Solver {
         id
     }
 
-    fn remove_clause(&mut self, cref: CRef) {
+    pub fn remove_clause(&mut self, cref: CRef) {
         self.watchers.detach(cref, self.cdb.get(cref));
         self.cdb.free(cref);
     }
@@ -406,7 +419,6 @@ impl Solver {
         self.cdb.learnt = self.simplify_clauses(learnt);
         let trans = take(&mut self.cdb.trans);
         self.cdb.trans = self.simplify_clauses(trans);
-        self.garbage_collect();
     }
 
     pub fn simplify_lazy_removed(&mut self) {

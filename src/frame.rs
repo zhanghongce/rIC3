@@ -208,7 +208,7 @@ impl IC3 {
                 }
                 if lemma.subsume(l) {
                     let remove = self.frame[i].swap_remove(j);
-                    self.solvers[i].remove_lemma(&remove);
+                    // self.solvers[i].remove_lemma(&remove);
                     continue;
                 }
                 j += 1;
@@ -227,25 +227,25 @@ impl IC3 {
         inv_found
     }
 
-    pub fn remove_lemma(&mut self, frame: usize, lemmas: Vec<Cube>) {
-        let lemmas: HashSet<Lemma> = HashSet::from_iter(lemmas.into_iter().map(Lemma::new));
-        for i in (1..=frame).rev() {
-            let mut j = 0;
-            while j < self.frame[i].len() {
-                if let Some(po) = &mut self.frame[i][j].po {
-                    po.removed = true;
-                }
-                if lemmas.contains(&self.frame[i][j]) {
-                    for s in self.solvers[..=frame].iter_mut() {
-                        s.remove_lemma(&self.frame[i][j]);
-                    }
-                    self.frame[i].swap_remove(j);
-                } else {
-                    j += 1;
-                }
-            }
-        }
-    }
+    // pub fn remove_lemma(&mut self, frame: usize, lemmas: Vec<Cube>) {
+    //     let lemmas: HashSet<Lemma> = HashSet::from_iter(lemmas.into_iter().map(Lemma::new));
+    //     for i in (1..=frame).rev() {
+    //         let mut j = 0;
+    //         while j < self.frame[i].len() {
+    //             if let Some(po) = &mut self.frame[i][j].po {
+    //                 po.removed = true;
+    //             }
+    //             if lemmas.contains(&self.frame[i][j]) {
+    //                 for s in self.solvers[..=frame].iter_mut() {
+    //                     s.remove_lemma(&self.frame[i][j]);
+    //                 }
+    //                 self.frame[i].swap_remove(j);
+    //             } else {
+    //                 j += 1;
+    //             }
+    //         }
+    //     }
+    // }
 
     pub fn symmetry_lemma(&self, lemma: &Lemma, frame: usize) -> Option<Lemma> {
         let groups: HashSet<u32> =

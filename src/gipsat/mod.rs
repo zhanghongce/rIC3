@@ -1,6 +1,7 @@
 mod analyze;
 mod cdb;
 mod domain;
+pub mod option;
 mod propagate;
 mod search;
 mod simplify;
@@ -182,10 +183,10 @@ impl Solver {
         self.add_clause_inner(lemma, ClauseKind::Lemma)
     }
 
-    #[inline]
-    pub fn remove_lemma(&mut self, lemma: &[Lit]) {
-        self.simplify.lazy_remove.push(Cube::from(lemma));
-    }
+    // #[inline]
+    // pub fn remove_lemma(&mut self, lemma: &[Lit]) {
+    // self.simplify.lazy_remove.push(Cube::from(lemma));
+    // }
 
     pub fn reset(&mut self) {
         self.backtrack(0, false);
@@ -638,7 +639,7 @@ impl IC3 {
                 }
             }
         }
-        self.remove_lemma(self.frame.len() - 1, removed_lemmas);
+        // self.remove_lemma(self.frame.len() - 1, removed_lemmas);
         for s in self.solvers.iter_mut() {
             s.reset();
             s.simplify_lazy_removed();
@@ -726,7 +727,7 @@ impl IC3 {
                 }
             }
         }
-        self.remove_lemma(self.frame.len() - 1, removed_lemmas);
+        // self.remove_lemma(self.frame.len() - 1, removed_lemmas);
         let last = self.frame.last().unwrap();
         println!("sbvb a {}", last.len());
         self.last_sbva = last.len() + 1000;
