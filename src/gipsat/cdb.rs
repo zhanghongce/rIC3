@@ -241,8 +241,8 @@ pub struct ClauseDB {
     allocator: Allocator,
     pub lemmas: Gvec<CRef>,
     pub trans: Gvec<CRef>,
-    learnt: Gvec<CRef>,
-    temporary: Gvec<CRef>,
+    pub learnt: Gvec<CRef>,
+    pub temporary: Gvec<CRef>,
     act_inc: f32,
 }
 
@@ -324,7 +324,7 @@ impl Default for ClauseDB {
 
 impl Solver {
     #[inline]
-    fn clause_satisfied(&self, cls: CRef) -> bool {
+    pub fn clause_satisfied(&self, cls: CRef) -> bool {
         let cls = self.cdb.get(cls);
         for i in 0..cls.len() {
             if self.value.v(cls[i]).is_true() {
@@ -341,14 +341,14 @@ impl Solver {
         id
     }
 
-    pub fn remove_clause(&mut self, cref: CRef) {
+    pub fn detach_clause(&mut self, cref: CRef) {
         self.watchers.detach(cref, self.cdb.get(cref));
         self.cdb.free(cref);
     }
 
     pub fn clean_temporary(&mut self) {
         while let Some(t) = self.cdb.temporary.pop() {
-            self.remove_clause(t);
+            self.detach_clause(t);
         }
     }
 
@@ -378,7 +378,7 @@ impl Solver {
                 let l = learnt[i];
                 let cls = self.cdb.get(l);
                 if i > learnt.len() / 3 && !self.locked(l) && cls.len() > 2 {
-                    self.remove_clause(l);
+                    self.detach_clause(l);
                 } else {
                     self.cdb.learnt.push(l);
                 }
@@ -387,38 +387,15 @@ impl Solver {
         }
     }
 
-    fn simplify_clauses(&mut self, mut clauses: Gvec<CRef>) -> Gvec<CRef> {
-        let mut i = 0;
-        while i < clauses.len() {
-            let cid = clauses[i];
-            if self.clause_satisfied(cid) {
-                clauses.swap_remove(i);
-                self.remove_clause(cid);
-                continue;
-            }
-            let mut j = 2;
-            let mut cls = self.cdb.get(cid);
-            while j < cls.len() {
-                if self.value.v(cls[j]).is_false() {
-                    cls.swap_remove(j);
-                    continue;
-                }
-                j += 1;
-            }
-            i += 1;
-        }
-        clauses
-    }
-
-    pub fn simplify_satisfied(&mut self) {
-        assert!(self.highest_level() == 0);
-        self.simplify.last_num_assign = self.trail.len();
-        let lemmas = take(&mut self.cdb.lemmas);
-        self.cdb.lemmas = self.simplify_clauses(lemmas);
-        let learnt = take(&mut self.cdb.learnt);
-        self.cdb.learnt = self.simplify_clauses(learnt);
-        let trans = take(&mut self.cdb.trans);
-        self.cdb.trans = self.simplify_clauses(trans);
+    #[inline]
+    pub fn strengthen_clause(&mut self, cref: CRef, lit: Lit) {
+        let mut cls = self.cdb.get(cref);
+        let pos = cls.slice().iter().position(|l| l.eq(&lit)).unwrap();
+        self.watchers.detach(cref, self.cdb.get(cref));
+        cls.swap_remove(pos);
+        assert!(self.value.v(cls[0]).is_none());
+        assert!(self.value.v(cls[1]).is_none());
+        self.watchers.attach(cref, cls);
     }
 
     pub fn simplify_lazy_removed(&mut self) {
@@ -436,7 +413,7 @@ impl Solver {
             *entry += 1;
         }
         let lemmas = take(&mut self.cdb.lemmas);
-        self.cdb.lemmas = self.simplify_clauses(lemmas);
+        self.cdb.lemmas = self.simplify_satisfied_clauses(lemmas);
         for cref in take(&mut self.cdb.lemmas) {
             let cls = self.cdb.get(cref);
             let lemma = Lemma::new(!logic_form::Clause::from(cls.slice()));
@@ -445,7 +422,7 @@ impl Solver {
                 if *r == 0 {
                     lazy_remove_map.remove(&lemma);
                 }
-                self.remove_clause(cref);
+                self.detach_clause(cref);
             } else {
                 self.cdb.lemmas.push(cref);
             }

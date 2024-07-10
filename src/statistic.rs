@@ -50,7 +50,7 @@ impl IC3 {
         println!();
         let mut statistic = SolverStatistic::default();
         for s in self.solvers.iter() {
-            statistic = statistic + s.statistic;
+            statistic += s.statistic;
         }
         println!("{:#?}", statistic);
         println!("{:#?}", self.statistic);
