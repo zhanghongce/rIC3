@@ -171,7 +171,7 @@ impl IC3 {
         &mut self,
         frame: usize,
         lemma: Cube,
-        subsume_check: bool,
+        contained_check: bool,
         po: Option<ProofObligation>,
     ) -> bool {
         let lemma = Lemma::new(lemma);
@@ -181,7 +181,7 @@ impl IC3 {
             self.frame[0].push(FrameLemma::new(lemma, po, None));
             return false;
         }
-        if subsume_check && self.frame.trivial_contained(frame, &lemma).is_some() {
+        if contained_check && self.frame.trivial_contained(frame, &lemma).is_some() {
             return false;
         }
         assert!(!self.ts.cube_subsume_init(lemma.cube()));

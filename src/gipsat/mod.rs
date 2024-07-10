@@ -187,7 +187,7 @@ impl Solver {
         self.simplify.lazy_remove.push(Cube::from(lemma));
     }
 
-    fn reset(&mut self) {
+    pub fn reset(&mut self) {
         self.backtrack(0, false);
         self.clean_temporary();
         self.prepared_vsids = false;
