@@ -188,6 +188,21 @@ impl Solver {
     // self.simplify.lazy_remove.push(Cube::from(lemma));
     // }
 
+    pub fn lemmas(&mut self) -> Vec<Lemma> {
+        self.reset();
+        let mut lemmas = Vec::new();
+        for t in self.trail.iter() {
+            if self.ts.is_latch(t.var()) {
+                lemmas.push(Lemma::new(Cube::from([!*t])));
+            }
+        }
+        for l in self.cdb.lemmas.iter() {
+            let lemma = Cube::from_iter(self.cdb.get(*l).slice().iter().map(|l| !*l));
+            lemmas.push(Lemma::new(lemma));
+        }
+        lemmas
+    }
+
     pub fn reset(&mut self) {
         self.backtrack(0, false);
         self.clean_temporary();
