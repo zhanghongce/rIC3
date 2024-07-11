@@ -155,11 +155,8 @@ impl IC3 {
             while i < lemma.len() {
                 let mut j = i + 1;
                 while j < lemma.len() {
-                    let mut try_gen = lemma.clone();
-                    try_gen[i] = !try_gen[i];
-                    try_gen[j] = !try_gen[j];
-                    let mut a = try_gen[i];
-                    let mut b = try_gen[j];
+                    let mut a = lemma[i];
+                    let mut b = lemma[j];
                     if a.var() > b.var() {
                         swap(&mut a, &mut b);
                     }
@@ -171,6 +168,16 @@ impl IC3 {
                         j += 1;
                         continue;
                     }
+                    let mut try_gen = lemma.clone();
+                    let c = self.xor_var.get(&(a, b));
+                    if let Some(c) = c {
+                        assert!(i < j);
+                        try_gen[i] = *c;
+                        try_gen.remove(j);
+                    } else {
+                        try_gen[i] = !try_gen[i];
+                        try_gen[j] = !try_gen[j];
+                    };
                     if self.ts.cube_subsume_init(&try_gen) {
                         j += 1;
                         continue;
@@ -180,14 +187,16 @@ impl IC3 {
                         .unwrap();
                     self.statistic.xor_gen.statistic(res);
                     if res {
-                        // let core = self.solvers[frame - 1].inductive_core();
-                        // if core.len() < try_gen.len() {
-                        //     println!("{:?} {:?}", &try_gen[i], &try_gen[j]);
-                        //     println!("c {:?}", core);
-                        //     println!("t {:?}", try_gen);
-                        // }
-                        let c = if let Some(c) = self.xor_var.get(&(a, b)) {
-                            *c
+                        if c.is_some() {
+                            let core = self.solvers[frame - 1].inductive_core();
+                            if core.len() < try_gen.len() {
+                                println!("{:?} {:?}", &try_gen[i], &try_gen[j]);
+                                println!("c {:?}", core);
+                                println!("t {:?}", try_gen);
+                            }
+                        }
+                        lemma = if c.is_some() {
+                            try_gen
                         } else {
                             let xor_var = self.new_var();
                             let xor_var_next = self.new_var();
@@ -201,15 +210,14 @@ impl IC3 {
                             ];
                             let dep = vec![a.var(), b.var()];
                             self.add_latch(xor_var, xor_var_next.lit(), None, trans, dep);
-                            c
+                            let mut new_lemma = lemma.clone();
+                            new_lemma[i] = c;
+                            new_lemma.remove(j);
+                            new_lemma
                         };
-                        let mut new_lemma = lemma.clone();
-                        new_lemma[i] = c;
-                        new_lemma.remove(j);
                         // assert!(self.solvers[frame - 1]
-                        //     .inductive(&new_lemma, true, false)
+                        //     .inductive(&lemma, true, false)
                         //     .unwrap());
-                        lemma = new_lemma;
                         continue;
                     }
                     j += 1;
@@ -218,7 +226,6 @@ impl IC3 {
             }
         }
         if lemma.len() < o {
-            // dbg!(self.auxiliary_var.len());
             assert!(self.solvers[frame - 1]
                 .inductive(&lemma, true, false)
                 .unwrap());
