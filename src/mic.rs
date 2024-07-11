@@ -26,10 +26,11 @@ impl IC3 {
                 return DownResult::IncludeInit;
             }
             let lemma = Lemma::new(cube.clone());
-            for (s, t) in cex.iter() {
-                if !lemma.subsume(s) && lemma.subsume(t) {
-                    return DownResult::Fail;
-                }
+            if cex
+                .iter()
+                .any(|(s, t)| !lemma.subsume(s) && lemma.subsume(t))
+            {
+                return DownResult::Fail;
             }
             self.statistic.num_down_sat += 1;
             if self
@@ -37,42 +38,40 @@ impl IC3 {
                 .unwrap()
             {
                 return DownResult::Success(self.solvers[frame - 1].inductive_core());
-            } else {
-                let mut ret = false;
-                let mut cube_new = Cube::new();
-                for lit in cube {
-                    if keep.contains(&lit) {
-                        if let Some(true) = self.solvers[frame - 1].sat_value(lit) {
-                            cube_new.push(lit);
-                        } else {
-                            ret = true;
-                            break;
-                        }
-                    } else if let Some(true) = self.solvers[frame - 1].sat_value(lit) {
-                        if !self.solvers[frame - 1].flip_to_none(lit.var()) {
-                            cube_new.push(lit);
-                        }
+            }
+            let mut ret = false;
+            let mut cube_new = Cube::new();
+            for lit in cube {
+                if keep.contains(&lit) {
+                    if let Some(true) = self.solvers[frame - 1].sat_value(lit) {
+                        cube_new.push(lit);
+                    } else {
+                        ret = true;
+                        break;
+                    }
+                } else if let Some(true) = self.solvers[frame - 1].sat_value(lit) {
+                    if !self.solvers[frame - 1].flip_to_none(lit.var()) {
+                        cube_new.push(lit);
                     }
                 }
-                cube = cube_new;
-
-                let mut s = Cube::new();
-                let mut t = Cube::new();
-                for l in full.iter() {
-                    if let Some(v) = self.solvers[frame - 1].sat_value(*l) {
-                        if !self.solvers[frame - 1].flip_to_none(l.var()) {
-                            s.push(l.not_if(!v));
-                        }
-                    }
-                    let lt = self.ts.lit_next(*l);
-                    if let Some(v) = self.solvers[frame - 1].sat_value(lt) {
-                        t.push(l.not_if(!v));
+            }
+            cube = cube_new;
+            let mut s = Cube::new();
+            let mut t = Cube::new();
+            for l in full.iter() {
+                if let Some(v) = self.solvers[frame - 1].sat_value(*l) {
+                    if !self.solvers[frame - 1].flip_to_none(l.var()) {
+                        s.push(l.not_if(!v));
                     }
                 }
-                cex.push((Lemma::new(s), Lemma::new(t)));
-                if ret {
-                    return DownResult::Fail;
+                let lt = self.ts.lit_next(*l);
+                if let Some(v) = self.solvers[frame - 1].sat_value(lt) {
+                    t.push(l.not_if(!v));
                 }
+            }
+            cex.push((Lemma::new(s), Lemma::new(t)));
+            if ret {
+                return DownResult::Fail;
             }
         }
     }
