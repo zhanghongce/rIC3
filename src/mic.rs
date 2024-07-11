@@ -185,8 +185,8 @@ impl IC3 {
                         .unwrap();
                     self.statistic.xor_gen.statistic(res);
                     if res {
+                        let core = self.solvers[frame - 1].inductive_core();
                         if c.is_some() {
-                            let core = self.solvers[frame - 1].inductive_core();
                             if core.len() < try_gen.len() {
                                 println!("{:?} {:?}", &try_gen[i], &try_gen[j]);
                                 println!("c {:?}", core);
@@ -211,6 +211,10 @@ impl IC3 {
                             let mut new_lemma = lemma.clone();
                             new_lemma[i] = c;
                             new_lemma.remove(j);
+                            if core.len() < lemma.len() {
+                                let mic = self.mic(frame, core, 0);
+                                self.add_lemma(frame, mic, true, None);
+                            }
                             new_lemma
                         };
                         // assert!(self.solvers[frame - 1]
