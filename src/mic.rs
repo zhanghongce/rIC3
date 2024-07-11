@@ -149,30 +149,15 @@ impl IC3 {
     }
 
     pub fn xor_generalize(&mut self, frame: usize, mut lemma: Cube) {
-        let mut i = 0;
-        lemma.sort();
-        while i < lemma.len() {
-            let mut j = i + 1;
-            let o = lemma.len();
-            while j < lemma.len() {
-                let mut try_gen = lemma.clone();
-                try_gen[i] = !try_gen[i];
-                try_gen[j] = !try_gen[j];
-                if self.ts.cube_subsume_init(&try_gen) {
-                    j += 1;
-                    continue;
-                }
-                let res = self.solvers[frame - 1]
-                    .inductive(&try_gen, true, false)
-                    .unwrap();
-                self.statistic.xor_gen.statistic(res);
-                if res {
-                    let core = self.solvers[frame - 1].inductive_core();
-                    if core.len() < try_gen.len() {
-                        println!("{:?} {:?}", &try_gen[i], &try_gen[j]);
-                        println!("c {:?}", core);
-                        println!("t {:?}", try_gen);
-                    }
+        let o = lemma.len();
+        for xor_round in 0..=1 {
+            let mut i = 0;
+            while i < lemma.len() {
+                let mut j = i + 1;
+                while j < lemma.len() {
+                    let mut try_gen = lemma.clone();
+                    try_gen[i] = !try_gen[i];
+                    try_gen[j] = !try_gen[j];
                     let mut a = try_gen[i];
                     let mut b = try_gen[j];
                     if a.var() > b.var() {
@@ -182,42 +167,62 @@ impl IC3 {
                         a = !a;
                         b = !b;
                     }
-                    let c = if let Some(c) = self.xor_var.get(&(a, b)) {
-                        *c
-                    } else {
-                        let xor_var = self.new_var();
-                        let xor_var_next = self.new_var();
-                        let c = xor_var.lit();
-                        self.xor_var.insert((a, b), c);
-                        let trans = vec![
-                            Clause::from([!a, !b, c]),
-                            Clause::from([a, b, c]),
-                            Clause::from([!a, b, !c]),
-                            Clause::from([a, !b, !c]),
-                        ];
-                        let dep = vec![a.var(), b.var()];
-                        self.add_latch(xor_var, xor_var_next.lit(), None, trans, dep);
-                        c
-                    };
-                    let mut new_lemma = lemma.clone();
-                    new_lemma[i] = c;
-                    new_lemma.remove(j);
-                    // assert!(self.solvers[frame - 1]
-                    //     .inductive(&new_lemma, true, false)
-                    //     .unwrap());
-                    lemma = new_lemma;
-                    continue;
+                    if xor_round == 0 && !self.xor_var.contains_key(&(a, b)) {
+                        j += 1;
+                        continue;
+                    }
+                    if self.ts.cube_subsume_init(&try_gen) {
+                        j += 1;
+                        continue;
+                    }
+                    let res = self.solvers[frame - 1]
+                        .inductive_with_constrain(&try_gen, true, vec![!lemma.clone()], false)
+                        .unwrap();
+                    self.statistic.xor_gen.statistic(res);
+                    if res {
+                        // let core = self.solvers[frame - 1].inductive_core();
+                        // if core.len() < try_gen.len() {
+                        //     println!("{:?} {:?}", &try_gen[i], &try_gen[j]);
+                        //     println!("c {:?}", core);
+                        //     println!("t {:?}", try_gen);
+                        // }
+                        let c = if let Some(c) = self.xor_var.get(&(a, b)) {
+                            *c
+                        } else {
+                            let xor_var = self.new_var();
+                            let xor_var_next = self.new_var();
+                            let c = xor_var.lit();
+                            self.xor_var.insert((a, b), c);
+                            let trans = vec![
+                                Clause::from([!a, !b, c]),
+                                Clause::from([a, b, c]),
+                                Clause::from([!a, b, !c]),
+                                Clause::from([a, !b, !c]),
+                            ];
+                            let dep = vec![a.var(), b.var()];
+                            self.add_latch(xor_var, xor_var_next.lit(), None, trans, dep);
+                            c
+                        };
+                        let mut new_lemma = lemma.clone();
+                        new_lemma[i] = c;
+                        new_lemma.remove(j);
+                        // assert!(self.solvers[frame - 1]
+                        //     .inductive(&new_lemma, true, false)
+                        //     .unwrap());
+                        lemma = new_lemma;
+                        continue;
+                    }
+                    j += 1;
                 }
-                j += 1;
+                i += 1;
             }
-            if lemma.len() < o {
-                // dbg!(self.auxiliary_var.len());
-                // assert!(self.solvers[frame - 1]
-                //     .inductive(&lemma, true, false)
-                //     .unwrap());
-                self.add_lemma(frame, lemma.clone(), false, None);
-            }
-            i += 1;
+        }
+        if lemma.len() < o {
+            // dbg!(self.auxiliary_var.len());
+            assert!(self.solvers[frame - 1]
+                .inductive(&lemma, true, false)
+                .unwrap());
+            self.add_lemma(frame, lemma.clone(), false, None);
         }
     }
 }

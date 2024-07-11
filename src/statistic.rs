@@ -27,6 +27,7 @@ pub struct Statistic {
     pub sbvb: usize,
 
     pub xor_gen: SuccessRate,
+    pub num_auxiliary_var: usize,
 }
 
 impl Statistic {
@@ -42,7 +43,8 @@ impl Statistic {
 }
 
 impl IC3 {
-    pub fn statistic(&self) {
+    pub fn statistic(&mut self) {
+        self.statistic.num_auxiliary_var = self.auxiliary_var.len();
         self.obligations.statistic();
         for f in self.frame.iter() {
             print!("{} ", f.len());
