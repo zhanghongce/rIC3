@@ -66,6 +66,23 @@ impl IC3 {
             for init in self.ts.init.clone() {
                 self.add_lemma(0, Cube::from([!init]), true, None);
             }
+            self.solvers[0].imply(
+                self.ts.constraints.iter().map(|l| l.var()),
+                self.ts.constraints.iter(),
+            );
+            let mut init = Cube::new();
+            for l in self.ts.latchs.iter() {
+                if self.ts.init_map[*l].is_none() {
+                    if let Some(v) = self.solvers[0].sat_value(l.lit()) {
+                        let l = l.lit().not_if(!v);
+                        init.push(l);
+                    }
+                }
+            }
+            let ts = unsafe { Rc::get_mut_unchecked(&mut self.ts) };
+            for i in init {
+                ts.add_init(i.var(), Some(i.polarity()));
+            }
         }
     }
 
