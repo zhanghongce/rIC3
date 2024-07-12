@@ -1,5 +1,5 @@
 use super::IC3;
-use logic_form::{Clause, Cube, Lemma, Lit};
+use logic_form::{Clause, Cube, Lemma, Lit, Var};
 use std::{collections::HashSet, mem::swap, time::Instant};
 
 enum DownResult {
@@ -187,11 +187,133 @@ impl IC3 {
                     if res {
                         let core = self.solvers[frame - 1].inductive_core();
                         if c.is_some() {
-                            if core.len() < try_gen.len() {
-                                println!("{:?} {:?}", &try_gen[i], &try_gen[j]);
-                                println!("c {:?}", core);
-                                println!("t {:?}", try_gen);
+                            // if core.len() < try_gen.len() {
+                            //     println!("{:?} {:?}", &try_gen[i], &try_gen[j]);
+                            //     println!("c {:?}", core);
+                            //     println!("t {:?}", try_gen);
+                            // }
+                        }
+                        lemma = if c.is_some() {
+                            try_gen
+                        } else {
+                            let xor_var = self.new_var();
+                            let xor_var_next = self.new_var();
+                            let c = xor_var.lit();
+                            self.xor_var.insert((a, b), c);
+                            let trans = vec![
+                                Clause::from([!a, !b, c]),
+                                Clause::from([a, b, c]),
+                                Clause::from([!a, b, !c]),
+                                Clause::from([a, !b, !c]),
+                            ];
+                            let dep = vec![a.var(), b.var()];
+                            self.add_latch(xor_var, xor_var_next.lit(), None, trans, dep);
+                            let mut new_lemma = lemma.clone();
+                            new_lemma[i] = c;
+                            new_lemma.remove(j);
+                            if core.len() < lemma.len() {
+                                let mic = self.mic(frame, core, 0);
+                                self.add_lemma(frame, mic, true, None);
                             }
+                            new_lemma
+                        };
+                        // assert!(self.solvers[frame - 1]
+                        //     .inductive(&lemma, true, false)
+                        //     .unwrap());
+                        continue;
+                    }
+                    j += 1;
+                }
+                i += 1;
+            }
+        }
+        if lemma.len() < o {
+            assert!(self.solvers[frame - 1]
+                .inductive(&lemma, true, false)
+                .unwrap());
+            self.add_lemma(frame, lemma.clone(), false, None);
+        }
+    }
+
+    pub fn xor_generalize2(&mut self, frame: usize, mut lemma: Cube) {
+        let mut cand_lits: HashSet<Lit> = HashSet::new();
+        let mut lemma_var_set: HashSet<Var> = HashSet::new();
+        let mut lemma_lit_set: HashSet<Lit> = HashSet::new();
+        for l in lemma.iter() {
+            lemma_var_set.insert(l.var());
+            lemma_lit_set.insert(*l);
+        }
+        for fl in self.frame[frame].iter() {
+            if fl.iter().all(|l| lemma_var_set.contains(&l.var())) {
+                for l in fl.iter() {
+                    if lemma_lit_set.contains(&!*l) {
+                        cand_lits.insert(!*l);
+                    }
+                }
+            }
+        }
+        let mut not_cand_lits: HashSet<Lit> = HashSet::new();
+        for l in lemma.iter() {
+            if !cand_lits.contains(l) {
+                not_cand_lits.insert(*l);
+            }
+        }
+
+        assert!(cand_lits.len() + not_cand_lits.len() == lemma.len());
+
+        let o = lemma.len();
+        for xor_round in 0..=1 {
+            let mut i = 0;
+            while i < lemma.len() {
+                if not_cand_lits.contains(&lemma[i]) {
+                    i += 1;
+                    continue;
+                }
+                let mut j = i + 1;
+                while j < lemma.len() {
+                    if not_cand_lits.contains(&lemma[j]) {
+                        j += 1;
+                        continue;
+                    }
+                    let mut a = lemma[i];
+                    let mut b = lemma[j];
+                    if a.var() > b.var() {
+                        swap(&mut a, &mut b);
+                    }
+                    if !a.polarity() {
+                        a = !a;
+                        b = !b;
+                    }
+                    if xor_round == 0 && !self.xor_var.contains_key(&(a, b)) {
+                        j += 1;
+                        continue;
+                    }
+                    let mut try_gen = lemma.clone();
+                    let c = self.xor_var.get(&(a, b));
+                    if let Some(c) = c {
+                        assert!(i < j);
+                        try_gen[i] = *c;
+                        try_gen.remove(j);
+                    } else {
+                        try_gen[i] = !try_gen[i];
+                        try_gen[j] = !try_gen[j];
+                    };
+                    if self.ts.cube_subsume_init(&try_gen) {
+                        j += 1;
+                        continue;
+                    }
+                    let res = self.solvers[frame - 1]
+                        .inductive_with_constrain(&try_gen, true, vec![!lemma.clone()], false)
+                        .unwrap();
+                    self.statistic.xor_gen.statistic(res);
+                    if res {
+                        let core = self.solvers[frame - 1].inductive_core();
+                        if c.is_some() {
+                            // if core.len() < try_gen.len() {
+                            //     println!("{:?} {:?}", &try_gen[i], &try_gen[j]);
+                            //     println!("c {:?}", core);
+                            //     println!("t {:?}", try_gen);
+                            // }
                         }
                         lemma = if c.is_some() {
                             try_gen

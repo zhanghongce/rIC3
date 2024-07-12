@@ -88,7 +88,7 @@ impl IC3 {
         po.frame = frame;
         self.add_obligation(po.clone());
         let res = self.add_lemma(frame - 1, mic.clone(), false, Some(po));
-        // self.xor_generalize(frame - 1, mic);
+        // self.xor_generalize2(frame - 1, mic);
         res
     }
 
