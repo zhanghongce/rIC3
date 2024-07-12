@@ -383,6 +383,7 @@ impl Solver {
                     self.cdb.learnt.push(l);
                 }
             }
+            self.garbage_collect();
             // dbg!(self.cdb.learnt.len());
         }
     }

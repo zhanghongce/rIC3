@@ -262,6 +262,7 @@ impl Solver {
         limit: bool,
     ) -> Option<bool> {
         assert!(!assump.is_empty());
+        self.statistic.num_solve += 1;
         if self.temporary_domain {
             assert!(bucket);
         }
@@ -289,10 +290,8 @@ impl Solver {
             assert!(self.new_round(assump.iter().map(|l| l.var()), vec![], bucket));
             assump
         };
-        self.statistic.num_solve += 1;
         self.clean_leanrt(true);
         self.simplify();
-        self.garbage_collect();
         self.search_with_restart(assump, limit)
     }
 
