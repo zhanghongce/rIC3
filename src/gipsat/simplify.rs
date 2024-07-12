@@ -39,8 +39,8 @@ impl Solver {
                 self.cdb.lemmas = self.simplify_subsume(lemmas);
                 self.simplify.last_num_lemma = self.cdb.lemmas.len();
             }
+            self.garbage_collect();
         }
-        self.garbage_collect();
     }
 
     pub fn simplify_satisfied_clauses(&mut self, mut clauses: Gvec<CRef>) -> Gvec<CRef> {
