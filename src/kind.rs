@@ -19,27 +19,36 @@ impl Kind {
     pub fn check(&mut self, step: usize) -> bool {
         println!("{}", self.args.model);
         assert!(step > 0);
-        let mut kind = cadical::Solver::new();
+        let mut solver = cadical::Solver::new();
         for k in (step - 1..).step_by(step) {
             self.uts.unroll_to(k);
             let kind_bound = k + 1 - step;
-            self.uts.load_trans(&mut kind, kind_bound);
+            self.uts.load_trans(&mut solver, kind_bound);
             if kind_bound > 0 {
                 if self.args.verbose {
                     println!("kind depth: {kind_bound}");
                 }
                 if let SatResult::Unsat(_) =
-                    kind.solve(&[self.uts.lit_next(self.uts.ts.bad, kind_bound)])
+                    solver.solve(&[self.uts.lit_next(self.uts.ts.bad, kind_bound)])
                 {
                     println!("k-induction proofed in depth {kind_bound}");
                     return true;
                 }
             }
             for s in kind_bound + 1..=k {
-                self.uts.load_trans(&mut kind, s);
+                self.uts.load_trans(&mut solver, s);
+            }
+            let mut assump = self.uts.ts.init.clone();
+            assump.push(self.uts.lit_next(self.uts.ts.bad, k));
+            if self.args.verbose {
+                println!("bmc depth: {k}");
+            }
+            if let SatResult::Sat(_) = solver.solve(&assump) {
+                println!("bmc found cex in depth {k}");
+                return false;
             }
             for s in k + 1 - step..=k {
-                kind.add_clause(&[!self.uts.lit_next(self.uts.ts.bad, s)]);
+                solver.add_clause(&[!self.uts.lit_next(self.uts.ts.bad, s)]);
             }
         }
         unreachable!();
