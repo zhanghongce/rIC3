@@ -6,6 +6,7 @@ mod args;
 pub mod bmc;
 mod frame;
 mod gipsat;
+pub mod kind;
 mod mic;
 pub mod portfolio;
 mod proofoblig;

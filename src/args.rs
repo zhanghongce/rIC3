@@ -34,6 +34,10 @@ pub struct Args {
     #[arg(long, default_value_t = false)]
     pub bmc: bool,
 
+    /// k-induction engine
+    #[arg(long, default_value_t = false)]
+    pub kind: bool,
+
     /// portfolio
     #[arg(short, long, default_value_t = false)]
     pub portfolio: bool,
