@@ -70,8 +70,8 @@ impl BMC {
         if self.check_in_depth(130) {
             return true;
         }
-        for k in 140.. {
-            if k % 10 == 0 && self.check_in_depth(k) {
+        for k in (140..).step_by(50) {
+            if self.check_in_depth(k) {
                 return true;
             }
         }
