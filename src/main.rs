@@ -11,7 +11,7 @@ fn main() {
         println!("bmc result: {}", !bmc.check());
     } else if args.kind {
         let mut kind = Kind::new(args);
-        println!("bmc result: {}", kind.check());
+        println!("kind result: {}", kind.check(10));
     } else {
         let mut ic3 = IC3::new(args);
         println!("ic3 result: {}", ic3.check_with_int_hanlder());

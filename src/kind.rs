@@ -16,38 +16,52 @@ impl Kind {
         Self { uts, args }
     }
 
-    pub fn check(&mut self) -> bool {
+    pub fn check(&mut self, step: usize) -> bool {
         println!("{}", self.args.model);
-        let mut solver = cadical::Solver::new();
-        let mut ind = cadical::Solver::new();
-        self.uts.ts.load_init(&mut solver);
-        for k in 0.. {
+        assert!(step > 0);
+        let mut kind = cadical::Solver::new();
+        for k in (step - 1..).step_by(step) {
             self.uts.unroll_to(k);
-            self.uts.load_trans(&mut solver, k);
-            self.uts.load_trans(&mut ind, k);
-            let bad = self.uts.lit_next(self.uts.ts.bad, k);
-            if k > 0 {
+            let kind_bound = k + 1 - step;
+            self.uts.load_trans(&mut kind, kind_bound);
+            if kind_bound > 0 {
                 if self.args.verbose {
-                    println!("kind depth: {k}");
+                    println!("kind depth: {kind_bound}");
                 }
-                if let SatResult::Unsat(_) = ind.solve(&[bad]) {
-                    println!("k-induction proofed in depth {k}");
+                if let SatResult::Unsat(_) =
+                    kind.solve(&[self.uts.lit_next(self.uts.ts.bad, kind_bound)])
+                {
+                    println!("k-induction proofed in depth {kind_bound}");
                     return true;
                 }
             }
-            if self.args.verbose {
-                println!("bmc depth: {k}");
+            for s in kind_bound + 1..=k {
+                self.uts.load_trans(&mut kind, s);
             }
-            match solver.solve(&[bad]) {
-                satif::SatResult::Sat(_) => {
-                    println!("bmc found cex in depth {k}");
-                    return false;
-                }
-                satif::SatResult::Unsat(_) => {
-                    ind.add_clause(&[!bad]);
-                }
+            for s in k + 1 - step..=k {
+                kind.add_clause(&[!self.uts.lit_next(self.uts.ts.bad, s)]);
             }
         }
         unreachable!();
+    }
+
+    pub fn check_in_depth(&mut self, depth: usize) -> bool {
+        println!("{}", self.args.model);
+        assert!(depth > 0);
+        let mut kind = kissat::Solver::new();
+        self.uts.unroll_to(depth);
+        for k in 0..=depth {
+            self.uts.load_trans(&mut kind, k);
+        }
+        for k in 0..depth {
+            kind.add_clause(&[!self.uts.lit_next(self.uts.ts.bad, k)]);
+        }
+        kind.add_clause(&[self.uts.lit_next(self.uts.ts.bad, depth)]);
+        println!("kind depth: {depth}");
+        if let satif::SatResult::Unsat(_) = kind.solve(&[]) {
+            println!("kind proofed in depth {depth}");
+            return true;
+        }
+        false
     }
 }
