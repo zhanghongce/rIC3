@@ -38,6 +38,10 @@ pub struct Args {
     #[arg(long, default_value_t = false)]
     pub kind: bool,
 
+    /// imc engine
+    #[arg(long, default_value_t = false)]
+    pub imc: bool,
+
     /// portfolio
     #[arg(short, long, default_value_t = false)]
     pub portfolio: bool,

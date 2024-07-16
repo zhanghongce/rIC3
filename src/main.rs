@@ -1,5 +1,5 @@
 use clap::Parser;
-use rIC3::{bmc::BMC, kind::Kind, portfolio::Portfolio, Args, IC3};
+use rIC3::{bmc::BMC, imc::IMC, kind::Kind, portfolio::Portfolio, Args, IC3};
 
 fn main() {
     let args = Args::parse();
@@ -12,6 +12,9 @@ fn main() {
     } else if args.kind {
         let mut kind = Kind::new(args);
         println!("kind result: {}", kind.check(10));
+    } else if args.imc {
+        let mut imc = IMC::new(args);
+        println!("imc result: {}", imc.check());
     } else {
         let mut ic3 = IC3::new(args);
         println!("ic3 result: {}", ic3.check_with_int_hanlder());
