@@ -311,6 +311,7 @@ dependencies = [
 name = "rIC3"
 version = "1.0.0"
 dependencies = [
+ "abc",
  "aig",
  "bitfield-struct",
  "cadical",

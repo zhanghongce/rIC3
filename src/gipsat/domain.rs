@@ -104,6 +104,7 @@ impl Solver {
 
     #[inline]
     pub fn push_to_vsids(&mut self) {
+        assert!(self.highest_level() == 0);
         let mut now = 0;
         while now < self.domain.fixed {
             let d = self.domain.domain[now];

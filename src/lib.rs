@@ -68,10 +68,6 @@ impl IC3 {
             for init in self.ts.init.clone() {
                 self.add_lemma(0, Cube::from([!init]), true, None);
             }
-            self.solvers[0].imply(
-                self.ts.constraints.iter().map(|l| l.var()),
-                self.ts.constraints.iter(),
-            );
             let mut init = Cube::new();
             for l in self.ts.latchs.iter() {
                 if self.ts.init_map[*l].is_none() {

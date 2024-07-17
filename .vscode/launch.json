@@ -9,11 +9,11 @@
                 "args": [
                     "build",
                     "--release",
-                    "--bin=ic3",
-                    "--package=ic3"
+                    "--bin=rIC3",
+                    "--package=rIC3"
                 ],
                 "filter": {
-                    "name": "ic3",
+                    "name": "rIC3",
                     "kind": "bin"
                 }
             },
