@@ -480,7 +480,7 @@ impl IC3 {
         self.activity.sort_by_activity(&mut latchs, false);
         let mut res = latchs;
         // self.lift.set_domain(cls.iter().cloned());
-        for i in 0..5 {
+        for i in 0.. {
             if i == 1 {
                 res.reverse();
             } else if i > 1 {
