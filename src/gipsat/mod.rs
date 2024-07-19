@@ -516,7 +516,7 @@ impl IC3 {
                 .into_iter()
                 .filter(|l| self.lift.unsat_has(*l))
                 .collect();
-            if res.len() == olen || strengthen {
+            if res.len() == olen || !strengthen {
                 break;
             }
         }

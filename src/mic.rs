@@ -90,13 +90,19 @@ impl IC3 {
                 return Some(self.solvers[frame - 1].inductive_core());
             }
             for lit in cube.iter() {
-                if keep.contains(&lit) {
-                    if !self.solvers[frame - 1].sat_value(*lit).is_some_and(|v| v) {
-                        return None;
-                    }
+                if keep.contains(&lit)
+                    && !self.solvers[frame - 1].sat_value(*lit).is_some_and(|v| v)
+                {
+                    return None;
                 }
             }
-            let model = self.get_predecessor(frame, false);
+            let model = self.get_predecessor(frame, true);
+            let cex_set: HashSet<Lit> = HashSet::from_iter(model.iter().cloned());
+            for lit in cube.iter() {
+                if keep.contains(&lit) && !cex_set.contains(&lit) {
+                    return None;
+                }
+            }
             if ctg < 3 && frame > 1 && !self.ts.cube_subsume_init(&model) {
                 self.statistic.num_down_sat += 1;
                 if self
@@ -119,7 +125,6 @@ impl IC3 {
                 }
             }
             ctg = 0;
-            let cex_set: HashSet<Lit> = HashSet::from_iter(model);
             let mut cube_new = Cube::new();
             for lit in cube {
                 if cex_set.contains(&lit) {
