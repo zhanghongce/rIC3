@@ -406,7 +406,7 @@ impl IC3 {
             .solve_with_domain(&[self.ts.bad], vec![], false, false)
             .unwrap();
         if res {
-            Some(self.get_predecessor(self.solvers.len()))
+            Some(self.get_predecessor(self.solvers.len(), true))
         } else {
             None
         }
@@ -453,7 +453,7 @@ impl IC3 {
         )
     }
 
-    pub fn get_predecessor(&mut self, frame: usize) -> Cube {
+    pub fn get_predecessor(&mut self, frame: usize, strengthen: bool) -> Cube {
         let solver = &mut self.solvers[frame - 1];
         let mut assumption = Cube::new();
         let mut cls = solver.assump.clone();
@@ -503,7 +503,7 @@ impl IC3 {
                 .into_iter()
                 .filter(|l| self.lift.unsat_has(*l))
                 .collect();
-            if res.len() == olen {
+            if res.len() == olen || strengthen {
                 break;
             }
         }

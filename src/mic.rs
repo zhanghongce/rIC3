@@ -68,7 +68,13 @@ impl IC3 {
         }
     }
 
-    fn ctg_down(&mut self, frame: usize, cube: &Cube, keep: &HashSet<Lit>) -> Option<Cube> {
+    fn ctg_down(
+        &mut self,
+        frame: usize,
+        cube: &Cube,
+        keep: &HashSet<Lit>,
+        full: &Cube,
+    ) -> Option<Cube> {
         let mut cube = cube.clone();
         self.statistic.num_down += 1;
         let mut ctg = 0;
@@ -90,11 +96,18 @@ impl IC3 {
                     }
                 }
             }
-            let model = self.get_predecessor(frame);
+            let model = self.get_predecessor(frame, false);
             if ctg < 3 && frame > 1 && !self.ts.cube_subsume_init(&model) {
                 self.statistic.num_down_sat += 1;
                 if self
-                    .blocked_with_ordered(frame - 1, &model, false, true, false)
+                    .blocked_with_ordered_with_constrain(
+                        frame - 1,
+                        &model,
+                        false,
+                        true,
+                        vec![!full.clone()],
+                        false,
+                    )
                     .unwrap()
                 {
                     ctg += 1;
@@ -166,7 +179,7 @@ impl IC3 {
             let mut removed_cube = cube.clone();
             removed_cube.remove(i);
             let mic = if level > 0 {
-                self.ctg_down(frame, &removed_cube, &keep)
+                self.ctg_down(frame, &removed_cube, &keep, &cube)
             } else {
                 self.down(frame, &removed_cube, &keep, &cube, &mut cex)
             };

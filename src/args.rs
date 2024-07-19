@@ -14,6 +14,10 @@ pub struct Args {
     #[arg(short = 'V', default_value_t = false, requires("verbose"))]
     pub verbose_all: bool,
 
+    /// ctg
+    #[arg(long, default_value_t = false)]
+    pub ctg: bool,
+
     /// random seed
     #[arg(short, long)]
     pub random: Option<usize>,

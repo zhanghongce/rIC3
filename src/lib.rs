@@ -97,7 +97,7 @@ impl IC3 {
 
     fn generalize(&mut self, mut po: ProofObligation) -> bool {
         let mut mic = self.solvers[po.frame - 1].inductive_core();
-        mic = self.mic(po.frame, mic, 0);
+        mic = self.mic(po.frame, mic, if self.args.ctg { 1 } else { 0 });
         let (frame, mic) = self.push_lemma(po.frame, mic);
         self.statistic.avg_po_cube_len += po.lemma.len();
         po.frame = frame;
@@ -139,7 +139,7 @@ impl IC3 {
                     return None;
                 }
             } else {
-                let model = self.get_predecessor(po.frame);
+                let model = self.get_predecessor(po.frame, true);
                 self.add_obligation(ProofObligation::new(
                     po.frame - 1,
                     Lemma::new(model),
@@ -178,7 +178,7 @@ impl IC3 {
                 self.add_lemma(frame - 1, mic, false, None);
                 return true;
             } else {
-                let model = Lemma::new(self.get_predecessor(frame));
+                let model = Lemma::new(self.get_predecessor(frame, true));
                 if !self.trivial_block(frame - 1, model, limit) {
                     return false;
                 }
