@@ -83,7 +83,7 @@ impl IC3 {
         certifaiger.outputs.push(invariants);
         certifaiger.to_file("./certifaiger.aig");
         let output = Command::new("/root/certifaiger/build/check")
-            .arg(&self.args.model)
+            .arg(&self.options.model)
             .arg("./certifaiger.aig")
             .output()
             .expect("certifaiger not found");

@@ -1,4 +1,4 @@
-use crate::Args;
+use crate::Options;
 use aig::Aig;
 use cadical::{itp::Interpolant, Solver};
 use logic_form::{Lit, Var};
@@ -8,11 +8,11 @@ use transys::{Transys, TransysUnroll};
 
 pub struct IMC {
     uts: TransysUnroll,
-    args: Args,
+    args: Options,
 }
 
 impl IMC {
-    pub fn new(args: Args) -> Self {
+    pub fn new(args: Options) -> Self {
         let aig = Aig::from_file(&args.model);
         let (ts, _) = Transys::from_aig(&aig);
         let uts = TransysUnroll::new(&ts);

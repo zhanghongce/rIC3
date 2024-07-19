@@ -2,13 +2,13 @@
 #![feature(assert_matches, is_sorted, get_mut_unchecked, format_args_nl)]
 
 mod activity;
-mod args;
 pub mod bmc;
 mod frame;
 mod gipsat;
 pub mod imc;
 pub mod kind;
 mod mic;
+mod options;
 pub mod portfolio;
 mod proofoblig;
 mod statistic;
@@ -18,10 +18,10 @@ use crate::proofoblig::{ProofObligation, ProofObligationQueue};
 use crate::statistic::Statistic;
 use activity::Activity;
 use aig::Aig;
-pub use args::Args;
 use frame::{Frame, Frames};
 use gipsat::Solver;
 use logic_form::{Cube, Lemma, Lit, Var};
+pub use options::Options;
 use std::collections::HashMap;
 use std::panic::{self, AssertUnwindSafe};
 use std::process::exit;
@@ -30,7 +30,7 @@ use std::time::Instant;
 use transys::{AigRestore, Transys};
 
 pub struct IC3 {
-    args: Args,
+    options: Options,
     ts: Rc<Transys>,
     frame: Frames,
     solvers: Vec<Solver>,
@@ -97,7 +97,7 @@ impl IC3 {
 
     fn generalize(&mut self, mut po: ProofObligation) -> bool {
         let mut mic = self.solvers[po.frame - 1].inductive_core();
-        mic = self.mic(po.frame, mic, if self.args.ctg { 1 } else { 0 });
+        mic = self.mic(po.frame, mic, if self.options.ctg { 1 } else { 0 });
         let (frame, mic) = self.push_lemma(po.frame, mic);
         self.statistic.avg_po_cube_len += po.lemma.len();
         po.frame = frame;
@@ -128,7 +128,7 @@ impl IC3 {
                 self.add_obligation(po);
                 continue;
             }
-            if self.args.verbose_all {
+            if self.options.verbose_all {
                 self.frame.statistic();
             }
             if self
@@ -217,7 +217,7 @@ impl IC3 {
 }
 
 impl IC3 {
-    pub fn new(args: Args) -> Self {
+    pub fn new(args: Options) -> Self {
         let aig = Aig::from_file(&args.model);
         let (ts, ts_restore) = Transys::from_aig(&aig);
         let ts = Rc::new(ts);
@@ -226,7 +226,7 @@ impl IC3 {
         let frame = Frames::new(&ts);
         let lift = Solver::new(None, &ts, &frame);
         let mut res = Self {
-            args,
+            options: args,
             ts,
             activity,
             solvers: Vec::new(),
@@ -252,7 +252,7 @@ impl IC3 {
                     Some(false) => {
                         self.statistic.overall_block_time += start.elapsed();
                         self.statistic();
-                        if self.args.witness {
+                        if self.options.witness {
                             dbg!(self.witness());
                         }
                         return false;
@@ -260,7 +260,7 @@ impl IC3 {
                     None => {
                         self.statistic.overall_block_time += start.elapsed();
                         self.statistic();
-                        if self.args.verify {
+                        if self.options.verify {
                             assert!(self.verify());
                         }
                         return true;
@@ -276,7 +276,7 @@ impl IC3 {
                 }
             }
             let blocked_time = start.elapsed();
-            if self.args.verbose {
+            if self.options.verbose {
                 self.frame.statistic();
                 println!(
                     "[{}:{}] frame: {}, time: {:?}",
@@ -293,7 +293,7 @@ impl IC3 {
             self.statistic.overall_propagate_time += start.elapsed();
             if propagate {
                 self.statistic();
-                if self.args.verify {
+                if self.options.verify {
                     assert!(self.verify());
                 }
                 return true;

@@ -1,4 +1,4 @@
-use crate::Args;
+use crate::Options;
 use aig::Aig;
 use logic_form::{
     dimacs::{from_dimacs_str, to_dimacs},
@@ -13,11 +13,11 @@ use transys::{Transys, TransysUnroll};
 
 pub struct BMC {
     uts: TransysUnroll,
-    args: Args,
+    args: Options,
 }
 
 impl BMC {
-    pub fn new(args: Args) -> Self {
+    pub fn new(args: Options) -> Self {
         let aig = Aig::from_file(&args.model);
         let (ts, _) = Transys::from_aig(&aig);
         let uts = TransysUnroll::new(&ts);

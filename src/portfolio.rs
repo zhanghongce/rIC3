@@ -1,13 +1,13 @@
 use std::{sync::mpsc::channel, thread::spawn};
 
-use crate::{bmc::BMC, Args, IC3};
+use crate::{bmc::BMC, Options, IC3};
 
 pub struct Portfolio {
-    args: Args,
+    args: Options,
 }
 
 impl Portfolio {
-    pub fn new(args: Args) -> Self {
+    pub fn new(args: Options) -> Self {
         Self { args }
     }
 

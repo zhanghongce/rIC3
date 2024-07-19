@@ -2,7 +2,7 @@ use clap::Parser;
 
 #[derive(Parser, Debug, Clone)]
 /// IC3
-pub struct Args {
+pub struct Options {
     /// input aiger file
     pub model: String,
 
@@ -51,8 +51,8 @@ pub struct Args {
     pub portfolio: bool,
 }
 
-impl Default for Args {
+impl Default for Options {
     fn default() -> Self {
-        Args::parse_from([""])
+        Options::parse_from([""])
     }
 }

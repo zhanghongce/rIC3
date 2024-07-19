@@ -1,11 +1,11 @@
 use clap::Parser;
-use rIC3::{bmc::BMC, imc::IMC, kind::Kind, portfolio::Portfolio, Args, IC3};
+use rIC3::{bmc::BMC, imc::IMC, kind::Kind, portfolio::Portfolio, Options, IC3};
 
 fn main() {
-    let args = Args::parse();
+    let args = Options::parse();
     if args.portfolio {
         let mut portfolio = Portfolio::new(args);
-        println!("bmc result: {}", portfolio.check());
+        println!("portfolio result: {}", portfolio.check());
     } else if args.bmc {
         let mut bmc = BMC::new(args);
         println!("bmc result: {}", !bmc.check());
