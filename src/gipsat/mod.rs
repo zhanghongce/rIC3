@@ -396,6 +396,19 @@ impl Solver {
         self.reset();
         self.value.v(lit).into()
     }
+
+    pub fn trivial_predecessor(&mut self) -> Cube {
+        let mut latchs = Cube::new();
+        for latch in self.ts.latchs.iter() {
+            let lit = latch.lit();
+            if let Some(v) = self.sat_value(lit) {
+                // if !self.flip_to_none(*latch) {
+                latchs.push(lit.not_if(!v));
+                // }
+            }
+        }
+        latchs
+    }
 }
 
 impl IC3 {
