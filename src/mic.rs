@@ -2,42 +2,34 @@ use super::IC3;
 use logic_form::{Clause, Cube, Lemma, Lit, Var};
 use std::{collections::HashSet, mem::swap, time::Instant};
 
-enum DownResult {
-    Success(Cube),
-    Fail,
-    IncludeInit,
-}
-
 impl IC3 {
-    fn ctg_down(
+    fn down(
         &mut self,
         frame: usize,
         cube: &Cube,
         keep: &HashSet<Lit>,
-        _level: usize,
         full: &Cube,
         cex: &mut Vec<(Lemma, Lemma)>,
-    ) -> DownResult {
+    ) -> Option<Cube> {
         let mut cube = cube.clone();
         self.statistic.num_down += 1;
-        // let mut ctgs = 0;
         loop {
             if self.ts.cube_subsume_init(&cube) {
-                return DownResult::IncludeInit;
+                return None;
             }
             let lemma = Lemma::new(cube.clone());
             if cex
                 .iter()
                 .any(|(s, t)| !lemma.subsume(s) && lemma.subsume(t))
             {
-                return DownResult::Fail;
+                return None;
             }
             self.statistic.num_down_sat += 1;
             if self
                 .blocked_with_ordered(frame, &cube, false, true, false)
                 .unwrap()
             {
-                return DownResult::Success(self.solvers[frame - 1].inductive_core());
+                return Some(self.solvers[frame - 1].inductive_core());
             }
             let mut ret = false;
             let mut cube_new = Cube::new();
@@ -71,8 +63,59 @@ impl IC3 {
             }
             cex.push((Lemma::new(s), Lemma::new(t)));
             if ret {
-                return DownResult::Fail;
+                return None;
             }
+        }
+    }
+
+    fn ctg_down(&mut self, frame: usize, cube: &Cube, keep: &HashSet<Lit>) -> Option<Cube> {
+        let mut cube = cube.clone();
+        self.statistic.num_down += 1;
+        let mut ctg = 0;
+        loop {
+            if self.ts.cube_subsume_init(&cube) {
+                return None;
+            }
+            self.statistic.num_down_sat += 1;
+            if self
+                .blocked_with_ordered(frame, &cube, false, true, false)
+                .unwrap()
+            {
+                return Some(self.solvers[frame - 1].inductive_core());
+            }
+            for lit in cube.iter() {
+                if keep.contains(&lit) {
+                    if !self.solvers[frame - 1].sat_value(*lit).is_some_and(|v| v) {
+                        return None;
+                    }
+                }
+            }
+            let model = self.get_predecessor(frame);
+            if ctg < 3 && frame > 1 && !self.ts.cube_subsume_init(&model) {
+                self.statistic.num_down_sat += 1;
+                if self
+                    .blocked_with_ordered(frame - 1, &model, false, true, false)
+                    .unwrap()
+                {
+                    ctg += 1;
+                    let core = self.solvers[frame - 2].inductive_core();
+                    let core = self.mic(frame - 1, core, 0);
+                    let (p, core) = self.push_lemma(frame - 1, core);
+                    self.add_lemma(p - 1, core, true, None);
+                    continue;
+                }
+            }
+            ctg = 0;
+            let cex_set: HashSet<Lit> = HashSet::from_iter(model);
+            let mut cube_new = Cube::new();
+            for lit in cube {
+                if cex_set.contains(&lit) {
+                    cube_new.push(lit);
+                } else if keep.contains(&lit) {
+                    return None;
+                }
+            }
+            cube = cube_new;
         }
     }
 
@@ -101,13 +144,15 @@ impl IC3 {
     pub fn mic(&mut self, frame: usize, mut cube: Cube, level: usize) -> Cube {
         let mut cex = Vec::new();
         let start = Instant::now();
-        self.solvers[frame - 1].set_domain(
-            self.ts
-                .cube_next(&cube)
-                .iter()
-                .copied()
-                .chain(cube.iter().copied()),
-        );
+        if level == 0 {
+            self.solvers[frame - 1].set_domain(
+                self.ts
+                    .cube_next(&cube)
+                    .iter()
+                    .copied()
+                    .chain(cube.iter().copied()),
+            );
+        }
         self.statistic.avg_mic_cube_len += cube.len();
         self.statistic.num_mic += 1;
         self.activity.sort_by_activity(&mut cube, true);
@@ -120,10 +165,15 @@ impl IC3 {
             }
             let mut removed_cube = cube.clone();
             removed_cube.remove(i);
-            match self.ctg_down(frame, &removed_cube, &keep, level, &cube, &mut cex) {
-                DownResult::Success(new_cube) => {
-                    self.statistic.mic_drop.success();
-                    (cube, i) = self.handle_down_success(frame, cube, i, new_cube);
+            let mic = if level > 0 {
+                self.ctg_down(frame, &removed_cube, &keep)
+            } else {
+                self.down(frame, &removed_cube, &keep, &cube, &mut cex)
+            };
+            if let Some(new_cube) = mic {
+                self.statistic.mic_drop.success();
+                (cube, i) = self.handle_down_success(frame, cube, i, new_cube);
+                if level == 0 {
                     self.solvers[frame - 1].unset_domain();
                     self.solvers[frame - 1].set_domain(
                         self.ts
@@ -133,14 +183,15 @@ impl IC3 {
                             .chain(cube.iter().copied()),
                     );
                 }
-                _ => {
-                    self.statistic.mic_drop.fail();
-                    keep.insert(cube[i]);
-                    i += 1;
-                }
+            } else {
+                self.statistic.mic_drop.fail();
+                keep.insert(cube[i]);
+                i += 1;
             }
         }
-        self.solvers[frame - 1].unset_domain();
+        if level == 0 {
+            self.solvers[frame - 1].unset_domain();
+        }
         self.activity.bump_cube_activity(&cube);
         self.statistic.overall_mic_time += start.elapsed();
         cube

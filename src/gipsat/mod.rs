@@ -481,6 +481,9 @@ impl IC3 {
         let mut res = latchs;
         // self.lift.set_domain(cls.iter().cloned());
         for i in 0.. {
+            if res.is_empty() {
+                break;
+            }
             if i == 1 {
                 res.reverse();
             } else if i > 1 {
