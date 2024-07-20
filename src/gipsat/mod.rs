@@ -492,7 +492,7 @@ impl IC3 {
         }
         self.activity.sort_by_activity(&mut latchs, false);
         let mut res = latchs;
-        // self.lift.set_domain(cls.iter().cloned());
+        self.lift.set_domain(cls.iter().cloned());
         for i in 0.. {
             if res.is_empty() {
                 break;
@@ -520,7 +520,7 @@ impl IC3 {
                 break;
             }
         }
-        // self.lift.unset_domain();
+        self.lift.unset_domain();
         res
     }
 
