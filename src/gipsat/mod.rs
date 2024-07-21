@@ -475,24 +475,24 @@ impl IC3 {
         let cls = !cls;
         for input in self.ts.inputs.iter() {
             let lit = input.lit();
-            match solver.sat_value(lit) {
-                Some(true) => assumption.push(lit),
-                Some(false) => assumption.push(!lit),
-                None => (),
+            if let Some(v) = solver.sat_value(lit) {
+                assumption.push(lit.not_if(!v));
             }
         }
+        self.lift.set_domain(cls.iter().cloned());
         let mut latchs = Cube::new();
         for latch in self.ts.latchs.iter() {
             let lit = latch.lit();
-            if let Some(v) = solver.sat_value(lit) {
-                if in_cls.contains(latch) || !solver.flip_to_none(*latch) {
-                    latchs.push(lit.not_if(!v));
+            if self.lift.domain.has(lit.var()) {
+                if let Some(v) = solver.sat_value(lit) {
+                    if in_cls.contains(latch) || !solver.flip_to_none(*latch) {
+                        latchs.push(lit.not_if(!v));
+                    }
                 }
             }
         }
         self.activity.sort_by_activity(&mut latchs, false);
         let mut res = latchs;
-        self.lift.set_domain(cls.iter().cloned());
         for i in 0.. {
             if res.is_empty() {
                 break;
