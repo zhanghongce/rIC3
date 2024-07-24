@@ -104,23 +104,19 @@ impl IC3 {
                 }
             }
             if ctg < 3 && frame > 1 && !self.ts.cube_subsume_init(&model) {
-                self.statistic.num_down_sat += 1;
-                if self
-                    .blocked_with_ordered_with_constrain(
-                        frame - 1,
-                        &model,
-                        false,
-                        true,
-                        vec![!full.clone()],
-                        false,
-                    )
-                    .unwrap()
-                {
+                // if self
+                //     .blocked_with_ordered_with_constrain(
+                //         frame - 1,
+                //         &model,
+                //         false,
+                //         true,
+                //         vec![!full.clone()],
+                //         false,
+                //     )
+                //     .unwrap()
+                let mut limit = 5;
+                if self.trivial_block(frame - 1, Lemma::new(model.clone()), &mut limit) {
                     ctg += 1;
-                    let core = self.solvers[frame - 2].inductive_core();
-                    let core = self.mic(frame - 1, core, 0);
-                    let (p, core) = self.push_lemma(frame - 1, core);
-                    self.add_lemma(p - 1, core, true, None);
                     continue;
                 }
             }

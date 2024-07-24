@@ -160,9 +160,6 @@ impl IC3 {
         if self.ts.cube_subsume_init(&lemma) {
             return false;
         }
-        if self.frame.trivial_contained(frame, &lemma).is_some() {
-            return true;
-        }
         if *limit == 0 {
             return false;
         }
