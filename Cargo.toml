@@ -20,6 +20,7 @@ transys = { path = "../transys" }
 bitfield-struct = "0.5.6"
 sbva = { path = "../sbva-rs" }
 abc = { path = "../abc-rs" }
+tempfile = "3.10.1"
 
 [features]
 default = ["no_bound_check"]

@@ -30,6 +30,10 @@ pub struct Options {
     #[arg(long, default_value_t = true)]
     pub verify: bool,
 
+    /// verify by certifaiger
+    #[arg(long, default_value_t = false, requires("verify"))]
+    pub certifaiger: bool,
+
     /// save frames
     #[arg(long, default_value_t = false)]
     pub save_frames: bool,

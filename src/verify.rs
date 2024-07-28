@@ -3,7 +3,11 @@ use aig::AigEdge;
 use logic_form::{Clause, Cube, Lemma};
 use minisat::Solver;
 use satif::{SatResult, Satif};
-use std::{ops::Deref, process::Command};
+use std::{
+    io::{self, Write},
+    ops::Deref,
+    process::Command,
+};
 
 impl IC3 {
     fn invariant(&self) -> Vec<Lemma> {
@@ -51,9 +55,6 @@ impl IC3 {
 
     pub fn verify(&mut self) -> bool {
         let invariants = self.invariant();
-        // for c in invariants.iter() {
-        //     println!("{:?}", **c);
-        // }
 
         if !self.verify_invariant(&invariants) {
             println!("invariant varify failed");
@@ -63,10 +64,14 @@ impl IC3 {
             "inductive invariant verified with {} lemmas!",
             invariants.len()
         );
-        true
+        if self.options.certifaiger {
+            self.certifaiger()
+        } else {
+            true
+        }
     }
 
-    pub fn certifaiger(&self) {
+    pub fn certifaiger(&self) -> bool {
         let invariants = self.invariant();
         let invariants = invariants
             .iter()
@@ -78,20 +83,28 @@ impl IC3 {
                 .push(certifaiger.new_ands_node(cube.into_iter().map(|l| AigEdge::from_lit(l))));
         }
         let invariants = certifaiger.new_ors_node(certifaiger_dnf.into_iter());
+        let constrains: Vec<AigEdge> = certifaiger.constraints.iter().map(|e| !*e).collect();
+        let constrains = certifaiger.new_ors_node(constrains.into_iter());
+        let invariants = certifaiger.new_or_node(invariants, constrains);
         certifaiger.bads.clear();
         certifaiger.outputs.clear();
         certifaiger.outputs.push(invariants);
-        certifaiger.to_file("./certifaiger.aig");
+        let certifaiger_file = tempfile::NamedTempFile::new().unwrap();
+        let certifaiger_path = certifaiger_file.path().as_os_str().to_str().unwrap();
+        certifaiger.to_file(certifaiger_path);
         let output = Command::new("/root/certifaiger/build/check")
             .arg(&self.options.model)
-            .arg("./certifaiger.aig")
+            .arg(certifaiger_path)
             .output()
             .expect("certifaiger not found");
 
         if output.status.success() {
+            io::stdout().write_all(&output.stdout).unwrap();
             println!("certifaiger check passed");
+            true
         } else {
             println!("certifaiger check failed");
+            false
         }
     }
 }
