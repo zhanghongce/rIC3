@@ -1,22 +1,40 @@
-use clap::Parser;
+use clap::{ArgGroup, Parser};
 
+/// rIC3 model checker
 #[derive(Parser, Debug, Clone)]
-/// IC3
+#[command(version, about)]
+#[command(group = ArgGroup::new("engine").required(true).multiple(false))]
 pub struct Options {
-    /// input aiger file
+    /// model file in aiger format
     pub model: String,
 
-    /// verbose level
-    #[arg(short, default_value_t = 1)]
-    pub verbose: usize,
+    /// ic3 engine
+    #[arg(long, default_value_t = true, group = "engine")]
+    pub ic3: bool,
 
-    /// ctg
-    #[arg(long, default_value_t = false)]
+    /// ic3 ctg
+    #[arg(long, default_value_t = false, requires = "ic3")]
     pub ctg: bool,
 
+    /// bmc engine
+    #[arg(long, default_value_t = false, group = "engine")]
+    pub bmc: bool,
+
+    /// k-induction engine
+    #[arg(long, default_value_t = false, group = "engine")]
+    pub kind: bool,
+
+    /// imc engine
+    #[arg(long, default_value_t = false, group = "engine")]
+    pub imc: bool,
+
+    /// portfolio
+    #[arg(long, default_value_t = false, group = "engine")]
+    pub portfolio: bool,
+
     /// random seed
-    #[arg(short, long)]
-    pub random: Option<usize>,
+    #[arg(long, default_value_t = 5)]
+    pub rseed: usize,
 
     /// print witness
     #[arg(long, default_value_t = false)]
@@ -27,28 +45,12 @@ pub struct Options {
     pub verify: bool,
 
     /// verify by certifaiger
-    #[arg(long, default_value_t = false, requires("verify"))]
+    #[arg(long, default_value_t = false, requires = "verify")]
     pub certifaiger: bool,
 
-    /// save frames
-    #[arg(long, default_value_t = false)]
-    pub save_frames: bool,
-
-    /// bmc engine
-    #[arg(long, default_value_t = false)]
-    pub bmc: bool,
-
-    /// k-induction engine
-    #[arg(long, default_value_t = false)]
-    pub kind: bool,
-
-    /// imc engine
-    #[arg(long, default_value_t = false)]
-    pub imc: bool,
-
-    /// portfolio
-    #[arg(short, long, default_value_t = false)]
-    pub portfolio: bool,
+    /// verbose level
+    #[arg(short, default_value_t = 1)]
+    pub verbose: usize,
 }
 
 impl Default for Options {
