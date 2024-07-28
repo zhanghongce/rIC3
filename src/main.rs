@@ -13,7 +13,7 @@ fn main() {
         portfolio.check()
     } else if args.bmc {
         let mut bmc = BMC::new(args);
-        !bmc.check()
+        bmc.check()
     } else if args.kind {
         let mut kind = Kind::new(args);
         kind.check(10)

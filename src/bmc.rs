@@ -4,7 +4,7 @@ use logic_form::{
     dimacs::{from_dimacs_str, to_dimacs},
     Clause,
 };
-use satif::Satif;
+use satif::{SatResult, Satif};
 use std::{
     io::Write,
     process::{Command, Stdio},
@@ -13,7 +13,7 @@ use transys::{Transys, TransysUnroll};
 
 pub struct BMC {
     uts: TransysUnroll,
-    args: Options,
+    options: Options,
 }
 
 impl BMC {
@@ -21,32 +21,36 @@ impl BMC {
         let aig = Aig::from_file(&args.model);
         let (ts, _) = Transys::from_aig(&aig);
         let uts = TransysUnroll::new(&ts);
-        Self { uts, args }
+        Self { uts, options: args }
     }
 
     pub fn check(&mut self) -> bool {
         let mut solver = cadical::Solver::new();
-        self.uts.ts.load_init(&mut solver);
-        for k in 0.. {
+        let step = self.options.step as usize;
+        for k in (step - 1..).step_by(step) {
             self.uts.unroll_to(k);
-            self.uts.load_trans(&mut solver, k);
-            if self.args.verbose > 0 {
+            let last_bound = k + 1 - step;
+            for s in last_bound..=k {
+                self.uts.load_trans(&mut solver, s);
+            }
+            let mut assump = self.uts.ts.init.clone();
+            assump.push(self.uts.lit_next(self.uts.ts.bad, k));
+            if self.options.verbose > 0 {
                 println!("bmc depth: {k}");
             }
-            let bad = self.uts.lit_next(self.uts.ts.bad, k);
-            match solver.solve(&[bad]) {
-                satif::SatResult::Sat(_) => {
-                    println!("bmc found cex in depth {k}");
-                    return true;
-                }
-                satif::SatResult::Unsat(_) => (),
+            if let SatResult::Sat(_) = solver.solve(&assump) {
+                println!("bmc found cex in depth {k}");
+                return false;
             }
+            // for s in last_bound..=k {
+            //     solver.add_clause(&[!self.uts.lit_next(self.uts.ts.bad, s)]);
+            // }
         }
         unreachable!();
     }
 
     pub fn check_in_depth(&mut self, depth: usize) -> bool {
-        println!("{}", self.args.model);
+        println!("{}", self.options.model);
         let mut solver = kissat::Solver::new();
         self.uts.ts.load_init(&mut solver);
         self.uts.unroll_to(depth);

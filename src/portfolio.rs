@@ -24,7 +24,7 @@ impl Portfolio {
             engines.push(engine);
         };
         // ic3
-        new_engine(&[]);
+        new_engine(&["--ic3"]);
         // bmc
         new_engine(&["--bmc"]);
         // kind
