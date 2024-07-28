@@ -128,7 +128,7 @@ impl IC3 {
                 self.add_obligation(po);
                 continue;
             }
-            if self.options.verbose_all {
+            if self.options.verbose > 1 {
                 self.frame.statistic();
             }
             if self
@@ -273,7 +273,7 @@ impl IC3 {
                 }
             }
             let blocked_time = start.elapsed();
-            if self.options.verbose {
+            if self.options.verbose > 0 {
                 self.frame.statistic();
                 println!(
                     "[{}:{}] frame: {}, time: {:?}",

@@ -41,7 +41,7 @@ impl IMC {
                     solver.add_clause(&[c]);
                 }
             }
-            if self.args.verbose {
+            if self.args.verbose > 0 {
                 println!("bmc depth: {k}");
             }
             let bad = self.uts.lit_next(self.uts.ts.bad, k);

@@ -19,6 +19,7 @@ impl Portfolio {
         let mut new_engine = |args: &[&str]| {
             let mut engine = Command::new(current_exe().unwrap());
             engine.arg(&option.model);
+            engine.args(&["-v", "0"]);
             engine.args(args);
             engines.push(engine);
         };
@@ -36,7 +37,10 @@ impl Portfolio {
 
     pub fn check(&mut self) -> bool {
         let (tx, rx) = channel::<(String, bool)>();
+        let mut engines = Vec::new();
         for mut engine in take(&mut self.engines) {
+            let mut child = engine.stderr(Stdio::piped()).spawn().unwrap();
+            engines.push(child.id() as i32);
             let tx = tx.clone();
             spawn(move || {
                 let config = engine
@@ -45,7 +49,6 @@ impl Portfolio {
                     .collect::<Vec<&str>>()
                     .join(" ");
                 println!("engine {config} start");
-                let mut child = engine.stderr(Stdio::piped()).spawn().unwrap();
                 let output = child
                     .controlled()
                     .memory_limit(1024 * 1024 * 1024 * 16)
@@ -69,6 +72,12 @@ impl Portfolio {
         }
         let (config, res) = rx.recv().unwrap();
         println!("best configuration: {config}");
+        for pid in engines {
+            let _ = nix::sys::signal::kill(
+                nix::unistd::Pid::from_raw(pid),
+                nix::sys::signal::Signal::SIGKILL,
+            );
+        }
         res
     }
 }

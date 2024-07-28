@@ -6,13 +6,9 @@ pub struct Options {
     /// input aiger file
     pub model: String,
 
-    /// verbose
-    #[arg(short, default_value_t = false)]
-    pub verbose: bool,
-
-    /// verbose all
-    #[arg(short = 'V', default_value_t = false, requires("verbose"))]
-    pub verbose_all: bool,
+    /// verbose level
+    #[arg(short, default_value_t = 1)]
+    pub verbose: usize,
 
     /// ctg
     #[arg(long, default_value_t = false)]

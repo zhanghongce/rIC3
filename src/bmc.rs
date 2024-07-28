@@ -30,7 +30,7 @@ impl BMC {
         for k in 0.. {
             self.uts.unroll_to(k);
             self.uts.load_trans(&mut solver, k);
-            if self.args.verbose {
+            if self.args.verbose > 0 {
                 println!("bmc depth: {k}");
             }
             let bad = self.uts.lit_next(self.uts.ts.bad, k);

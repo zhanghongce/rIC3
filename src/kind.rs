@@ -24,7 +24,7 @@ impl Kind {
             let kind_bound = k + 1 - step;
             self.uts.load_trans(&mut solver, kind_bound);
             if kind_bound > 0 {
-                if self.args.verbose {
+                if self.args.verbose > 0 {
                     println!("kind depth: {kind_bound}");
                 }
                 if let SatResult::Unsat(_) =
@@ -39,7 +39,7 @@ impl Kind {
             }
             let mut assump = self.uts.ts.init.clone();
             assump.push(self.uts.lit_next(self.uts.ts.bad, k));
-            if self.args.verbose {
+            if self.args.verbose > 0 {
                 println!("bmc depth: {k}");
             }
             if let SatResult::Sat(_) = solver.solve(&assump) {

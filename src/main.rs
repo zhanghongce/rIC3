@@ -4,7 +4,10 @@ use std::process::exit;
 
 fn main() {
     let args = Options::parse();
-    println!("the model to be checked: {}", args.model);
+    let verbose = args.verbose;
+    if verbose > 0 {
+        println!("the model to be checked: {}", args.model);
+    }
     let res = if args.portfolio {
         let mut portfolio = Portfolio::new(args);
         portfolio.check()
@@ -21,7 +24,9 @@ fn main() {
         let mut ic3 = IC3::new(args);
         ic3.check_with_int_hanlder()
     };
-    println!("result: {res}");
+    if verbose > 0 {
+        println!("result: {res}");
+    }
     if res {
         exit(20);
     } else {
