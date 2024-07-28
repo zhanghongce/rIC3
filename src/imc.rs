@@ -20,7 +20,6 @@ impl IMC {
     }
 
     pub fn check(&mut self) -> bool {
-        println!("{}", self.args.model);
         for k in 0.. {
             let mut solver = cadical::Solver::new();
             let mut itp = Box::new(Interpolant::new());

@@ -21,6 +21,8 @@ bitfield-struct = "0.5.6"
 sbva = { path = "../sbva-rs" }
 abc = { path = "../abc-rs" }
 tempfile = "3.10.1"
+process_control = "4.1.0"
+nix = { version = "0.27.1", features = ["signal"] }
 
 [features]
 default = ["no_bound_check"]

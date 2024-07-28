@@ -73,7 +73,7 @@ impl IC3 {
         frame: usize,
         cube: &Cube,
         keep: &HashSet<Lit>,
-        full: &Cube,
+        _full: &Cube,
     ) -> Option<Cube> {
         let mut cube = cube.clone();
         self.statistic.num_down += 1;

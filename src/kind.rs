@@ -17,7 +17,6 @@ impl Kind {
     }
 
     pub fn check(&mut self, step: usize) -> bool {
-        println!("{}", self.args.model);
         assert!(step > 0);
         let mut solver = cadical::Solver::new();
         for k in (step - 1..).step_by(step) {

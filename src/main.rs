@@ -1,22 +1,30 @@
 use clap::Parser;
 use rIC3::{bmc::BMC, imc::IMC, kind::Kind, portfolio::Portfolio, Options, IC3};
+use std::process::exit;
 
 fn main() {
     let args = Options::parse();
-    if args.portfolio {
+    println!("the model to be checked: {}", args.model);
+    let res = if args.portfolio {
         let mut portfolio = Portfolio::new(args);
-        println!("portfolio result: {}", portfolio.check());
+        portfolio.check()
     } else if args.bmc {
         let mut bmc = BMC::new(args);
-        println!("bmc result: {}", !bmc.check());
+        !bmc.check()
     } else if args.kind {
         let mut kind = Kind::new(args);
-        println!("kind result: {}", kind.check(10));
+        kind.check(10)
     } else if args.imc {
         let mut imc = IMC::new(args);
-        println!("imc result: {}", imc.check());
+        imc.check()
     } else {
         let mut ic3 = IC3::new(args);
-        println!("ic3 result: {}", ic3.check_with_int_hanlder());
+        ic3.check_with_int_hanlder()
+    };
+    println!("result: {res}");
+    if res {
+        exit(20);
+    } else {
+        exit(10);
     }
 }

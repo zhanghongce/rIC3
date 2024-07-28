@@ -25,7 +25,6 @@ impl BMC {
     }
 
     pub fn check(&mut self) -> bool {
-        println!("{}", self.args.model);
         let mut solver = cadical::Solver::new();
         self.uts.ts.load_init(&mut solver);
         for k in 0.. {

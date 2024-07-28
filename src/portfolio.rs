@@ -1,6 +1,11 @@
-use std::{sync::mpsc::channel, thread::spawn};
-
-use crate::{bmc::BMC, Options, IC3};
+use crate::Options;
+use process_control::{ChildExt, Control};
+use std::{
+    env::current_exe,
+    process::{Command, Stdio},
+    sync::mpsc::channel,
+    thread::spawn,
+};
 
 pub struct Portfolio {
     args: Options,
@@ -12,22 +17,44 @@ impl Portfolio {
     }
 
     pub fn check(&mut self) -> bool {
-        println!("{}", self.args.model);
-        let (tx, rx) = channel::<(bool, String)>();
-        let t = tx.clone();
-        let args = self.args.clone();
-        spawn(move || {
-            let mut bmc = BMC::new(args);
-            let _ = t.send((!bmc.check_no_incremental(), "bmc".to_string()));
-        });
-        let t = tx.clone();
-        let args = self.args.clone();
-        spawn(move || {
-            let mut ic3 = IC3::new(args);
-            let _ = t.send((ic3.check(), "ic3".to_string()));
-        });
-        let (res, engine) = rx.recv().unwrap();
-        println!("best configuration: {engine}");
+        let mut engines = Vec::new();
+        let mut engine = Command::new(current_exe().unwrap());
+        engine.arg(&self.args.model);
+        engines.push(engine);
+
+        let (tx, rx) = channel::<(String, bool)>();
+        for mut engine in engines {
+            let tx = tx.clone();
+            spawn(move || {
+                let mut child = engine.stderr(Stdio::piped()).spawn().unwrap();
+                let output = child
+                    .controlled()
+                    .memory_limit(1024 * 1024 * 1024 * 16)
+                    .wait()
+                    .unwrap();
+                if let Some(status) = output {
+                    let res = match status.code() {
+                        Some(10) => false,
+                        Some(20) => true,
+                        _ => return,
+                    };
+                    let config = engine.get_args();
+                    let config = config
+                        .map(|cstr| cstr.to_str().unwrap())
+                        .collect::<Vec<&str>>()
+                        .join(" ");
+                    let _ = tx.send((config, res));
+                } else {
+                    nix::sys::signal::kill(
+                        nix::unistd::Pid::from_raw(child.id() as i32),
+                        nix::sys::signal::Signal::SIGKILL,
+                    )
+                    .unwrap();
+                };
+            });
+        }
+        let (config, res) = rx.recv().unwrap();
+        println!("best configuration: {config}");
         res
     }
 }
