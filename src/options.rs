@@ -1,4 +1,4 @@
-use clap::{ArgGroup, Parser};
+use clap::{ArgGroup, Args, Parser};
 
 /// rIC3 model checker
 #[derive(Parser, Debug, Clone)]
@@ -12,13 +12,15 @@ pub struct Options {
     #[arg(long, default_value_t = true, group = "engine")]
     pub ic3: bool,
 
-    /// ic3 ctg
-    #[arg(long, default_value_t = false, requires = "ic3")]
-    pub ctg: bool,
+    #[command(flatten)]
+    pub ic3_options: IC3Options,
 
     /// bmc engine
     #[arg(long, default_value_t = false, group = "engine")]
     pub bmc: bool,
+
+    #[command(flatten)]
+    pub bmc_options: BMCOptions,
 
     /// k-induction engine
     #[arg(long, default_value_t = false, group = "engine")]
@@ -55,6 +57,20 @@ pub struct Options {
     /// verbose level
     #[arg(short, default_value_t = 1)]
     pub verbose: usize,
+}
+
+#[derive(Args, Clone, Debug)]
+pub struct IC3Options {
+    /// counterexample to a generalization
+    #[arg(long, default_value_t = false, requires = "ic3")]
+    pub ctg: bool,
+}
+
+#[derive(Args, Clone, Debug)]
+pub struct BMCOptions {
+    /// use kissat solver, otherwise cadical
+    #[arg(long, default_value_t = false, requires = "bmc")]
+    pub kissat: bool,
 }
 
 impl Default for Options {

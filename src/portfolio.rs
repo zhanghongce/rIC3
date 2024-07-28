@@ -25,8 +25,10 @@ impl Portfolio {
         };
         // ic3
         new_engine(&["--ic3"]);
-        // bmc
-        new_engine(&["--bmc"]);
+        // bmc kissat step 70
+        new_engine(&["--bmc", "--kissat", "--step", "70"]);
+        // bmc kissat step 130
+        new_engine(&["--bmc", "--kissat", "--step", "130"]);
         // kind
         new_engine(&["--kind"]);
         Self {

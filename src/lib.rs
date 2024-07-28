@@ -97,7 +97,11 @@ impl IC3 {
 
     fn generalize(&mut self, mut po: ProofObligation) -> bool {
         let mut mic = self.solvers[po.frame - 1].inductive_core();
-        mic = self.mic(po.frame, mic, if self.options.ctg { 1 } else { 0 });
+        mic = self.mic(
+            po.frame,
+            mic,
+            if self.options.ic3_options.ctg { 1 } else { 0 },
+        );
         let (frame, mic) = self.push_lemma(po.frame, mic);
         self.statistic.avg_po_cube_len += po.lemma.len();
         po.frame = frame;

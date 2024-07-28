@@ -24,7 +24,7 @@ impl BMC {
         Self { uts, options: args }
     }
 
-    pub fn check(&mut self) -> bool {
+    fn check_with_cadical(&mut self) -> bool {
         let mut solver = cadical::Solver::new();
         let step = self.options.step as usize;
         for k in (step - 1..).step_by(step) {
@@ -49,36 +49,33 @@ impl BMC {
         unreachable!();
     }
 
-    pub fn check_in_depth(&mut self, depth: usize) -> bool {
-        println!("{}", self.options.model);
-        let mut solver = kissat::Solver::new();
-        self.uts.ts.load_init(&mut solver);
-        self.uts.unroll_to(depth);
-        for k in 0..=depth {
-            self.uts.load_trans(&mut solver, k);
-        }
-        println!("bmc depth: {depth}");
-        solver.add_clause(&[self.uts.lit_next(self.uts.ts.bad, depth)]);
-        if let satif::SatResult::Sat(_) = solver.solve(&[]) {
-            println!("bmc found cex in depth {depth}");
-            return true;
-        }
-        false
-    }
-
-    pub fn check_no_incremental(&mut self) -> bool {
-        if self.check_in_depth(70) {
-            return true;
-        }
-        if self.check_in_depth(130) {
-            return true;
-        }
-        for k in (140..).step_by(50) {
-            if self.check_in_depth(k) {
+    fn check_with_kissat(&mut self) -> bool {
+        let step = self.options.step as usize;
+        for k in (step..).step_by(step) {
+            let mut solver = kissat::Solver::new();
+            self.uts.ts.load_init(&mut solver);
+            self.uts.unroll_to(k);
+            for k in 0..=k {
+                self.uts.load_trans(&mut solver, k);
+            }
+            if self.options.verbose > 0 {
+                println!("bmc depth: {k}");
+            }
+            solver.add_clause(&[self.uts.lit_next(self.uts.ts.bad, k)]);
+            if let satif::SatResult::Sat(_) = solver.solve(&[]) {
+                println!("bmc found cex in depth {k}");
                 return true;
             }
         }
         unreachable!()
+    }
+
+    pub fn check(&mut self) -> bool {
+        if self.options.bmc_options.kissat {
+            self.check_with_kissat()
+        } else {
+            self.check_with_cadical()
+        }
     }
 }
 
