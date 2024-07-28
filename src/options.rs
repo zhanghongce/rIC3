@@ -3,7 +3,7 @@ use clap::{ArgGroup, Parser};
 /// rIC3 model checker
 #[derive(Parser, Debug, Clone)]
 #[command(version, about)]
-#[command(group = ArgGroup::new("engine").required(true).multiple(false))]
+#[command(group = ArgGroup::new("engine").required(false).multiple(false))]
 pub struct Options {
     /// model file in aiger format
     pub model: String,
