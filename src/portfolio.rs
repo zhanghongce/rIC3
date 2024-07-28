@@ -2,30 +2,49 @@ use crate::Options;
 use process_control::{ChildExt, Control};
 use std::{
     env::current_exe,
+    mem::take,
     process::{Command, Stdio},
     sync::mpsc::channel,
     thread::spawn,
 };
 
 pub struct Portfolio {
-    args: Options,
+    _option: Options,
+    engines: Vec<Command>,
 }
 
 impl Portfolio {
-    pub fn new(args: Options) -> Self {
-        Self { args }
+    pub fn new(option: Options) -> Self {
+        let mut engines = Vec::new();
+        let mut new_engine = |args: &[&str]| {
+            let mut engine = Command::new(current_exe().unwrap());
+            engine.arg(&option.model);
+            engine.args(args);
+            engines.push(engine);
+        };
+        // ic3
+        new_engine(&[]);
+        // bmc
+        new_engine(&["--bmc"]);
+        // kind
+        new_engine(&["--kind"]);
+        Self {
+            _option: option,
+            engines,
+        }
     }
 
     pub fn check(&mut self) -> bool {
-        let mut engines = Vec::new();
-        let mut engine = Command::new(current_exe().unwrap());
-        engine.arg(&self.args.model);
-        engines.push(engine);
-
         let (tx, rx) = channel::<(String, bool)>();
-        for mut engine in engines {
+        for mut engine in take(&mut self.engines) {
             let tx = tx.clone();
             spawn(move || {
+                let config = engine
+                    .get_args()
+                    .map(|cstr| cstr.to_str().unwrap())
+                    .collect::<Vec<&str>>()
+                    .join(" ");
+                println!("engine {config} start");
                 let mut child = engine.stderr(Stdio::piped()).spawn().unwrap();
                 let output = child
                     .controlled()
@@ -38,11 +57,6 @@ impl Portfolio {
                         Some(20) => true,
                         _ => return,
                     };
-                    let config = engine.get_args();
-                    let config = config
-                        .map(|cstr| cstr.to_str().unwrap())
-                        .collect::<Vec<&str>>()
-                        .join(" ");
                     let _ = tx.send((config, res));
                 } else {
                     nix::sys::signal::kill(
