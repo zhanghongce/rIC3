@@ -60,10 +60,12 @@ impl IC3 {
             println!("invariant varify failed");
             return false;
         }
-        println!(
-            "inductive invariant verified with {} lemmas!",
-            invariants.len()
-        );
+        if self.options.verbose > 0 {
+            println!(
+                "inductive invariant verified with {} lemmas!",
+                invariants.len()
+            );
+        }
         if self.options.certifaiger {
             self.certifaiger()
         } else {

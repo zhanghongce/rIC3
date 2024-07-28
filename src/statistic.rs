@@ -44,17 +44,19 @@ impl Statistic {
 
 impl IC3 {
     pub fn statistic(&mut self) {
-        self.statistic.num_auxiliary_var = self.auxiliary_var.len();
-        self.obligations.statistic();
-        for f in self.frame.iter() {
-            print!("{} ", f.len());
+        if self.options.verbose > 0 {
+            self.statistic.num_auxiliary_var = self.auxiliary_var.len();
+            self.obligations.statistic();
+            for f in self.frame.iter() {
+                print!("{} ", f.len());
+            }
+            println!();
+            let mut statistic = SolverStatistic::default();
+            for s in self.solvers.iter() {
+                statistic += s.statistic;
+            }
+            println!("{:#?}", statistic);
+            println!("{:#?}", self.statistic);
         }
-        println!();
-        let mut statistic = SolverStatistic::default();
-        for s in self.solvers.iter() {
-            statistic += s.statistic;
-        }
-        println!("{:#?}", statistic);
-        println!("{:#?}", self.statistic);
     }
 }

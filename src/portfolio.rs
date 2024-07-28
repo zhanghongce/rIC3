@@ -50,7 +50,7 @@ impl Portfolio {
                     .map(|cstr| cstr.to_str().unwrap())
                     .collect::<Vec<&str>>()
                     .join(" ");
-                println!("start engine: {config}");
+                // println!("start engine: {config}");
                 let output = child
                     .controlled()
                     .memory_limit(1024 * 1024 * 1024 * 16)
