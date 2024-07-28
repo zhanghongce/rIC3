@@ -48,7 +48,7 @@ impl Portfolio {
                     .map(|cstr| cstr.to_str().unwrap())
                     .collect::<Vec<&str>>()
                     .join(" ");
-                println!("engine {config} start");
+                println!("start engine: {config}");
                 let output = child
                     .controlled()
                     .memory_limit(1024 * 1024 * 1024 * 16)
@@ -62,11 +62,10 @@ impl Portfolio {
                     };
                     let _ = tx.send((config, res));
                 } else {
-                    nix::sys::signal::kill(
+                    let _ = nix::sys::signal::kill(
                         nix::unistd::Pid::from_raw(child.id() as i32),
                         nix::sys::signal::Signal::SIGKILL,
-                    )
-                    .unwrap();
+                    );
                 };
             });
         }
