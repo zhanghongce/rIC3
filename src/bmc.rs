@@ -39,7 +39,9 @@ impl BMC {
                 println!("bmc depth: {k}");
             }
             if let SatResult::Sat(_) = solver.solve(&assump) {
-                println!("bmc found cex in depth {k}");
+                if self.options.verbose > 0 {
+                    println!("bmc found cex in depth {k}");
+                }
                 return false;
             }
             // for s in last_bound..=k {
@@ -63,8 +65,10 @@ impl BMC {
             }
             solver.add_clause(&[self.uts.lit_next(self.uts.ts.bad, k)]);
             if let satif::SatResult::Sat(_) = solver.solve(&[]) {
-                println!("bmc found cex in depth {k}");
-                return true;
+                if self.options.verbose > 0 {
+                    println!("bmc found cex in depth {k}");
+                }
+                return false;
             }
         }
         unreachable!()

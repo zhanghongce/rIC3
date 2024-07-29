@@ -43,7 +43,9 @@ impl Kind {
                 println!("bmc depth: {k}");
             }
             if let SatResult::Sat(_) = solver.solve(&assump) {
-                println!("bmc found cex in depth {k}");
+                if self.args.verbose > 0 {
+                    println!("bmc found cex in depth {k}");
+                }
                 return false;
             }
             for s in k + 1 - step..=k {
