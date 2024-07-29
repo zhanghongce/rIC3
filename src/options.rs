@@ -26,6 +26,9 @@ pub struct Options {
     #[arg(long, default_value_t = false, group = "engine")]
     pub kind: bool,
 
+    #[command(flatten)]
+    pub kind_options: KindOptions,
+
     /// imc engine
     #[arg(long, default_value_t = false, group = "engine")]
     pub imc: bool,
@@ -63,14 +66,21 @@ pub struct Options {
 pub struct IC3Options {
     /// counterexample to a generalization
     #[arg(long, default_value_t = false, requires = "ic3")]
-    pub ctg: bool,
+    pub ic3_ctg: bool,
 }
 
 #[derive(Args, Clone, Debug)]
 pub struct BMCOptions {
     /// use kissat solver, otherwise cadical
     #[arg(long, default_value_t = false, requires = "bmc")]
-    pub kissat: bool,
+    pub bmc_kissat: bool,
+}
+
+#[derive(Args, Clone, Debug)]
+pub struct KindOptions {
+    /// no bmc check in kind
+    #[arg(long, default_value_t = false, requires = "kind")]
+    pub kind_no_bmc: bool,
 }
 
 impl Default for Options {

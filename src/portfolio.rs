@@ -18,23 +18,23 @@ impl Portfolio {
         let mut engines = Vec::new();
         let mut new_engine = |args: &[&str]| {
             let mut engine = Command::new(current_exe().unwrap());
-            engine.arg(&option.model);
             engine.args(&["-v", "0"]);
+            engine.arg(&option.model);
             engine.args(args);
             engines.push(engine);
         };
         // ic3
         new_engine(&["--ic3"]);
         // ic3 with ctg
-        new_engine(&["--ic3", "--ctg"]);
+        new_engine(&["--ic3", "--ic3-ctg"]);
         // bmc
-        new_engine(&["--bmc"]);
+        new_engine(&["--bmc", "--step", "10"]);
         // bmc kissat step 70
-        new_engine(&["--bmc", "--kissat", "--step", "70"]);
+        new_engine(&["--bmc", "--bmc-kissat", "--step", "70"]);
         // bmc kissat step 130
-        new_engine(&["--bmc", "--kissat", "--step", "130"]);
+        new_engine(&["--bmc", "--bmc-kissat", "--step", "135"]);
         // kind
-        new_engine(&["--kind", "--step", "10"]);
+        new_engine(&["--kind", "--step", "10", "--kind-no-bmc"]);
         Self {
             _option: option,
             engines,
@@ -51,10 +51,11 @@ impl Portfolio {
             spawn(move || {
                 let config = engine
                     .get_args()
+                    .skip(1)
                     .map(|cstr| cstr.to_str().unwrap())
                     .collect::<Vec<&str>>()
                     .join(" ");
-                // println!("start engine: {config}");
+                println!("start engine: {config}");
                 let output = child
                     .controlled()
                     .memory_limit(1024 * 1024 * 1024 * 16)
