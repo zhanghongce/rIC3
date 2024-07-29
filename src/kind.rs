@@ -16,8 +16,8 @@ impl Kind {
         Self { uts, args }
     }
 
-    pub fn check(&mut self, step: usize) -> bool {
-        assert!(step > 0);
+    pub fn check(&mut self) -> bool {
+        let step = self.args.step as usize;
         let mut solver = cadical::Solver::new();
         for k in (step - 1..).step_by(step) {
             self.uts.unroll_to(k);

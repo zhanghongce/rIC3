@@ -16,7 +16,7 @@ fn main() {
         bmc.check()
     } else if args.kind {
         let mut kind = Kind::new(args);
-        kind.check(10)
+        kind.check()
     } else if args.imc {
         let mut imc = IMC::new(args);
         imc.check()

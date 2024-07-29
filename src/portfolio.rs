@@ -34,7 +34,7 @@ impl Portfolio {
         // bmc kissat step 130
         new_engine(&["--bmc", "--kissat", "--step", "130"]);
         // kind
-        new_engine(&["--kind"]);
+        new_engine(&["--kind", "--step", "10"]);
         Self {
             _option: option,
             engines,
