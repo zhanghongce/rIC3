@@ -2,7 +2,7 @@ use crate::Options;
 use aig::Aig;
 use cadical::{itp::Interpolant, Solver};
 use logic_form::{Lit, Var};
-use satif::{SatResult, Satif};
+use satif::Satif;
 use std::collections::HashMap;
 use transys::{Transys, TransysUnroll};
 
@@ -47,16 +47,13 @@ impl IMC {
             let bad = self.uts.lit_next(self.uts.ts.bad, k);
             itp.label_clause(false);
             solver.add_clause(&[bad]);
-            match solver.solve(&[]) {
-                SatResult::Sat(_) => {
-                    solver.disconnect_tracer(&itp);
-                    println!("bmc found cex in depth {k}");
-                    return true;
-                }
-                SatResult::Unsat(_) => {
-                    solver.disconnect_tracer(&itp);
-                    self.handle_itp(itp, k / 2);
-                }
+            if solver.solve(&[]) {
+                solver.disconnect_tracer(&itp);
+                println!("bmc found cex in depth {k}");
+                return true;
+            } else {
+                solver.disconnect_tracer(&itp);
+                self.handle_itp(itp, k / 2);
             }
         }
         unreachable!();
@@ -113,7 +110,7 @@ impl IMC {
             solver.add_clause(cls);
         }
 
-        if let SatResult::Sat(_) = solver.solve(&[itp_root]) {
+        if solver.solve(&[itp_root]) {
             panic!();
         }
     }

@@ -1,6 +1,6 @@
 use crate::Options;
 use aig::Aig;
-use satif::{SatResult, Satif};
+use satif::Satif;
 use transys::{Transys, TransysUnroll};
 
 pub struct Kind {
@@ -27,9 +27,7 @@ impl Kind {
                 if self.options.verbose > 0 {
                     println!("kind depth: {kind_bound}");
                 }
-                if let SatResult::Unsat(_) =
-                    solver.solve(&[self.uts.lit_next(self.uts.ts.bad, kind_bound)])
-                {
+                if !solver.solve(&[self.uts.lit_next(self.uts.ts.bad, kind_bound)]) {
                     println!("k-induction proofed in depth {kind_bound}");
                     return true;
                 }
@@ -43,7 +41,7 @@ impl Kind {
                 if self.options.verbose > 0 {
                     println!("kind bmc depth: {k}");
                 }
-                if let SatResult::Sat(_) = solver.solve(&assump) {
+                if solver.solve(&assump) {
                     if self.options.verbose > 0 {
                         println!("bmc found cex in depth {k}");
                     }
@@ -70,7 +68,7 @@ impl Kind {
         }
         kind.add_clause(&[self.uts.lit_next(self.uts.ts.bad, depth)]);
         println!("kind depth: {depth}");
-        if let satif::SatResult::Unsat(_) = kind.solve(&[]) {
+        if !kind.solve(&[]) {
             println!("kind proofed in depth {depth}");
             return true;
         }

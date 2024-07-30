@@ -2,7 +2,7 @@ use crate::IC3;
 use aig::AigEdge;
 use logic_form::{Clause, Cube, Lemma};
 use minisat::Solver;
-use satif::{SatResult, Satif};
+use satif::Satif;
 use std::{
     io::{self, Write},
     ops::Deref,
@@ -40,13 +40,13 @@ impl IC3 {
         for c in self.ts.constraints.iter() {
             solver.add_clause(&Clause::from([*c]));
         }
-        if let SatResult::Sat(_) = solver.solve(&[self.ts.bad]) {
+        if solver.solve(&[self.ts.bad]) {
             return false;
         }
         for lemma in invariants {
             let mut assump = self.ts.constraints.clone();
             assump.push(self.ts.bad);
-            if let SatResult::Sat(_) = solver.solve(&self.ts.cube_next(lemma)) {
+            if solver.solve(&self.ts.cube_next(lemma)) {
                 return false;
             }
         }

@@ -4,7 +4,7 @@ use logic_form::{
     dimacs::{from_dimacs_str, to_dimacs},
     Clause,
 };
-use satif::{SatResult, Satif};
+use satif::Satif;
 use std::{
     io::Write,
     process::{Command, Stdio},
@@ -38,7 +38,7 @@ impl BMC {
             if self.options.verbose > 0 {
                 println!("bmc depth: {k}");
             }
-            if let SatResult::Sat(_) = solver.solve(&assump) {
+            if solver.solve(&assump) {
                 if self.options.verbose > 0 {
                     println!("bmc found cex in depth {k}");
                 }
@@ -64,7 +64,7 @@ impl BMC {
                 println!("bmc depth: {k}");
             }
             solver.add_clause(&[self.uts.lit_next(self.uts.ts.bad, k)]);
-            if let satif::SatResult::Sat(_) = solver.solve(&[]) {
+            if solver.solve(&[]) {
                 if self.options.verbose > 0 {
                     println!("bmc found cex in depth {k}");
                 }
