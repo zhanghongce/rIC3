@@ -412,7 +412,7 @@ impl Solver {
 }
 
 impl IC3 {
-    pub fn get_bad(&mut self) -> Option<Cube> {
+    pub fn get_bad(&mut self) -> Option<(Cube, Cube)> {
         let solver = self.solvers.last_mut().unwrap();
         solver.assump = Cube::from([self.ts.bad]);
         let res = solver
@@ -466,17 +466,17 @@ impl IC3 {
         )
     }
 
-    pub fn get_predecessor(&mut self, frame: usize, strengthen: bool) -> Cube {
+    pub fn get_predecessor(&mut self, frame: usize, strengthen: bool) -> (Cube, Cube) {
         let solver = &mut self.solvers[frame - 1];
-        let mut assumption = Cube::new();
         let mut cls = solver.assump.clone();
         cls.extend_from_slice(&self.ts.constraints);
         let in_cls: HashSet<Var> = HashSet::from_iter(cls.iter().map(|l| l.var()));
         let cls = !cls;
+        let mut inputs = Cube::new();
         for input in self.ts.inputs.iter() {
             let lit = input.lit();
             if let Some(v) = solver.sat_value(lit) {
-                assumption.push(lit.not_if(!v));
+                inputs.push(lit.not_if(!v));
             }
         }
         self.lift.set_domain(cls.iter().cloned());
@@ -502,7 +502,7 @@ impl IC3 {
             } else if i > 1 {
                 res.shuffle(&mut self.lift.rng);
             }
-            let mut lift_assump = assumption.clone();
+            let mut lift_assump = inputs.clone();
             lift_assump.extend_from_slice(&res);
             let constrain = vec![cls.clone()];
             let Some(false) = self
@@ -521,7 +521,7 @@ impl IC3 {
             }
         }
         self.lift.unset_domain();
-        res
+        (res, inputs)
     }
 
     pub fn new_var(&mut self) -> Var {

@@ -22,7 +22,7 @@ impl Kind {
         for k in (step - 1..).step_by(step) {
             self.uts.unroll_to(k);
             let kind_bound = k + 1 - step;
-            self.uts.load_trans(&mut solver, kind_bound);
+            self.uts.load_trans(&mut solver, kind_bound, true);
             if kind_bound > 0 {
                 if self.options.verbose > 0 {
                     println!("kind depth: {kind_bound}");
@@ -35,7 +35,7 @@ impl Kind {
                 }
             }
             for s in kind_bound + 1..=k {
-                self.uts.load_trans(&mut solver, s);
+                self.uts.load_trans(&mut solver, s, true);
             }
             if !self.options.kind_options.kind_no_bmc {
                 let mut assump = self.uts.ts.init.clone();
@@ -63,7 +63,7 @@ impl Kind {
         let mut kind = kissat::Solver::new();
         self.uts.unroll_to(depth);
         for k in 0..=depth {
-            self.uts.load_trans(&mut kind, k);
+            self.uts.load_trans(&mut kind, k, true);
         }
         for k in 0..depth {
             kind.add_clause(&[!self.uts.lit_next(self.uts.ts.bad, k)]);

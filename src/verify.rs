@@ -82,7 +82,7 @@ impl IC3 {
         let mut certifaiger_dnf = vec![];
         for cube in invariants {
             certifaiger_dnf
-                .push(certifaiger.new_ands_node(cube.into_iter().map(|l| AigEdge::from_lit(l))));
+                .push(certifaiger.new_ands_node(cube.into_iter().map(AigEdge::from_lit)));
         }
         let invariants = certifaiger.new_ors_node(certifaiger_dnf.into_iter());
         let constrains: Vec<AigEdge> = certifaiger.constraints.iter().map(|e| !*e).collect();

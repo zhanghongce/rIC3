@@ -147,10 +147,11 @@ impl IC3 {
                     return None;
                 }
             } else {
-                let model = self.get_predecessor(po.frame, true);
+                let (model, inputs) = self.get_predecessor(po.frame, true);
                 self.add_obligation(ProofObligation::new(
                     po.frame - 1,
                     Lemma::new(model),
+                    inputs,
                     po.depth + 1,
                     Some(po.clone()),
                 ));
@@ -183,7 +184,7 @@ impl IC3 {
                 self.add_lemma(frame - 1, mic, false, None);
                 return true;
             } else {
-                let model = Lemma::new(self.get_predecessor(frame, true));
+                let model = Lemma::new(self.get_predecessor(frame, true).0);
                 if !self.trivial_block(frame - 1, model, limit) {
                     return false;
                 }
@@ -273,9 +274,9 @@ impl IC3 {
                     _ => (),
                 }
                 self.statistic.num_get_bad += 1;
-                if let Some(bad) = self.get_bad() {
+                if let Some((bad, inputs)) = self.get_bad() {
                     let bad = Lemma::new(bad);
-                    self.add_obligation(ProofObligation::new(self.level(), bad, 0, None))
+                    self.add_obligation(ProofObligation::new(self.level(), bad, inputs, 0, None))
                 } else {
                     break;
                 }

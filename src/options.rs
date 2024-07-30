@@ -64,7 +64,7 @@ pub struct Options {
 
 #[derive(Args, Clone, Debug)]
 pub struct IC3Options {
-    /// counterexample to a generalization
+    /// counterexample to generalization
     #[arg(long, default_value_t = false, requires = "ic3")]
     pub ic3_ctg: bool,
 }

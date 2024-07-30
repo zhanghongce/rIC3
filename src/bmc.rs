@@ -31,7 +31,7 @@ impl BMC {
             self.uts.unroll_to(k);
             let last_bound = k + 1 - step;
             for s in last_bound..=k {
-                self.uts.load_trans(&mut solver, s);
+                self.uts.load_trans(&mut solver, s, true);
             }
             let mut assump = self.uts.ts.init.clone();
             assump.push(self.uts.lit_next(self.uts.ts.bad, k));
@@ -58,7 +58,7 @@ impl BMC {
             self.uts.ts.load_init(&mut solver);
             self.uts.unroll_to(k);
             for k in 0..=k {
-                self.uts.load_trans(&mut solver, k);
+                self.uts.load_trans(&mut solver, k, true);
             }
             if self.options.verbose > 0 {
                 println!("bmc depth: {k}");

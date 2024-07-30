@@ -1,5 +1,5 @@
 use crate::IC3;
-use logic_form::Lemma;
+use logic_form::{Cube, Lemma};
 use std::cmp::Ordering;
 use std::collections::BTreeSet;
 use std::fmt::{self, Debug};
@@ -9,6 +9,7 @@ use std::rc::Rc;
 #[derive(Default)]
 pub struct ProofObligationInner {
     pub frame: usize,
+    pub input: Cube,
     pub lemma: Lemma,
     pub depth: usize,
     pub next: Option<ProofObligation>,
@@ -67,10 +68,11 @@ pub struct ProofObligation {
 }
 
 impl ProofObligation {
-    pub fn new(frame: usize, lemma: Lemma, depth: usize, next: Option<Self>) -> Self {
+    pub fn new(frame: usize, lemma: Lemma, input: Cube, depth: usize, next: Option<Self>) -> Self {
         Self {
             inner: Rc::new(ProofObligationInner {
                 frame,
+                input,
                 lemma,
                 depth,
                 next,

@@ -18,7 +18,7 @@ impl Portfolio {
         let mut engines = Vec::new();
         let mut new_engine = |args: &[&str]| {
             let mut engine = Command::new(current_exe().unwrap());
-            engine.args(&["-v", "0"]);
+            engine.args(["-v", "0"]);
             engine.arg(&option.model);
             engine.args(args);
             engines.push(engine);
