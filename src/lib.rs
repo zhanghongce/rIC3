@@ -225,7 +225,7 @@ impl IC3 {
 impl IC3 {
     pub fn new(args: Options) -> Self {
         let aig = Aig::from_file(&args.model);
-        let (ts, ts_restore) = Transys::from_aig(&aig);
+        let (ts, ts_restore) = Transys::from_aig(&aig, false);
         let ts = Rc::new(ts);
         let statistic = Statistic::new(&args.model);
         let activity = Activity::new(&ts);
