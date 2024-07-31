@@ -47,7 +47,7 @@ impl Portfolio {
             let tx = tx.clone();
             let config = engine
                 .get_args()
-                .skip(1)
+                .skip(2)
                 .map(|cstr| cstr.to_str().unwrap())
                 .collect::<Vec<&str>>()
                 .join(" ");
