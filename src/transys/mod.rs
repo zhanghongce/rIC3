@@ -99,7 +99,6 @@ impl Transys {
         let mut dependence = VarMap::new();
         dependence.push(vec![]);
         simp_solver.add_clause(&[!false_lit]);
-        simp_solver.set_frozen(false_lit.var(), true);
         for node in aig.nodes.iter().skip(1) {
             assert_eq!(Var::new(node.node_id()), simp_solver.new_var());
             let mut dep = Vec::new();
@@ -169,6 +168,7 @@ impl Transys {
         }
         simp_solver.simplify();
         let mut trans = simp_solver.clauses();
+        trans.push(Clause::from([!false_lit]));
         let mut next_map = LitMap::new();
         for (l, p) in latchs.iter().zip(primes.iter()) {
             next_map.reserve(*l);
