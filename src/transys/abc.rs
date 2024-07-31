@@ -8,7 +8,7 @@ fn preprocess(f: String) {
     let num_input = aig.inputs.len();
     let num_latchs = aig.latchs.len();
     let num_constraints = aig.constraints.len();
-    if aig.outputs.len() == 0 {
+    if aig.outputs.is_empty() {
         aig.outputs.push(aig.bads[0]);
         aig.bads.clear();
     }
@@ -54,7 +54,7 @@ pub fn abc_preprocess(mut aig: Aig) -> Aig {
     aig.to_file(path);
     let mut join = procspawn::spawn(path.to_string(), preprocess);
     if join.join_timeout(Duration::from_secs(10)).is_ok() {
-        aig = Aig::from_file(&path);
+        aig = Aig::from_file(path);
     } else {
         let _ = join.kill();
     }

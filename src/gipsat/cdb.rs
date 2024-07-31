@@ -304,6 +304,7 @@ impl ClauseDB {
     }
 
     #[inline]
+    #[allow(unused)]
     pub fn num_lemma(&self) -> u32 {
         self.lemmas.len()
     }
@@ -398,6 +399,7 @@ impl Solver {
         self.watchers.attach(cref, cls);
     }
 
+    #[allow(unused)]
     pub fn simplify_lazy_removed(&mut self) {
         if self.simplify.lazy_remove.len() as u32 * 10 <= self.cdb.num_lemma() {
             return;
@@ -463,6 +465,7 @@ impl Solver {
         }
     }
 
+    #[allow(unused)]
     pub fn verify(&self, assump: &[Lit]) -> bool {
         for l in assump.iter() {
             if !self.value.v(*l).is_true() {

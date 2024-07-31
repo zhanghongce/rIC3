@@ -610,7 +610,6 @@ dependencies = [
  "procspawn",
  "rand 0.8.5",
  "satif",
- "sbva",
  "tempfile",
 ]
 
@@ -718,17 +717,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "sbva"
-version = "0.1.0"
-dependencies = [
- "aig",
- "cadical",
- "logic-form",
- "satif",
- "transys",
-]
-
-[[package]]
 name = "serde"
 version = "1.0.204"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -825,18 +813,6 @@ dependencies = [
  "fastrand",
  "rustix",
  "windows-sys",
-]
-
-[[package]]
-name = "transys"
-version = "0.1.0"
-dependencies = [
- "abc",
- "aig",
- "cadical",
- "logic-form",
- "minisat",
- "satif",
 ]
 
 [[package]]

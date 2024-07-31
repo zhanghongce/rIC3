@@ -90,8 +90,7 @@ impl IC3 {
                 return Some(self.solvers[frame - 1].inductive_core());
             }
             for lit in cube.iter() {
-                if keep.contains(&lit)
-                    && !self.solvers[frame - 1].sat_value(*lit).is_some_and(|v| v)
+                if keep.contains(lit) && !self.solvers[frame - 1].sat_value(*lit).is_some_and(|v| v)
                 {
                     return None;
                 }
@@ -99,7 +98,7 @@ impl IC3 {
             let (model, _) = self.get_predecessor(frame, true);
             let cex_set: HashSet<Lit> = HashSet::from_iter(model.iter().cloned());
             for lit in cube.iter() {
-                if keep.contains(&lit) && !cex_set.contains(&lit) {
+                if keep.contains(lit) && !cex_set.contains(lit) {
                     return None;
                 }
             }

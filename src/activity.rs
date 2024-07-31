@@ -36,6 +36,7 @@ impl Activity {
     }
 
     #[inline]
+    #[allow(unused)]
     pub fn set_max_act(&mut self, var: Var) {
         self.activity[var] = self.max_act;
     }

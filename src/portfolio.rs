@@ -9,7 +9,7 @@ use std::{
 };
 
 pub struct Portfolio {
-    _option: Options,
+    option: Options,
     engines: Vec<Command>,
 }
 
@@ -35,10 +35,7 @@ impl Portfolio {
         new_engine(&["--bmc", "--bmc-kissat", "--step", "135"]);
         // kind
         new_engine(&["--kind", "--step", "10", "--kind-no-bmc"]);
-        Self {
-            _option: option,
-            engines,
-        }
+        Self { option, engines }
     }
 
     pub fn check(&mut self) -> bool {
@@ -48,14 +45,16 @@ impl Portfolio {
             let mut child = engine.stderr(Stdio::piped()).spawn().unwrap();
             engines.push(child.id() as i32);
             let tx = tx.clone();
-            spawn(move || {
-                let config = engine
-                    .get_args()
-                    .skip(1)
-                    .map(|cstr| cstr.to_str().unwrap())
-                    .collect::<Vec<&str>>()
-                    .join(" ");
+            let config = engine
+                .get_args()
+                .skip(1)
+                .map(|cstr| cstr.to_str().unwrap())
+                .collect::<Vec<&str>>()
+                .join(" ");
+            if self.option.verbose > 1 {
                 println!("start engine: {config}");
+            }
+            spawn(move || {
                 let output = child
                     .controlled()
                     .memory_limit(1024 * 1024 * 1024 * 16)

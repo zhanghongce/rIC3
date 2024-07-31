@@ -1,3 +1,5 @@
+#![allow(non_snake_case)]
+
 use clap::Parser;
 use rIC3::{bmc::BMC, imc::IMC, kind::Kind, portfolio::Portfolio, Options, IC3};
 use std::process::exit;

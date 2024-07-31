@@ -63,7 +63,7 @@ impl Transys {
         let mut compressed: HashSet<Var> = HashSet::new();
         for v in 0..deps.len() {
             let v = Var::new(v);
-            Self::compress_deps_rec(v, &mut deps, &domain, &mut compressed)
+            Self::compress_deps_rec(v, &mut deps, domain, &mut compressed)
         }
         for v in 0..deps.len() {
             let v = Var::new(v);
@@ -85,7 +85,7 @@ impl Transys {
         for l in aig.latchs.iter() {
             remap_retain.insert(l.input);
         }
-        remap.retain(|x, _| remap_retain.contains(&x));
+        remap.retain(|x, _| remap_retain.contains(x));
         let mut aig = abc_preprocess(aig);
         aig.constraints
             .retain(|e| *e != AigEdge::constant_edge(true));
@@ -359,6 +359,7 @@ impl Transys {
         self.is_latch[var]
     }
 
+    #[allow(unused)]
     pub fn get_coi(&self, var: impl Iterator<Item = Var>) -> Vec<Var> {
         let mut marked = HashSet::new();
         let mut queue = vec![];
@@ -374,7 +375,7 @@ impl Transys {
                 }
             }
         }
-        Vec::from_iter(marked.into_iter())
+        Vec::from_iter(marked)
     }
 
     pub fn load_init(&self, satif: &mut impl Satif) {

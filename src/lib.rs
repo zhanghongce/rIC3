@@ -43,7 +43,6 @@ pub struct IC3 {
     aig: Aig,
     ts_restore: AigRestore,
 
-    last_sbva: usize,
     auxiliary_var: Vec<Var>,
 
     xor_var: HashMap<(Lit, Lit), Lit>,
@@ -111,9 +110,8 @@ impl IC3 {
         self.statistic.avg_po_cube_len += po.lemma.len();
         po.frame = frame;
         self.add_obligation(po.clone());
-        let res = self.add_lemma(frame - 1, mic.clone(), false, Some(po));
+        self.add_lemma(frame - 1, mic.clone(), false, Some(po))
         // self.xor_generalize2(frame - 1, mic);
-        res
     }
 
     fn block(&mut self) -> Option<bool> {
@@ -243,7 +241,6 @@ impl IC3 {
             frame,
             aig,
             ts_restore,
-            last_sbva: 1000,
             auxiliary_var: Vec::new(),
             xor_var: HashMap::new(),
         };

@@ -9,23 +9,18 @@ pub mod statistic;
 mod utils;
 mod vsids;
 
-use crate::{bmc, frame::Frames, transys::Transys, IC3};
+use crate::{frame::Frames, transys::Transys, IC3};
 use analyze::Analyze;
 use cdb::{CRef, ClauseDB, ClauseKind, CREF_NONE};
 use domain::Domain;
 use giputils::gvec::Gvec;
-use logic_form::{cnf_lits_or, Clause, Cube, Lemma, Lit, LitSet, Var, VarMap};
+use logic_form::{Clause, Cube, Lemma, Lit, LitSet, Var, VarMap};
 use propagate::Watchers;
 use rand::{prelude::SliceRandom, rngs::StdRng, SeedableRng};
-use sbva::{SBVAClauseType, SBVA};
 use search::Value;
 use simplify::Simplify;
 use statistic::SolverStatistic;
-use std::{
-    collections::{HashMap, HashSet},
-    rc::Rc,
-    time::Instant,
-};
+use std::{collections::HashSet, rc::Rc};
 use utils::Lbool;
 use vsids::Vsids;
 
@@ -187,6 +182,7 @@ impl Solver {
     // self.simplify.lazy_remove.push(Cube::from(lemma));
     // }
 
+    #[allow(unused)]
     pub fn lemmas(&mut self) -> Vec<Lemma> {
         self.reset();
         let mut lemmas = Vec::new();
@@ -343,6 +339,7 @@ impl Solver {
         ans
     }
 
+    #[allow(unused)]
     pub fn imply<'a>(
         &mut self,
         domain: impl Iterator<Item = Var>,
@@ -391,11 +388,13 @@ impl Solver {
     }
 
     #[inline]
+    #[allow(unused)]
     pub fn assert_value(&mut self, lit: Lit) -> Option<bool> {
         self.reset();
         self.value.v(lit).into()
     }
 
+    #[allow(unused)]
     pub fn trivial_predecessor(&mut self) -> Cube {
         let mut latchs = Cube::new();
         for latch in self.ts.latchs.iter() {
@@ -574,192 +573,22 @@ impl IC3 {
                 ts.init.push(!state.lit());
                 ts.init_map[state] = Some(false);
             }
-        } else {
-            if !self.solvers[0]
-                .solve_with_domain(&[state.lit()], vec![], true, false)
-                .unwrap()
-            {
-                ts.init.push(!state.lit());
-                ts.init_map[state] = Some(false);
-            } else if !self.solvers[0]
-                .solve_with_domain(&[!state.lit()], vec![], true, false)
-                .unwrap()
-            {
-                ts.init.push(state.lit());
-                ts.init_map[state] = Some(true);
-            }
+        } else if !self.solvers[0]
+            .solve_with_domain(&[state.lit()], vec![], true, false)
+            .unwrap()
+        {
+            ts.init.push(!state.lit());
+            ts.init_map[state] = Some(false);
+        } else if !self.solvers[0]
+            .solve_with_domain(&[!state.lit()], vec![], true, false)
+            .unwrap()
+        {
+            ts.init.push(state.lit());
+            ts.init_map[state] = Some(true);
         }
+
         self.activity.reserve(state);
         // self.activity.set_max_act(state);
         self.auxiliary_var.push(state);
-    }
-
-    pub fn sbva(&mut self) {
-        let last = self.frame.last().unwrap();
-        if last.len() < self.last_sbva {
-            return;
-        }
-        let start = Instant::now();
-        println!("name {}", self.options.model);
-        let mut cnf: Vec<Clause> = last.iter().map(|l| !&***l).collect();
-        for cls in cnf.iter_mut() {
-            cls.sort();
-        }
-        cnf.sort_by_key(|cls| cls.len());
-        // for cls in cnf.iter() {
-        //     println!("{:?}", cls);
-        // }
-        println!("inorigin: {}", cnf.len());
-        let bmc_sbva = bmc::sbva(&cnf);
-        println!("bmc_sbva: {}", bmc_sbva.len());
-        let mut sbva = SBVA::new(&cnf, Var::new(self.ts.num_var));
-        sbva.sbva();
-        println!(
-            "insbva: {}",
-            sbva.cnf.iter().filter(|cls| !cls.is_removed()).count()
-        );
-        let mut ties: HashMap<Var, Vec<Lit>> = HashMap::new();
-        for cls in sbva.cnf.iter() {
-            if let SBVAClauseType::Relation(tie, lit) = cls.kind {
-                if let Some(deps) = ties.get_mut(&tie) {
-                    deps.push(lit);
-                } else {
-                    let nv = self.new_var();
-                    assert!(tie == nv);
-                    ties.insert(tie, vec![lit]);
-                }
-            }
-        }
-        let mut ties = Vec::from_iter(ties);
-        ties.sort_by_key(|(v, _)| *v);
-        for (tie, deps) in ties {
-            dbg!(tie);
-            println!("{:?}", deps);
-            // assert!(deps.iter().all(|l| self.ts.is_latch(l.var())));
-            let tie = tie.lit();
-            let tie_next = self.new_var().lit();
-            let mut trans = Vec::new();
-            let mut rel = Clause::from([!tie]);
-            for lit in deps.iter() {
-                trans.push(Clause::from([tie, *lit]));
-                rel.push(!*lit);
-            }
-            trans.push(rel);
-            let deps: Vec<Var> = deps.into_iter().map(|l| l.var()).collect();
-            self.add_latch(tie.var(), tie_next, None, trans, deps);
-        }
-        for cls in sbva.cnf.iter() {
-            let lemma = !&**cls;
-            // println!("{:?}", lemma);
-            if cls.is_removed() {
-                continue;
-            }
-            if let SBVAClauseType::Simplify = cls.kind {
-                // println!("s{:?}", lemma);
-                self.add_lemma(self.frame.len() - 1, lemma, true, None);
-            }
-        }
-        let mut removed_lemmas = Vec::new();
-        for cls in sbva.cnf.iter() {
-            if cls.is_removed() {
-                if let SBVAClauseType::Origin = cls.kind {
-                    let lemma = !&**cls;
-                    removed_lemmas.push(lemma);
-                }
-            }
-        }
-        // self.remove_lemma(self.frame.len() - 1, removed_lemmas);
-        for s in self.solvers.iter_mut() {
-            s.reset();
-            s.simplify_lazy_removed();
-        }
-        self.last_sbva = self.frame.last().unwrap().len() + 1000;
-        println!("sbva end: {}", self.frame.last().unwrap().len());
-        self.statistic.sbva += start.elapsed();
-    }
-
-    pub fn sbvb(&mut self) {
-        let last = self.frame.last().unwrap();
-        if last.len() < self.last_sbva {
-            return;
-        }
-        println!("sbvb b {}", last.len());
-        let mut dnf: Vec<Cube> = last.iter().map(|l| (***l).clone()).collect();
-        for cube in dnf.iter_mut() {
-            cube.sort();
-        }
-        dnf.sort_by_key(|cls| cls.len());
-        let mut partial_cls: HashMap<Lemma, Vec<Lit>> = HashMap::new();
-        for i in 0..dnf.len() {
-            if dnf[i].len() == 1 {
-                continue;
-            }
-            for j in 0..dnf[i].len() {
-                let mut pcls = dnf[i].clone();
-                let r = pcls.remove(j);
-                let pcls = Cube::from_iter(pcls.into_iter());
-                let lemma = Lemma::new(pcls);
-                let entry = partial_cls.entry(lemma).or_default();
-                entry.push(r);
-            }
-        }
-        let mut removed_lemmas = Vec::new();
-        let mut partial_cls = Vec::from_iter(partial_cls);
-        partial_cls.sort_by(|a, b| b.0.cmp(&a.0));
-        partial_cls.sort_by_key(|(_, lits)| lits.len());
-        partial_cls.reverse();
-        for (pcls, lits) in partial_cls {
-            if lits.len() >= 4 {
-                if lits
-                    .iter()
-                    .all(|x| self.ts.latch_group[*x] == self.ts.latch_group[lits[0]])
-                {
-                    println!("{:?}", lits);
-                    for l in lits.iter() {
-                        print!("{} ", self.ts.latch_group[*l]);
-                    }
-                    println!();
-                    let mut bva = Vec::new();
-                    for gi in 0..self.ts.groups[&self.ts.latch_group[lits[0]]].len() {
-                        let gl = self.ts.groups[&self.ts.latch_group[lits[0]]][gi].lit();
-                        gl.not_if(!lits[0].polarity());
-                        let mut pcls = (*pcls).clone();
-                        pcls.push(gl);
-                        let f = self.level() - 1;
-                        let pcls = Lemma::new(pcls);
-                        if self.frame.trivial_contained(f, &pcls).is_none() {
-                            if self.solvers[f].inductive(&pcls, true, false).unwrap() {
-                                self.add_lemma(f, (*pcls).clone(), false, None);
-                                self.statistic.sbvb += 1;
-                                bva.push(gl);
-                            }
-                        } else {
-                            bva.push(gl);
-                        }
-                    }
-                    println!("{:?}", bva);
-                    let tie = self.new_var().lit();
-                    let tie_next = self.new_var().lit();
-                    let trans = cnf_lits_or(tie, &bva);
-                    let dep = bva.iter().map(|l| l.var()).collect();
-                    self.add_latch(tie.var(), tie_next, None, trans, dep);
-                    let mut pcls_tie = (*pcls).clone();
-                    pcls_tie.push(tie);
-                    let f = self.level() - 1;
-                    assert!(self.solvers[f].inductive(&pcls_tie, true, false).unwrap());
-                    self.add_lemma(f, pcls_tie, false, None);
-                    for lit in bva {
-                        let mut pcls = (*pcls).clone();
-                        pcls.push(lit);
-                        removed_lemmas.push(pcls);
-                    }
-                }
-            }
-        }
-        // self.remove_lemma(self.frame.len() - 1, removed_lemmas);
-        let last = self.frame.last().unwrap();
-        println!("sbvb a {}", last.len());
-        self.last_sbva = last.len() + 1000;
-        todo!();
     }
 }

@@ -43,6 +43,7 @@ impl TransysUnroll {
     }
 
     #[inline]
+    #[allow(unused)]
     pub fn cube_next(&self, cube: &[Lit], num: usize) -> Cube {
         cube.iter().map(|l| self.lit_next(*l, num)).collect()
     }
