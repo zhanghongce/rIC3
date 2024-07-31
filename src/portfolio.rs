@@ -68,10 +68,7 @@ impl Portfolio {
                     };
                     let _ = tx.send((config, res));
                 } else {
-                    let _ = nix::sys::signal::kill(
-                        nix::unistd::Pid::from_raw(child.id() as i32),
-                        nix::sys::signal::Signal::SIGKILL,
-                    );
+                    let _ = child.kill();
                 };
             });
         }

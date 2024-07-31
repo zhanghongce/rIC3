@@ -1,7 +1,6 @@
-use std::{mem::take, time::Duration};
-
 use abc::Abc;
 use aig::Aig;
+use std::{mem::take, time::Duration};
 
 fn preprocess(f: String) {
     let mut aig = Aig::from_file(&f);

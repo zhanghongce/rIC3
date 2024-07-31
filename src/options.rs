@@ -3,13 +3,13 @@ use clap::{ArgGroup, Args, Parser};
 /// rIC3 model checker
 #[derive(Parser, Debug, Clone)]
 #[command(version, about)]
-#[command(group = ArgGroup::new("engine").required(false).multiple(false))]
+#[command(group = ArgGroup::new("engine").required(true).multiple(false))]
 pub struct Options {
     /// model file in aiger format
     pub model: String,
 
     /// ic3 engine
-    #[arg(long, default_value_t = true, group = "engine")]
+    #[arg(long, default_value_t = false, group = "engine")]
     pub ic3: bool,
 
     #[command(flatten)]
