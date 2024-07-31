@@ -99,6 +99,7 @@ impl Transys {
         let mut dependence = VarMap::new();
         dependence.push(vec![]);
         simp_solver.add_clause(&[!false_lit]);
+        simp_solver.set_frozen(false_lit.var(), true);
         for node in aig.nodes.iter().skip(1) {
             assert_eq!(Var::new(node.node_id()), simp_solver.new_var());
             let mut dep = Vec::new();
