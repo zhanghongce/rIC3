@@ -1,7 +1,8 @@
+use crate::transys::Transys;
+
 use super::{search::Value, Solver};
 use logic_form::{Var, VarSet};
 use std::{collections::HashSet, rc::Rc};
-use transys::Transys;
 
 pub struct Domain {
     pub domain: VarSet,

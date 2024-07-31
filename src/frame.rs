@@ -1,11 +1,10 @@
-use crate::{proofoblig::ProofObligation, IC3};
+use crate::{proofoblig::ProofObligation, transys::Transys, IC3};
 use logic_form::{Cube, Lemma, LitSet};
 use std::{
     collections::HashSet,
     ops::{Deref, DerefMut},
     rc::Rc,
 };
-use transys::Transys;
 
 #[derive(Clone)]
 pub struct FrameLemma {

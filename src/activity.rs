@@ -1,7 +1,6 @@
-use crate::IC3;
+use crate::{transys::Transys, IC3};
 use logic_form::{Cube, Lit, Var, VarMap};
 use std::{collections::HashMap, ops::MulAssign};
-use transys::Transys;
 
 pub struct Activity {
     activity: VarMap<f64>,

@@ -9,7 +9,7 @@ pub mod statistic;
 mod utils;
 mod vsids;
 
-use crate::{bmc, frame::Frames, IC3};
+use crate::{bmc, frame::Frames, transys::Transys, IC3};
 use analyze::Analyze;
 use cdb::{CRef, ClauseDB, ClauseKind, CREF_NONE};
 use domain::Domain;
@@ -26,7 +26,6 @@ use std::{
     rc::Rc,
     time::Instant,
 };
-use transys::Transys;
 use utils::Lbool;
 use vsids::Vsids;
 

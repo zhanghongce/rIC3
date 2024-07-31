@@ -1,7 +1,9 @@
-use crate::Options;
+use crate::{
+    transys::{Transys, TransysUnroll},
+    Options,
+};
 use aig::Aig;
 use satif::Satif;
-use transys::{Transys, TransysUnroll};
 
 pub struct Kind {
     uts: TransysUnroll,

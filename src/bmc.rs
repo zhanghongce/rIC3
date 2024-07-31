@@ -1,4 +1,7 @@
-use crate::Options;
+use crate::{
+    transys::{Transys, TransysUnroll},
+    Options,
+};
 use aig::Aig;
 use logic_form::{
     dimacs::{from_dimacs_str, to_dimacs},
@@ -9,7 +12,6 @@ use std::{
     io::Write,
     process::{Command, Stdio},
 };
-use transys::{Transys, TransysUnroll};
 
 pub struct BMC {
     uts: TransysUnroll,

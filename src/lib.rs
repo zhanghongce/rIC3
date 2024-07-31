@@ -12,6 +12,7 @@ mod options;
 pub mod portfolio;
 mod proofoblig;
 mod statistic;
+mod transys;
 mod verify;
 
 use crate::proofoblig::{ProofObligation, ProofObligationQueue};

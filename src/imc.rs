@@ -1,10 +1,12 @@
-use crate::Options;
+use crate::{
+    transys::{Transys, TransysUnroll},
+    Options,
+};
 use aig::Aig;
 use cadical::{itp::Interpolant, Solver};
 use logic_form::{Lit, Var};
 use satif::Satif;
 use std::collections::HashMap;
-use transys::{Transys, TransysUnroll};
 
 pub struct IMC {
     uts: TransysUnroll,
