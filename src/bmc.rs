@@ -2,7 +2,6 @@ use crate::{
     transys::{Transys, TransysUnroll},
     Options,
 };
-use aig::Aig;
 use logic_form::{
     dimacs::{from_dimacs_str, to_dimacs},
     Clause,
@@ -19,11 +18,9 @@ pub struct BMC {
 }
 
 impl BMC {
-    pub fn new(args: Options) -> Self {
-        let aig = Aig::from_file(&args.model);
-        let (ts, _) = Transys::from_aig(&aig, true);
+    pub fn new(options: Options, ts: Transys) -> Self {
         let uts = TransysUnroll::new(&ts);
-        Self { uts, options: args }
+        Self { uts, options }
     }
 
     fn check_with_cadical(&mut self) -> bool {

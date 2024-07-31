@@ -12,13 +12,12 @@ mod options;
 pub mod portfolio;
 mod proofoblig;
 mod statistic;
-mod transys;
+pub mod transys;
 mod verify;
 
 use crate::proofoblig::{ProofObligation, ProofObligationQueue};
 use crate::statistic::Statistic;
 use activity::Activity;
-use aig::Aig;
 use frame::{Frame, Frames};
 use gipsat::Solver;
 use logic_form::{Cube, Lemma, Lit, Var};
@@ -28,7 +27,7 @@ use std::panic::{self, AssertUnwindSafe};
 use std::process::exit;
 use std::rc::Rc;
 use std::time::Instant;
-use transys::{AigRestore, Transys};
+use transys::Transys;
 
 pub struct IC3 {
     options: Options,
@@ -39,9 +38,6 @@ pub struct IC3 {
     obligations: ProofObligationQueue,
     activity: Activity,
     statistic: Statistic,
-
-    aig: Aig,
-    ts_restore: AigRestore,
 
     auxiliary_var: Vec<Var>,
 
@@ -222,9 +218,7 @@ impl IC3 {
 }
 
 impl IC3 {
-    pub fn new(args: Options) -> Self {
-        let aig = Aig::from_file(&args.model);
-        let (ts, ts_restore) = Transys::from_aig(&aig, false);
+    pub fn new(args: Options, ts: Transys) -> Self {
         let ts = Rc::new(ts);
         let statistic = Statistic::new(&args.model);
         let activity = Activity::new(&ts);
@@ -239,8 +233,6 @@ impl IC3 {
             statistic,
             obligations: ProofObligationQueue::new(),
             frame,
-            aig,
-            ts_restore,
             auxiliary_var: Vec::new(),
             xor_var: HashMap::new(),
         };

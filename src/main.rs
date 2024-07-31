@@ -1,31 +1,32 @@
 #![allow(non_snake_case)]
 
+use aig::Aig;
 use clap::Parser;
-use rIC3::{bmc::BMC, imc::IMC, kind::Kind, portfolio::Portfolio, Options, IC3};
+use rIC3::{bmc::BMC, imc::IMC, kind::Kind, portfolio::Portfolio, transys::Transys, Options, IC3};
 use std::process::exit;
 
 fn main() {
     procspawn::init();
-    let args = Options::parse();
-    let verbose = args.verbose;
+    let option = Options::parse();
+    let verbose = option.verbose;
     if verbose > 0 {
-        println!("the model to be checked: {}", args.model);
+        println!("the model to be checked: {}", option.model);
     }
-    let res = if args.portfolio {
-        let mut portfolio = Portfolio::new(args);
+    let res = if option.portfolio {
+        let mut portfolio = Portfolio::new(option);
         portfolio.check()
-    } else if args.bmc {
-        let mut bmc = BMC::new(args);
-        bmc.check()
-    } else if args.kind {
-        let mut kind = Kind::new(args);
-        kind.check()
-    } else if args.imc {
-        let mut imc = IMC::new(args);
-        imc.check()
     } else {
-        let mut ic3 = IC3::new(args);
-        ic3.check_with_int_hanlder()
+        let aig = Aig::from_file(&option.model);
+        let (ts, _) = Transys::from_aig(&aig, !option.ic3);
+        if option.bmc {
+            BMC::new(option, ts).check()
+        } else if option.kind {
+            Kind::new(option, ts).check()
+        } else if option.imc {
+            IMC::new(option, ts).check()
+        } else {
+            IC3::new(option, ts).check()
+        }
     };
     if verbose > 0 {
         println!("result: {res}");

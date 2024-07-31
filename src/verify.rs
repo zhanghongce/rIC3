@@ -1,12 +1,12 @@
 use crate::IC3;
-use aig::AigEdge;
-use logic_form::{Clause, Cube, Lemma};
+// use aig::AigEdge;
+use logic_form::{Clause, Lemma};
 use minisat::Solver;
 use satif::Satif;
 use std::{
-    io::{self, Write},
+    // io::{self, Write},
     ops::Deref,
-    process::Command,
+    // process::Command,
 };
 
 impl IC3 {
@@ -74,39 +74,40 @@ impl IC3 {
     }
 
     pub fn certifaiger(&self) -> bool {
-        let invariants = self.invariant();
-        let invariants = invariants
-            .iter()
-            .map(|l| Cube::from_iter(l.iter().map(|l| self.ts_restore.restore(*l))));
-        let mut certifaiger = self.aig.clone();
-        let mut certifaiger_dnf = vec![];
-        for cube in invariants {
-            certifaiger_dnf
-                .push(certifaiger.new_ands_node(cube.into_iter().map(AigEdge::from_lit)));
-        }
-        let invariants = certifaiger.new_ors_node(certifaiger_dnf.into_iter());
-        let constrains: Vec<AigEdge> = certifaiger.constraints.iter().map(|e| !*e).collect();
-        let constrains = certifaiger.new_ors_node(constrains.into_iter());
-        let invariants = certifaiger.new_or_node(invariants, constrains);
-        certifaiger.bads.clear();
-        certifaiger.outputs.clear();
-        certifaiger.outputs.push(invariants);
-        let certifaiger_file = tempfile::NamedTempFile::new().unwrap();
-        let certifaiger_path = certifaiger_file.path().as_os_str().to_str().unwrap();
-        certifaiger.to_file(certifaiger_path);
-        let output = Command::new("/root/certifaiger/build/check")
-            .arg(&self.options.model)
-            .arg(certifaiger_path)
-            .output()
-            .expect("certifaiger not found");
+        // let invariants = self.invariant();
+        // let invariants = invariants
+        //     .iter()
+        //     .map(|l| Cube::from_iter(l.iter().map(|l| self.ts_restore.restore(*l))));
+        // let mut certifaiger = self.aig.clone();
+        // let mut certifaiger_dnf = vec![];
+        // for cube in invariants {
+        //     certifaiger_dnf
+        //         .push(certifaiger.new_ands_node(cube.into_iter().map(AigEdge::from_lit)));
+        // }
+        // let invariants = certifaiger.new_ors_node(certifaiger_dnf.into_iter());
+        // let constrains: Vec<AigEdge> = certifaiger.constraints.iter().map(|e| !*e).collect();
+        // let constrains = certifaiger.new_ors_node(constrains.into_iter());
+        // let invariants = certifaiger.new_or_node(invariants, constrains);
+        // certifaiger.bads.clear();
+        // certifaiger.outputs.clear();
+        // certifaiger.outputs.push(invariants);
+        // let certifaiger_file = tempfile::NamedTempFile::new().unwrap();
+        // let certifaiger_path = certifaiger_file.path().as_os_str().to_str().unwrap();
+        // certifaiger.to_file(certifaiger_path);
+        // let output = Command::new("/root/certifaiger/build/check")
+        //     .arg(&self.options.model)
+        //     .arg(certifaiger_path)
+        //     .output()
+        //     .expect("certifaiger not found");
 
-        if output.status.success() {
-            io::stdout().write_all(&output.stdout).unwrap();
-            println!("certifaiger check passed");
-            true
-        } else {
-            println!("certifaiger check failed");
-            false
-        }
+        // if output.status.success() {
+        //     io::stdout().write_all(&output.stdout).unwrap();
+        //     println!("certifaiger check passed");
+        //     true
+        // } else {
+        //     println!("certifaiger check failed");
+        //     false
+        // }
+        todo!()
     }
 }

@@ -2,7 +2,6 @@ use crate::{
     transys::{Transys, TransysUnroll},
     Options,
 };
-use aig::Aig;
 use satif::Satif;
 
 pub struct Kind {
@@ -11,11 +10,9 @@ pub struct Kind {
 }
 
 impl Kind {
-    pub fn new(args: Options) -> Self {
-        let aig = Aig::from_file(&args.model);
-        let (ts, _) = Transys::from_aig(&aig, true);
+    pub fn new(options: Options, ts: Transys) -> Self {
         let uts = TransysUnroll::new(&ts);
-        Self { uts, options: args }
+        Self { uts, options }
     }
 
     pub fn check(&mut self) -> bool {

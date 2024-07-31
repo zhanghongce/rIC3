@@ -10,15 +10,13 @@ use std::collections::HashMap;
 
 pub struct IMC {
     uts: TransysUnroll,
-    args: Options,
+    options: Options,
 }
 
 impl IMC {
-    pub fn new(args: Options) -> Self {
-        let aig = Aig::from_file(&args.model);
-        let (ts, _) = Transys::from_aig(&aig, true);
+    pub fn new(options: Options, ts: Transys) -> Self {
         let uts = TransysUnroll::new(&ts);
-        Self { uts, args }
+        Self { uts, options }
     }
 
     pub fn check(&mut self) -> bool {
@@ -43,7 +41,7 @@ impl IMC {
                     solver.add_clause(&[c]);
                 }
             }
-            if self.args.verbose > 0 {
+            if self.options.verbose > 0 {
                 println!("bmc depth: {k}");
             }
             let bad = self.uts.lit_next(self.uts.ts.bad, k);
