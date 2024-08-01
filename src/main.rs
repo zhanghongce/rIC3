@@ -21,7 +21,7 @@ fn main() {
             assert!(!option.ic3);
             let sec = ts.sec();
             if option.verbose > 0 {
-                println!("sec find {} lemmas", sec.len());
+                println!("sec find {} equivalent latchs", sec.len());
             }
             ts.simplify_eq_latchs(&sec, option.ic3);
         }

@@ -1,6 +1,8 @@
+use std::collections::HashMap;
+
 use crate::{transys::unroll::TransysUnroll, Transys};
 use cadical::Solver;
-use logic_form::Cube;
+use logic_form::{Cube, Var};
 use satif::Satif;
 
 impl Transys {
@@ -13,10 +15,10 @@ impl Transys {
         for k in 0..=depth {
             uts.load_trans(&mut solver, k, true);
         }
-        let mut res = vec![self.init.clone()];
+        let mut res = vec![];
         let ninit: Cube = uts.lits_next(&self.init, depth + 1);
         solver.add_clause(&!&ninit);
-        while res.len() < 30 {
+        while res.len() < 64 {
             if !solver.solve(&[]) {
                 break;
             };
@@ -40,5 +42,24 @@ impl Transys {
         }
         println!("{:?}", res.len());
         res
+    }
+
+    pub fn simulation_bv(&self, simulation: Vec<Cube>) -> Option<HashMap<Var, u64>> {
+        let mut bv = HashMap::new();
+        for v in self.latchs.iter() {
+            bv.insert(*v, 0);
+        }
+        for (i, s) in simulation.into_iter().enumerate() {
+            if s.len() != self.latchs.len() {
+                return None;
+            }
+            for l in s.iter() {
+                let bv = bv.get_mut(&l.var()).unwrap();
+                if l.polarity() {
+                    *bv = *bv | (1 << i);
+                }
+            }
+        }
+        Some(bv)
     }
 }
