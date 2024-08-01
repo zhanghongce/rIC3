@@ -16,6 +16,10 @@ fn main() {
     } else {
         let aig = Aig::from_file(&option.model);
         let (ts, _) = Transys::from_aig(&aig, !option.ic3);
+        if option.preprocess.sec {
+            ts.sec();
+            return;
+        }
         if option.bmc {
             BMC::new(option, ts).check()
         } else if option.kind {

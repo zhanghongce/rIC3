@@ -1,5 +1,6 @@
 mod abc;
-mod unroll;
+pub mod sec;
+pub mod unroll;
 
 use abc::abc_preprocess;
 use aig::{Aig, AigEdge};
@@ -10,7 +11,6 @@ use std::{
     collections::{HashMap, HashSet},
     usize,
 };
-pub use unroll::*;
 
 #[derive(Clone, Default, Debug)]
 pub struct Transys {

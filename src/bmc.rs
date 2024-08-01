@@ -1,5 +1,5 @@
 use crate::{
-    transys::{Transys, TransysUnroll},
+    transys::{unroll::TransysUnroll, Transys},
     Options,
 };
 use logic_form::{
