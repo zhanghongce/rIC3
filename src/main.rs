@@ -27,7 +27,7 @@ fn main() {
         } else if option.imc {
             IMC::new(option, ts).check()
         } else {
-            IC3::new(option, ts).check()
+            IC3::new(option, ts).check_with_int_hanlder()
         }
     };
     if verbose > 0 {

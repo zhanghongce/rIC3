@@ -102,8 +102,13 @@ impl IC3 {
         self.statistic.avg_po_cube_len += po.lemma.len();
         po.frame = frame;
         self.add_obligation(po.clone());
-        self.add_lemma(frame - 1, mic.clone(), false, Some(po))
-        // self.xor_generalize2(frame - 1, mic);
+        if self.add_lemma(frame - 1, mic.clone(), false, Some(po)) {
+            return true;
+        }
+        if self.options.ic3_options.xor {
+            self.xor_generalize(frame - 1, mic);
+        }
+        false
     }
 
     fn block(&mut self) -> Option<bool> {
