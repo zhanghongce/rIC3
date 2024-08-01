@@ -1,9 +1,9 @@
 use crate::transys::Transys;
-use logic_form::Clause;
+use logic_form::Lit;
 use satif::Satif;
 
 impl Transys {
-    pub fn sec(&self) -> Vec<Clause> {
+    pub fn sec(&self) -> Vec<(Lit, Lit)> {
         let mut solver = cadical::Solver::new();
         self.load_trans(&mut solver);
         let mut lemmas = Vec::new();
@@ -20,8 +20,7 @@ impl Transys {
                     let nxl = self.lit_next(xl);
                     let nyl = self.lit_next(yl);
                     if !solver.solve(&[act, nxl, !nyl]) && !solver.solve(&[act, !nxl, nyl]) {
-                        lemmas.push(Clause::from([xl, !yl]));
-                        lemmas.push(Clause::from([!xl, yl]));
+                        lemmas.push((xl, yl));
                         dbg!(x, y);
                         solver.add_clause(&[act]);
                     } else {

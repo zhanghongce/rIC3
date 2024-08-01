@@ -400,6 +400,25 @@ impl Transys {
         }
     }
 
+    pub fn simplify_eq_latchs(&mut self, eqs: &[(Lit, Lit)], keep_dep: bool) {
+        let mut marks = HashSet::new();
+        let mut map = HashMap::new();
+        for (x, y) in eqs.iter() {
+            assert!(marks.insert(x.var()));
+            assert!(marks.insert(y.var()));
+            map.insert(*y, *x);
+            map.insert(!*y, !*x);
+        }
+        for cls in self.trans.iter_mut() {
+            for l in cls.iter_mut() {
+                if let Some(r) = map.get(l) {
+                    *l = *r;
+                }
+            }
+        }
+        self.simplify(&[], keep_dep, true)
+    }
+
     pub fn simplify(&mut self, lemmas: &[Clause], keep_dep: bool, assert_constrain: bool) {
         let mut simp_solver: Box<dyn Satif> = if keep_dep {
             Box::new(SimpSolver::new())

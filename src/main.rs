@@ -15,20 +15,20 @@ fn main() {
         portfolio.check()
     } else {
         let aig = Aig::from_file(&option.model);
-        let (ts, _) = Transys::from_aig(&aig, option.ic3);
-        let pre_lemmas = if option.preprocess.sec {
+        let (mut ts, _) = Transys::from_aig(&aig, option.ic3);
+        let pre_lemmas = vec![];
+        if option.preprocess.sec {
+            assert!(!option.ic3);
             let sec = ts.sec();
             if option.verbose > 0 {
                 println!("sec find {} lemmas", sec.len());
             }
-            sec
-        } else {
-            vec![]
-        };
+            ts.simplify_eq_latchs(&sec, option.ic3);
+        }
         if option.bmc {
             BMC::new(option, ts).check()
         } else if option.kind {
-            Kind::new(option, ts, pre_lemmas).check()
+            Kind::new(option, ts, pre_lemmas).check_in_depth(2)
         } else if option.imc {
             IMC::new(option, ts).check()
         } else {
