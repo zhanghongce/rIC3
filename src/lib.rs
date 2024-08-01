@@ -20,7 +20,7 @@ use crate::statistic::Statistic;
 use activity::Activity;
 use frame::{Frame, Frames};
 use gipsat::Solver;
-use logic_form::{Cube, Lemma, Lit, Var};
+use logic_form::{Clause, Cube, Lemma, Lit, Var};
 pub use options::Options;
 use std::collections::HashMap;
 use std::panic::{self, AssertUnwindSafe};
@@ -38,6 +38,7 @@ pub struct IC3 {
     obligations: ProofObligationQueue,
     activity: Activity,
     statistic: Statistic,
+    pre_lemmas: Vec<Clause>,
 
     auxiliary_var: Vec<Var>,
 
@@ -76,6 +77,10 @@ impl IC3 {
             let ts = unsafe { Rc::get_mut_unchecked(&mut self.ts) };
             for i in init {
                 ts.add_init(i.var(), Some(i.polarity()));
+            }
+        } else if self.level() == 1 {
+            for cls in self.pre_lemmas.clone().iter() {
+                self.add_lemma(1, !cls.clone(), true, None);
             }
         }
     }
@@ -219,7 +224,7 @@ impl IC3 {
 }
 
 impl IC3 {
-    pub fn new(args: Options, ts: Transys) -> Self {
+    pub fn new(args: Options, ts: Transys, pre_lemmas: Vec<Clause>) -> Self {
         let ts = Rc::new(ts);
         let statistic = Statistic::new(&args.model);
         let activity = Activity::new(&ts);
@@ -234,6 +239,7 @@ impl IC3 {
             statistic,
             obligations: ProofObligationQueue::new(),
             frame,
+            pre_lemmas,
             auxiliary_var: Vec::new(),
             xor_var: HashMap::new(),
         };

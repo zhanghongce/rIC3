@@ -16,7 +16,7 @@ fn main() {
     } else {
         let aig = Aig::from_file(&option.model);
         let (ts, _) = Transys::from_aig(&aig, !option.ic3);
-        let lemmas = if option.preprocess.sec {
+        let pre_lemmas = if option.preprocess.sec {
             let sec = ts.sec();
             if option.verbose > 0 {
                 println!("sec find {} lemmas", sec.len());
@@ -28,11 +28,11 @@ fn main() {
         if option.bmc {
             BMC::new(option, ts).check()
         } else if option.kind {
-            Kind::new(option, ts, lemmas).check_in_depth(2)
+            Kind::new(option, ts, pre_lemmas).check()
         } else if option.imc {
             IMC::new(option, ts).check()
         } else {
-            IC3::new(option, ts).check_with_int_hanlder()
+            IC3::new(option, ts, pre_lemmas).check_with_int_hanlder()
         }
     };
     if verbose > 0 {
