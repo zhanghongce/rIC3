@@ -1,10 +1,12 @@
 use crate::transys::Transys;
 use logic_form::Lit;
 use satif::Satif;
+use std::collections::HashSet;
 
 impl Transys {
     pub fn sec(&self) -> Vec<(Lit, Lit)> {
         let mut eqs = Vec::new();
+        let mut marks = HashSet::new();
         let simulations = self.simulations();
         let Some(simulations) = self.simulation_bv(simulations) else {
             return eqs;
@@ -12,9 +14,15 @@ impl Transys {
         let mut solver = cadical::Solver::new();
         self.load_trans(&mut solver);
         for i in 0..self.latchs.len() {
+            let x = self.latchs[i];
+            if marks.contains(&x) {
+                continue;
+            }
             for j in i + 1..self.latchs.len() {
-                let x = self.latchs[i];
                 let y = self.latchs[j];
+                if marks.contains(&y) {
+                    continue;
+                }
                 if self.init_map[x].is_some()
                     && self.init_map[x] == self.init_map[y]
                     && simulations[&x] == simulations[&y]
@@ -28,6 +36,8 @@ impl Transys {
                     let nyl = self.lit_next(yl);
                     if !solver.solve(&[act, nxl, !nyl]) && !solver.solve(&[act, !nxl, nyl]) {
                         eqs.push((xl, yl));
+                        marks.insert(x);
+                        marks.insert(y);
                         dbg!(x, y);
                         solver.add_clause(&[act]);
                         break;

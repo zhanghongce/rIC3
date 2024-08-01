@@ -1,9 +1,8 @@
-use std::collections::HashMap;
-
 use crate::{transys::unroll::TransysUnroll, Transys};
 use cadical::Solver;
 use logic_form::{Cube, Var};
 use satif::Satif;
+use std::collections::HashMap;
 
 impl Transys {
     pub fn simulations(&self) -> Vec<Cube> {
@@ -40,7 +39,6 @@ impl Transys {
             solver.add_clause(&!&ncube);
             res.push(cube);
         }
-        println!("{:?}", res.len());
         res
     }
 
