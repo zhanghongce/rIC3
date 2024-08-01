@@ -25,6 +25,9 @@ fn main() {
             }
             ts.simplify_eq_latchs(&sec, option.ic3);
         }
+        if !option.ic3 {
+            ts.simplify(&[], false, true);
+        }
         if option.bmc {
             BMC::new(option, ts).check()
         } else if option.kind {

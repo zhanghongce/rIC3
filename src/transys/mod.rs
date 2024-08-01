@@ -452,8 +452,6 @@ impl Transys {
         simp_solver.simplify();
         let mut trans = simp_solver.clauses();
         trans.push(Clause::from([!false_lit]));
-        dbg!(self.trans.len());
-        dbg!(trans.len());
         self.trans = trans;
     }
 }
