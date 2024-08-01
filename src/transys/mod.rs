@@ -74,7 +74,7 @@ impl Transys {
         deps
     }
 
-    pub fn from_aig(aig: &Aig, strengthen: bool) -> (Self, AigRestore) {
+    pub fn from_aig(aig: &Aig, keep_dep: bool) -> (Self, AigRestore) {
         let (aig, mut remap) = aig.coi_refine();
 
         let mut remap_retain = HashSet::new();
@@ -90,10 +90,10 @@ impl Transys {
         aig.constraints
             .retain(|e| *e != AigEdge::constant_edge(true));
 
-        let mut simp_solver: Box<dyn Satif> = if strengthen {
-            Box::new(cadical::Solver::new())
-        } else {
+        let mut simp_solver: Box<dyn Satif> = if keep_dep {
             Box::new(SimpSolver::new())
+        } else {
+            Box::new(cadical::Solver::new())
         };
         let false_lit: Lit = simp_solver.new_var().into();
         let mut dependence = VarMap::new();
@@ -398,6 +398,43 @@ impl Transys {
         for c in self.constraints.iter() {
             satif.add_clause(&[*c]);
         }
+    }
+
+    pub fn simplify(&mut self, lemmas: &[Clause], keep_dep: bool, assert_constrain: bool) {
+        let mut simp_solver: Box<dyn Satif> = if keep_dep {
+            Box::new(SimpSolver::new())
+        } else {
+            Box::new(cadical::Solver::new())
+        };
+        let false_lit: Lit = simp_solver.new_var().into();
+        simp_solver.add_clause(&[!false_lit]);
+        while simp_solver.num_var() < self.num_var {
+            simp_solver.new_var();
+        }
+        for c in self.trans.iter().chain(lemmas.iter()) {
+            simp_solver.add_clause(c);
+        }
+        for i in self.inputs.iter() {
+            simp_solver.set_frozen(*i, true)
+        }
+        for l in self.latchs.iter() {
+            simp_solver.set_frozen(*l, true);
+            simp_solver.set_frozen(self.lit_next(l.lit()).var(), true)
+        }
+        simp_solver.set_frozen(self.bad.var(), true);
+        for c in self.constraints.iter() {
+            if assert_constrain {
+                simp_solver.add_clause(&[*c]);
+            } else {
+                simp_solver.set_frozen(c.var(), true);
+            }
+        }
+        simp_solver.simplify();
+        let mut trans = simp_solver.clauses();
+        trans.push(Clause::from([!false_lit]));
+        dbg!(self.trans.len());
+        dbg!(trans.len());
+        self.trans = trans;
     }
 }
 

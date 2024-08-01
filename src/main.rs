@@ -15,7 +15,7 @@ fn main() {
         portfolio.check()
     } else {
         let aig = Aig::from_file(&option.model);
-        let (ts, _) = Transys::from_aig(&aig, !option.ic3);
+        let (ts, _) = Transys::from_aig(&aig, option.ic3);
         let pre_lemmas = if option.preprocess.sec {
             let sec = ts.sec();
             if option.verbose > 0 {
