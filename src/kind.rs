@@ -2,17 +2,30 @@ use crate::{
     transys::{unroll::TransysUnroll, Transys},
     Options,
 };
+use logic_form::Clause;
 use satif::Satif;
 
 pub struct Kind {
     uts: TransysUnroll,
     options: Options,
+    pre_lemmas: Vec<Clause>,
 }
 
 impl Kind {
-    pub fn new(options: Options, ts: Transys) -> Self {
+    pub fn new(options: Options, ts: Transys, pre_lemmas: Vec<Clause>) -> Self {
         let uts = TransysUnroll::new(&ts);
-        Self { uts, options }
+        Self {
+            uts,
+            options,
+            pre_lemmas,
+        }
+    }
+
+    fn load_pre_lemmas(&self, solver: &mut impl Satif, k: usize) {
+        for cls in self.pre_lemmas.iter() {
+            let cls: Clause = self.uts.lits_next(cls, k);
+            solver.add_clause(&cls);
+        }
     }
 
     pub fn check(&mut self) -> bool {
@@ -22,6 +35,7 @@ impl Kind {
             self.uts.unroll_to(k);
             let kind_bound = k + 1 - step;
             self.uts.load_trans(&mut solver, kind_bound, true);
+            self.load_pre_lemmas(&mut solver, kind_bound);
             if kind_bound > 0 {
                 if self.options.verbose > 0 {
                     println!("kind depth: {kind_bound}");
@@ -33,6 +47,7 @@ impl Kind {
             }
             for s in kind_bound + 1..=k {
                 self.uts.load_trans(&mut solver, s, true);
+                self.load_pre_lemmas(&mut solver, s);
             }
             if !self.options.kind_options.no_bmc {
                 let mut assump = self.uts.ts.init.clone();
@@ -57,17 +72,18 @@ impl Kind {
     pub fn check_in_depth(&mut self, depth: usize) -> bool {
         println!("{}", self.options.model);
         assert!(depth > 0);
-        let mut kind = kissat::Solver::new();
+        let mut solver = kissat::Solver::new();
         self.uts.unroll_to(depth);
         for k in 0..=depth {
-            self.uts.load_trans(&mut kind, k, true);
+            self.uts.load_trans(&mut solver, k, true);
         }
         for k in 0..depth {
-            kind.add_clause(&[!self.uts.lit_next(self.uts.ts.bad, k)]);
+            solver.add_clause(&[!self.uts.lit_next(self.uts.ts.bad, k)]);
+            self.load_pre_lemmas(&mut solver, k);
         }
-        kind.add_clause(&[self.uts.lit_next(self.uts.ts.bad, depth)]);
+        solver.add_clause(&[self.uts.lit_next(self.uts.ts.bad, depth)]);
         println!("kind depth: {depth}");
-        if !kind.solve(&[]) {
+        if !solver.solve(&[]) {
             println!("kind proofed in depth {depth}");
             return true;
         }

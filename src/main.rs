@@ -16,14 +16,19 @@ fn main() {
     } else {
         let aig = Aig::from_file(&option.model);
         let (ts, _) = Transys::from_aig(&aig, !option.ic3);
-        if option.preprocess.sec {
-            ts.sec();
-            return;
-        }
+        let lemmas = if option.preprocess.sec {
+            let sec = ts.sec();
+            if option.verbose > 0 {
+                println!("sec find {} lemmas", sec.len());
+            }
+            sec
+        } else {
+            vec![]
+        };
         if option.bmc {
             BMC::new(option, ts).check()
         } else if option.kind {
-            Kind::new(option, ts).check()
+            Kind::new(option, ts, lemmas).check_in_depth(2)
         } else if option.imc {
             IMC::new(option, ts).check()
         } else {

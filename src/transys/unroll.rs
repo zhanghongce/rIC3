@@ -1,5 +1,5 @@
 use crate::Transys;
-use logic_form::{Cube, Lit, LitMap, Var};
+use logic_form::{Lit, LitMap, Var};
 use satif::Satif;
 
 pub struct TransysUnroll {
@@ -44,8 +44,8 @@ impl TransysUnroll {
 
     #[inline]
     #[allow(unused)]
-    pub fn cube_next(&self, cube: &[Lit], num: usize) -> Cube {
-        cube.iter().map(|l| self.lit_next(*l, num)).collect()
+    pub fn lits_next<R: FromIterator<Lit>>(&self, lits: &[Lit], num: usize) -> R {
+        lits.iter().map(|l| self.lit_next(*l, num)).collect()
     }
 
     pub fn unroll(&mut self) {
