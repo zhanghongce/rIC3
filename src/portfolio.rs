@@ -45,16 +45,17 @@ impl Portfolio {
             let mut child = engine.stderr(Stdio::piped()).spawn().unwrap();
             engines.push(child.id() as i32);
             let tx = tx.clone();
-            let config = engine
-                .get_args()
-                .skip(2)
-                .map(|cstr| cstr.to_str().unwrap())
-                .collect::<Vec<&str>>()
-                .join(" ");
-            if self.option.verbose > 1 {
-                println!("start engine: {config}");
-            }
+            let option = self.option.clone();
             spawn(move || {
+                let config = engine
+                    .get_args()
+                    .skip(2)
+                    .map(|cstr| cstr.to_str().unwrap())
+                    .collect::<Vec<&str>>()
+                    .join(" ");
+                if option.verbose > 1 {
+                    println!("start engine: {config}");
+                }
                 let output = child
                     .controlled()
                     .memory_limit(1024 * 1024 * 1024 * 16)
@@ -68,6 +69,9 @@ impl Portfolio {
                     };
                     let _ = tx.send((config, res));
                 } else {
+                    if option.verbose > 0 {
+                        println!("{config} memory out exit");
+                    }
                     let _ = child.kill();
                 };
             });
