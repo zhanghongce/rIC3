@@ -15,6 +15,8 @@ pub struct Statistic {
     pub num_down: usize,
     pub num_down_sat: usize,
 
+    pub ctp: SuccessRate,
+
     pub num_get_bad: usize,
 
     pub overall_mic_time: Duration,

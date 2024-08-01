@@ -74,6 +74,10 @@ pub struct IC3Options {
     /// ic3 xor generalization
     #[arg(long = "ic3-xor", default_value_t = false, requires = "ic3")]
     pub xor: bool,
+
+    /// ic3 counterexample to propagation
+    #[arg(long = "ic3-ctp", default_value_t = false, requires = "ic3")]
+    pub ctp: bool,
 }
 
 #[derive(Args, Clone, Debug)]

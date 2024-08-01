@@ -111,7 +111,7 @@ impl IC3 {
             return true;
         }
         if self.options.ic3_options.xor {
-            self.xor_generalize(frame - 1, mic);
+            self.xor_generalize2(frame - 1, mic);
         }
         false
     }
@@ -201,17 +201,36 @@ impl IC3 {
                 if self.frame[frame_idx].iter().all(|l| l.ne(&lemma)) {
                     continue;
                 }
-                if let Some(true) =
-                    self.blocked_with_ordered(frame_idx + 1, &lemma, false, false, false)
-                {
-                    let core = self.solvers[frame_idx].inductive_core();
-                    if let Some(po) = &mut lemma.po {
-                        if po.frame < frame_idx + 2 && self.obligations.remove(po) {
-                            po.frame = frame_idx + 2;
-                            self.obligations.add(po.clone());
+                for ctp in 0..3 {
+                    if self
+                        .blocked_with_ordered(frame_idx + 1, &lemma, false, false, false)
+                        .unwrap()
+                    {
+                        let core = self.solvers[frame_idx].inductive_core();
+                        if let Some(po) = &mut lemma.po {
+                            if po.frame < frame_idx + 2 && self.obligations.remove(po) {
+                                po.frame = frame_idx + 2;
+                                self.obligations.add(po.clone());
+                            }
                         }
+                        self.add_lemma(frame_idx + 1, core, true, lemma.po);
+                        self.statistic.ctp.statistic(ctp > 0);
+                        break;
                     }
-                    self.add_lemma(frame_idx + 1, core, true, lemma.po);
+                    if !self.options.ic3_options.ctp {
+                        break;
+                    }
+                    let (ctp, _) = self.get_predecessor(frame_idx + 1, false);
+                    if self.solvers[frame_idx]
+                        .inductive(&ctp, true, false)
+                        .unwrap()
+                    {
+                        let core = self.solvers[frame_idx].inductive_core();
+                        let mic = self.mic(frame_idx + 1, core, 0);
+                        self.add_lemma(frame_idx + 1, mic, false, None);
+                    } else {
+                        break;
+                    }
                 }
             }
             if self.frame[frame_idx].is_empty() {
