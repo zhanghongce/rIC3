@@ -37,6 +37,9 @@ pub struct Options {
     #[arg(long, default_value_t = false, group = "engine")]
     pub portfolio: bool,
 
+    #[command(flatten)]
+    pub preprocess: PreprocessOptions,
+
     /// step length
     #[arg(long, default_value_t = 1, value_parser = clap::value_parser!(u32).range(1..))]
     pub step: u32,
@@ -65,22 +68,29 @@ pub struct Options {
 #[derive(Args, Clone, Debug)]
 pub struct IC3Options {
     /// counterexample to generalization
-    #[arg(long, default_value_t = false, requires = "ic3")]
-    pub ic3_ctg: bool,
+    #[arg(long = "ic3-ctg", default_value_t = false, requires = "ic3")]
+    pub ctg: bool,
 }
 
 #[derive(Args, Clone, Debug)]
 pub struct BMCOptions {
     /// use kissat solver, otherwise cadical
-    #[arg(long, default_value_t = false, requires = "bmc")]
-    pub bmc_kissat: bool,
+    #[arg(long = "bmc-kissat", default_value_t = false, requires = "bmc")]
+    pub kissat: bool,
 }
 
 #[derive(Args, Clone, Debug)]
 pub struct KindOptions {
     /// no bmc check in kind
-    #[arg(long, default_value_t = false, requires = "kind")]
-    pub kind_no_bmc: bool,
+    #[arg(long = "kind-no-bmc", default_value_t = false, requires = "kind")]
+    pub no_bmc: bool,
+}
+
+#[derive(Args, Clone, Debug)]
+pub struct PreprocessOptions {
+    /// sec preprocess
+    #[arg(long = "sec", default_value_t = false)]
+    pub sec: bool,
 }
 
 impl Default for Options {

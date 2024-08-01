@@ -96,11 +96,7 @@ impl IC3 {
         mic = self.mic(
             po.frame,
             mic,
-            if self.options.ic3_options.ic3_ctg {
-                1
-            } else {
-                0
-            },
+            if self.options.ic3_options.ctg { 1 } else { 0 },
         );
         let (frame, mic) = self.push_lemma(po.frame, mic);
         self.statistic.avg_po_cube_len += po.lemma.len();

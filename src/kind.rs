@@ -34,7 +34,7 @@ impl Kind {
             for s in kind_bound + 1..=k {
                 self.uts.load_trans(&mut solver, s, true);
             }
-            if !self.options.kind_options.kind_no_bmc {
+            if !self.options.kind_options.no_bmc {
                 let mut assump = self.uts.ts.init.clone();
                 assump.push(self.uts.lit_next(self.uts.ts.bad, k));
                 if self.options.verbose > 0 {

@@ -74,7 +74,7 @@ impl BMC {
     }
 
     pub fn check(&mut self) -> bool {
-        if self.options.bmc_options.bmc_kissat {
+        if self.options.bmc_options.kissat {
             self.check_with_kissat()
         } else {
             self.check_with_cadical()

@@ -1,5 +1,3 @@
-#![allow(non_snake_case)]
-
 use aig::Aig;
 use clap::Parser;
 use rIC3::{bmc::BMC, imc::IMC, kind::Kind, portfolio::Portfolio, transys::Transys, Options, IC3};
@@ -31,9 +29,5 @@ fn main() {
     if verbose > 0 {
         println!("result: {res}");
     }
-    if res {
-        exit(20);
-    } else {
-        exit(10);
-    }
+    exit(if res { 20 } else { 10 });
 }
