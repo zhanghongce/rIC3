@@ -4,7 +4,7 @@ use satif::Satif;
 
 pub struct TransysUnroll {
     pub ts: Transys,
-    num_unroll: usize,
+    pub num_unroll: usize,
     pub num_var: usize,
     next_map: LitMap<Vec<Lit>>,
 }

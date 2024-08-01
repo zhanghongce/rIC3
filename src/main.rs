@@ -28,7 +28,7 @@ fn main() {
         if option.bmc {
             BMC::new(option, ts).check()
         } else if option.kind {
-            Kind::new(option, ts, pre_lemmas).check_in_depth(2)
+            Kind::new(option, ts, pre_lemmas).check()
         } else if option.imc {
             IMC::new(option, ts).check()
         } else {
