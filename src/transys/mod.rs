@@ -1,5 +1,6 @@
 mod abc;
 pub mod sec;
+pub mod simulate;
 pub mod unroll;
 
 use abc::abc_preprocess;
