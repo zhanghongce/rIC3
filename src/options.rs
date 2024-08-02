@@ -8,6 +8,10 @@ pub struct Options {
     /// model file in aiger format
     pub model: String,
 
+    /// word level engin
+    #[arg(long, default_value_t = false)]
+    pub wl: bool,
+
     /// ic3 engine
     #[arg(long, default_value_t = false, group = "engine")]
     pub ic3: bool,

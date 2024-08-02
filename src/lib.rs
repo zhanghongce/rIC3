@@ -14,6 +14,7 @@ mod proofoblig;
 mod statistic;
 pub mod transys;
 mod verify;
+pub mod wl;
 
 use crate::proofoblig::{ProofObligation, ProofObligationQueue};
 use crate::statistic::Statistic;
