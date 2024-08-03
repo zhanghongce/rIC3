@@ -53,7 +53,12 @@ impl IC3 {
     }
 
     fn extend(&mut self) {
-        let mut solver = Solver::new(Some(self.frame.len()), &self.ts, &self.frame);
+        let mut solver = Solver::new(
+            self.options.clone(),
+            Some(self.frame.len()),
+            &self.ts,
+            &self.frame,
+        );
         for v in self.auxiliary_var.iter() {
             solver.add_domain(*v);
             for d in self.ts.dependence[*v].iter() {
@@ -244,14 +249,14 @@ impl IC3 {
 }
 
 impl IC3 {
-    pub fn new(args: Options, ts: Transys, pre_lemmas: Vec<Clause>) -> Self {
+    pub fn new(options: Options, ts: Transys, pre_lemmas: Vec<Clause>) -> Self {
         let ts = Rc::new(ts);
-        let statistic = Statistic::new(&args.model);
+        let statistic = Statistic::new(&options.model);
         let activity = Activity::new(&ts);
         let frame = Frames::new(&ts);
-        let lift = Solver::new(None, &ts, &frame);
+        let lift = Solver::new(options.clone(), None, &ts, &frame);
         let mut res = Self {
-            options: args,
+            options,
             ts,
             activity,
             solvers: Vec::new(),

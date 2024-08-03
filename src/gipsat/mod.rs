@@ -9,7 +9,7 @@ pub mod statistic;
 mod utils;
 mod vsids;
 
-use crate::{frame::Frames, transys::Transys, IC3};
+use crate::{frame::Frames, transys::Transys, Options, IC3};
 use analyze::Analyze;
 use cdb::{CRef, ClauseDB, ClauseKind, CREF_NONE};
 use domain::Domain;
@@ -55,7 +55,7 @@ pub struct Solver {
 }
 
 impl Solver {
-    pub fn new(id: Option<usize>, ts: &Rc<Transys>, frame: &Frames) -> Self {
+    pub fn new(options: Options, id: Option<usize>, ts: &Rc<Transys>, frame: &Frames) -> Self {
         let mut solver = Self {
             id,
             ts: ts.clone(),
@@ -79,7 +79,7 @@ impl Solver {
             constrain_act: Var(0),
             assump: Default::default(),
             statistic: Default::default(),
-            rng: StdRng::seed_from_u64(0),
+            rng: StdRng::seed_from_u64(options.rseed),
             mark: Default::default(),
         };
         while solver.num_var() < solver.ts.num_var {

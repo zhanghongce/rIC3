@@ -49,8 +49,8 @@ pub struct Options {
     pub step: u32,
 
     /// random seed
-    #[arg(long, default_value_t = 5)]
-    pub rseed: usize,
+    #[arg(long, default_value_t = 0)]
+    pub rseed: u64,
 
     /// print witness
     #[arg(long, default_value_t = false)]
