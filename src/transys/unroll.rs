@@ -3,6 +3,7 @@ use logic_form::{Lit, LitMap, Var};
 use satif::Satif;
 use std::collections::HashSet;
 
+#[derive(Debug)]
 pub struct TransysUnroll {
     pub ts: Transys,
     pub num_unroll: usize,

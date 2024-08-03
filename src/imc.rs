@@ -4,7 +4,7 @@ use crate::{
 };
 use aig::Aig;
 use cadical::{itp::Interpolant, Solver};
-use logic_form::{Lit, Var};
+use logic_form::{Clause, Var};
 use satif::Satif;
 use std::collections::HashMap;
 
@@ -31,7 +31,7 @@ impl IMC {
             }
             for u in 0..=k {
                 for c in self.uts.ts.trans.iter() {
-                    let c: Vec<Lit> = c.iter().map(|l| self.uts.lit_next(*l, u)).collect();
+                    let c: Clause = self.uts.lits_next(c, u);
                     itp.label_clause(u < k / 2);
                     solver.add_clause(&c);
                 }
