@@ -9,6 +9,7 @@ impl IC3 {
         cube: &Cube,
         keep: &HashSet<Lit>,
         full: &Cube,
+        constrain: &[Clause],
         cex: &mut Vec<(Lemma, Lemma)>,
     ) -> Option<Cube> {
         let mut cube = cube.clone();
@@ -26,7 +27,14 @@ impl IC3 {
             }
             self.statistic.num_down_sat += 1;
             if self
-                .blocked_with_ordered(frame, &cube, false, true, false)
+                .blocked_with_ordered_with_constrain(
+                    frame,
+                    &cube,
+                    false,
+                    true,
+                    constrain.to_vec(),
+                    false,
+                )
                 .unwrap()
             {
                 return Some(self.solvers[frame - 1].inductive_core());
@@ -73,7 +81,7 @@ impl IC3 {
         frame: usize,
         cube: &Cube,
         keep: &HashSet<Lit>,
-        _full: &Cube,
+        full: &Cube,
     ) -> Option<Cube> {
         let mut cube = cube.clone();
         self.statistic.num_down += 1;
@@ -103,18 +111,13 @@ impl IC3 {
                 }
             }
             if ctg < 3 && frame > 1 && !self.ts.cube_subsume_init(&model) {
-                // if self
-                //     .blocked_with_ordered_with_constrain(
-                //         frame - 1,
-                //         &model,
-                //         false,
-                //         true,
-                //         vec![!full.clone()],
-                //         false,
-                //     )
-                //     .unwrap()
                 let mut limit = 5;
-                if self.trivial_block(frame - 1, Lemma::new(model.clone()), &mut limit) {
+                if self.trivial_block(
+                    frame - 1,
+                    Lemma::new(model.clone()),
+                    &[!full.clone()],
+                    &mut limit,
+                ) {
                     ctg += 1;
                     continue;
                 }
@@ -154,7 +157,13 @@ impl IC3 {
         (new_cube, new_i)
     }
 
-    pub fn mic(&mut self, frame: usize, mut cube: Cube, level: usize) -> Cube {
+    pub fn mic(
+        &mut self,
+        frame: usize,
+        mut cube: Cube,
+        level: usize,
+        constrain: &[Clause],
+    ) -> Cube {
         let mut cex = Vec::new();
         let start = Instant::now();
         if level == 0 {
@@ -181,7 +190,7 @@ impl IC3 {
             let mic = if level > 0 {
                 self.ctg_down(frame, &removed_cube, &keep, &cube)
             } else {
-                self.down(frame, &removed_cube, &keep, &cube, &mut cex)
+                self.down(frame, &removed_cube, &keep, &cube, constrain, &mut cex)
             };
             if let Some(new_cube) = mic {
                 self.statistic.mic_drop.success();
@@ -195,8 +204,6 @@ impl IC3 {
                             .copied()
                             .chain(cube.iter().copied()),
                     );
-                } else {
-                    self.add_lemma(frame, cube.clone(), false, None);
                 }
             } else {
                 self.statistic.mic_drop.fail();
@@ -278,7 +285,7 @@ impl IC3 {
                             new_lemma[i] = c;
                             new_lemma.remove(j);
                             if core.len() < lemma.len() {
-                                let mic = self.mic(frame, core, 0);
+                                let mic = self.mic(frame, core, 0, &[]);
                                 self.add_lemma(frame, mic, true, None);
                             }
                             new_lemma
@@ -400,7 +407,7 @@ impl IC3 {
                             new_lemma[i] = c;
                             new_lemma.remove(j);
                             if core.len() < lemma.len() {
-                                let mic = self.mic(frame, core, 0);
+                                let mic = self.mic(frame, core, 0, &[]);
                                 self.add_lemma(frame, mic, true, None);
                             }
                             new_lemma

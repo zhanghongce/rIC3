@@ -108,6 +108,7 @@ impl IC3 {
             po.frame,
             mic,
             if self.options.ic3_options.ctg { 1 } else { 0 },
+            &[],
         );
         let (frame, mic) = self.push_lemma(po.frame, mic);
         self.statistic.avg_po_cube_len += po.lemma.len();
@@ -169,7 +170,13 @@ impl IC3 {
     }
 
     #[allow(unused)]
-    fn trivial_block(&mut self, frame: usize, lemma: Lemma, limit: &mut usize) -> bool {
+    fn trivial_block(
+        &mut self,
+        frame: usize,
+        lemma: Lemma,
+        constrain: &[Clause],
+        limit: &mut usize,
+    ) -> bool {
         if frame == 0 {
             return false;
         }
@@ -182,17 +189,24 @@ impl IC3 {
         *limit -= 1;
         loop {
             if self
-                .blocked_with_ordered(frame, &lemma, false, true, false)
+                .blocked_with_ordered_with_constrain(
+                    frame,
+                    &lemma,
+                    false,
+                    true,
+                    constrain.to_vec(),
+                    false,
+                )
                 .unwrap()
             {
                 let mut mic = self.solvers[frame - 1].inductive_core();
-                mic = self.mic(frame, mic, 0);
+                mic = self.mic(frame, mic, 0, constrain);
                 let (frame, mic) = self.push_lemma(frame, mic);
                 self.add_lemma(frame - 1, mic, false, None);
                 return true;
             } else {
                 let model = Lemma::new(self.get_predecessor(frame, true).0);
-                if !self.trivial_block(frame - 1, model, limit) {
+                if !self.trivial_block(frame - 1, model, constrain, limit) {
                     return false;
                 }
             }
@@ -232,7 +246,7 @@ impl IC3 {
                         .unwrap()
                     {
                         let core = self.solvers[frame_idx].inductive_core();
-                        let mic = self.mic(frame_idx + 1, core, 0);
+                        let mic = self.mic(frame_idx + 1, core, 0, &[]);
                         self.add_lemma(frame_idx + 1, mic, false, None);
                     } else {
                         break;
