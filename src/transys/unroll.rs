@@ -1,6 +1,7 @@
 use crate::Transys;
 use logic_form::{Lit, LitMap, Var};
 use satif::Satif;
+use std::collections::HashSet;
 
 pub struct TransysUnroll {
     pub ts: Transys,
@@ -191,83 +192,89 @@ impl TransysUnroll {
     //     }
     // }
 
-    // pub fn interal_signals(&self) -> Transys {
-    //     assert!(self.num_unroll == 1);
-    //     let mut trans = Cnf::new();
-    //     for u in 0..=1 {
-    //         for c in self.ts.trans.iter() {
-    //             let c: Clause = c.iter().map(|l| self.lit_next(*l, u)).collect();
-    //             trans.push(c);
-    //         }
-    //     }
-    //     let mut dependence = self.ts.dependence.clone();
-    //     dependence.reserve(Var::new(self.num_var));
-    //     let mut next_map = self.ts.next_map.clone();
-    //     next_map.reserve(Var::new(self.num_var));
-    //     for i in 0..self.ts.num_var {
-    //         let l = Var::new(i).lit();
-    //         let n = self.lit_next(l, 1).var();
-    //         next_map[l] = self.lit_next(l, 1);
-    //         next_map[!l] = self.lit_next(!l, 1);
-    //         if dependence[n].is_empty() {
-    //             dependence[n] = dependence[l]
-    //                 .iter()
-    //                 .map(|l| self.lit_next(l.lit(), 1).var())
-    //                 .collect()
-    //         }
-    //     }
-    //     let mut keep: HashSet<Var> = HashSet::from_iter(self.ts.inputs.iter().cloned());
-    //     for i in 0..self.ts.num_var {
-    //         let v = Var::new(i);
-    //         if dependence[v].iter().any(|d| keep.contains(d)) {
-    //             keep.insert(v);
-    //         }
-    //     }
-    //     let mut latchs = Vec::new();
-    //     for i in 1..self.ts.num_var {
-    //         let v = Var::new(i);
-    //         if !keep.contains(&v) {
-    //             latchs.push(v);
-    //         }
-    //     }
-    //     let max_latch = *latchs.last().unwrap();
-    //     let mut init_map = self.ts.init_map.clone();
-    //     init_map.reserve(max_latch);
-    //     let mut init = self.ts.init.clone();
-    //     let mut solver = minisat::Solver::new();
-    //     while solver.num_var() < self.num_var {
-    //         solver.new_var();
-    //     }
-    //     for cls in trans.iter() {
-    //         solver.add_clause(cls);
-    //     }
-    //     for c in self.ts.constraints.iter() {
-    //         solver.add_clause(&[*c]);
-    //     }
-    //     let implies: HashSet<Lit> = HashSet::from_iter(solver.implies(&init).into_iter());
-    //     for l in latchs.iter() {
-    //         let l = l.lit();
-    //         if implies.contains(&l) {
-    //             init.push(l);
-    //             init_map[l] = Some(true);
-    //         } else if implies.contains(&!l) {
-    //             init.push(!l);
-    //             init_map[l] = Some(false);
-    //         }
-    //     }
-    //     Transys {
-    //         inputs: self.ts.inputs.clone(),
-    //         latchs,
-    //         init,
-    //         bad: self.ts.bad.clone(),
-    //         init_map,
-    //         constraints: self.ts.constraints.clone(),
-    //         trans,
-    //         num_var: self.num_var,
-    //         next_map,
-    //         dependence,
-    //         max_latch,
-    //         latch_group: self.ts.latch_group.clone(),
-    //     }
-    // }
+    pub fn interal_signals(&self) -> Transys {
+        let mut trans = self.ts.trans.clone();
+        for c in self.ts.trans.iter() {
+            trans.push(self.lits_next(&c, 1));
+        }
+        let mut dependence = self.ts.dependence.clone();
+        dependence.reserve(Var::new(self.num_var));
+        let mut next_map = self.ts.next_map.clone();
+        let mut prev_map = self.ts.prev_map.clone();
+        let mut is_latch = self.ts.is_latch.clone();
+        next_map.reserve(Var::new(self.num_var));
+        prev_map.reserve(Var::new(self.num_var));
+        is_latch.reserve(Var::new(self.num_var));
+        for i in 1..self.ts.num_var {
+            let l = Var::new(i).lit();
+            let n = self.lit_next(l, 1);
+            next_map[l] = n;
+            prev_map[n] = l;
+            next_map[!l] = !n;
+            prev_map[!n] = !l;
+            if dependence[n].is_empty() {
+                dependence[n] = dependence[l]
+                    .iter()
+                    .map(|l| self.lit_next(l.lit(), 1).var())
+                    .collect()
+            }
+        }
+        let mut keep: HashSet<Var> = HashSet::from_iter(self.ts.inputs.iter().cloned());
+        for i in 0..self.ts.num_var {
+            let v = Var::new(i);
+            if dependence[v].iter().any(|d| keep.contains(d)) {
+                keep.insert(v);
+            }
+        }
+        let mut latchs = Vec::new();
+        for i in 1..self.ts.num_var {
+            let v = Var::new(i);
+            if !keep.contains(&v) {
+                latchs.push(v);
+                is_latch[v] = true;
+            }
+        }
+        let max_latch = *latchs.last().unwrap();
+        let mut init_map = self.ts.init_map.clone();
+        init_map.reserve(max_latch);
+        let mut init = self.ts.init.clone();
+        let mut solver = minisat::Solver::new();
+        while solver.num_var() < self.num_var {
+            solver.new_var();
+        }
+        for cls in trans.iter() {
+            solver.add_clause(cls);
+        }
+        for c in self.ts.constraints.iter() {
+            solver.add_clause(&[*c]);
+        }
+        let implies: HashSet<Lit> = HashSet::from_iter(solver.implies(&init).into_iter());
+        for l in latchs.iter() {
+            let l = l.lit();
+            if implies.contains(&l) {
+                init.push(l);
+                init_map[l] = Some(true);
+            } else if implies.contains(&!l) {
+                init.push(!l);
+                init_map[l] = Some(false);
+            }
+        }
+        Transys {
+            inputs: self.ts.inputs.clone(),
+            latchs,
+            init,
+            bad: self.ts.bad.clone(),
+            init_map,
+            constraints: self.ts.constraints.clone(),
+            trans,
+            num_var: self.num_var,
+            next_map,
+            prev_map,
+            dependence,
+            max_latch,
+            latch_group: self.ts.latch_group.clone(),
+            is_latch,
+            groups: self.ts.groups.clone(),
+        }
+    }
 }

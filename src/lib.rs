@@ -28,6 +28,7 @@ use std::panic::{self, AssertUnwindSafe};
 use std::process::exit;
 use std::rc::Rc;
 use std::time::Instant;
+use transys::unroll::TransysUnroll;
 use transys::Transys;
 
 pub struct IC3 {
@@ -60,10 +61,7 @@ impl IC3 {
             &self.frame,
         );
         for v in self.auxiliary_var.iter() {
-            solver.add_domain(*v);
-            for d in self.ts.dependence[*v].iter() {
-                solver.add_domain(*d);
-            }
+            solver.add_domain(*v, true);
         }
         self.solvers.push(solver);
         self.frame.push(Frame::new());
@@ -263,7 +261,12 @@ impl IC3 {
 }
 
 impl IC3 {
-    pub fn new(options: Options, ts: Transys, pre_lemmas: Vec<Clause>) -> Self {
+    pub fn new(options: Options, mut ts: Transys, pre_lemmas: Vec<Clause>) -> Self {
+        if options.ic3_options.inn {
+            let mut uts = TransysUnroll::new(&ts);
+            uts.unroll();
+            ts = uts.interal_signals();
+        }
         let ts = Rc::new(ts);
         let statistic = Statistic::new(&options.model);
         let activity = Activity::new(&ts);

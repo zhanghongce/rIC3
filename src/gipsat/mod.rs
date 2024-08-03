@@ -169,10 +169,7 @@ impl Solver {
     pub fn add_lemma(&mut self, lemma: &[Lit]) -> CRef {
         self.reset();
         for l in lemma.iter() {
-            self.add_domain(l.var());
-            assert!(self.ts.dependence[l.var()]
-                .iter()
-                .all(|v| self.domain.domain.has(*v) || !self.value.v(v.lit()).is_none()),);
+            self.add_domain(l.var(), true);
         }
         self.add_clause_inner(lemma, ClauseKind::Lemma)
     }
@@ -234,8 +231,8 @@ impl Solver {
 
         if !self.temporary_domain {
             self.domain.enable_local(domain, &self.ts, &self.value);
-            assert!(!self.domain.domain.has(self.constrain_act));
-            self.domain.domain.insert(self.constrain_act);
+            assert!(!self.domain.has(self.constrain_act));
+            self.domain.insert(self.constrain_act);
             if bucket {
                 self.vsids.enable_bucket = true;
                 self.vsids.bucket.clear();
@@ -362,8 +359,8 @@ impl Solver {
         self.temporary_domain = true;
         self.domain
             .enable_local(domain.map(|l| l.var()), &self.ts, &self.value);
-        assert!(!self.domain.domain.has(self.constrain_act));
-        self.domain.domain.insert(self.constrain_act);
+        assert!(!self.domain.has(self.constrain_act));
+        self.domain.insert(self.constrain_act);
         self.vsids.enable_bucket = true;
         self.vsids.bucket.clear();
         self.push_to_vsids();
@@ -560,10 +557,7 @@ impl IC3 {
             for cls in trans.iter() {
                 s.add_clause_inner(cls, ClauseKind::Trans);
             }
-            s.add_domain(state);
-            for d in dep.iter() {
-                s.add_domain(*d);
-            }
+            s.add_domain(state, true);
         }
         if !self.solvers[0].value.v(state.lit()).is_none() {
             if self.solvers[0].value.v(state.lit()).is_true() {

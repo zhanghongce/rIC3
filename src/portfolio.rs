@@ -69,13 +69,15 @@ impl Portfolio {
                     let res = match status.code() {
                         Some(10) => false,
                         Some(20) => true,
-                        _ => return,
+                        e => {
+                            if option.verbose > 0 {
+                                println!("{config} unsuccessfully exited, exit code: {:?}", e);
+                            }
+                            return;
+                        }
                     };
                     let _ = tx.send((config, res));
                 } else {
-                    if option.verbose > 0 {
-                        println!("{config} memory out exit");
-                    }
                     let _ = child.kill();
                 };
             });

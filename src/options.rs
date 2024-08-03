@@ -82,6 +82,10 @@ pub struct IC3Options {
     /// ic3 counterexample to propagation
     #[arg(long = "ic3-ctp", default_value_t = false, requires = "ic3")]
     pub ctp: bool,
+
+    /// ic3 with internal signals (FMCAD'21)
+    #[arg(long = "ic3-inn", default_value_t = false, requires = "ic3")]
+    pub inn: bool,
 }
 
 #[derive(Args, Clone, Debug)]

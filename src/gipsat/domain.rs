@@ -1,11 +1,14 @@
-use crate::transys::Transys;
-
 use super::{search::Value, Solver};
+use crate::transys::Transys;
 use logic_form::{Var, VarSet};
-use std::{collections::HashSet, rc::Rc};
+use std::{
+    collections::HashSet,
+    ops::{Deref, DerefMut},
+    rc::Rc,
+};
 
 pub struct Domain {
-    pub domain: VarSet,
+    domain: VarSet,
     pub fixed: u32,
 }
 
@@ -91,15 +94,43 @@ impl Domain {
     }
 }
 
+impl Deref for Domain {
+    type Target = VarSet;
+
+    #[inline]
+    fn deref(&self) -> &Self::Target {
+        &self.domain
+    }
+}
+
+impl DerefMut for Domain {
+    #[inline]
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.domain
+    }
+}
+
 impl Solver {
     #[inline]
-    pub fn add_domain(&mut self, var: Var) {
+    pub fn add_domain(&mut self, var: Var, deps: bool) {
         assert!(self.highest_level() == 0);
         if !self.value.v(var.lit()).is_none() {
             return;
         }
         self.domain.reset();
         self.domain.domain.insert(var);
+        if deps {
+            let mut queue = self.ts.dependence[var].clone();
+            while let Some(d) = queue.pop() {
+                if self.domain.has(d) || !self.value.v(d.lit()).is_none() {
+                    continue;
+                }
+                self.domain.domain.insert(d);
+                for dd in self.ts.dependence[d].iter() {
+                    queue.push(*dd);
+                }
+            }
+        }
         self.domain.fixed = self.domain.len();
     }
 
