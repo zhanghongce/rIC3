@@ -486,19 +486,32 @@ impl IC3 {
                 }
             }
         }
-        self.activity.sort_by_activity(&mut latchs, false);
-        let mut res = latchs;
+        let inn: Box<dyn FnMut(&mut Cube)> = Box::new(|cube: &mut Cube| {
+            cube.sort();
+            cube.reverse();
+        });
+        let act: Box<dyn FnMut(&mut Cube)> = Box::new(|cube: &mut Cube| {
+            self.activity.sort_by_activity(cube, false);
+        });
+        let rev: Box<dyn FnMut(&mut Cube)> = Box::new(|cube: &mut Cube| {
+            cube.reverse();
+        });
+        let mut order = if self.options.ic3_options.inn {
+            vec![inn, act, rev]
+        } else {
+            vec![act, rev]
+        };
         for i in 0.. {
-            if res.is_empty() {
+            if latchs.is_empty() {
                 break;
             }
-            if i == 1 {
-                res.reverse();
-            } else if i > 1 {
-                res.shuffle(&mut self.lift.rng);
+            if let Some(f) = order.get_mut(i) {
+                f(&mut latchs);
+            } else {
+                latchs.shuffle(&mut self.lift.rng);
             }
             let mut lift_assump = inputs.clone();
-            lift_assump.extend_from_slice(&res);
+            lift_assump.extend_from_slice(&latchs);
             let constrain = vec![cls.clone()];
             let Some(false) = self
                 .lift
@@ -506,17 +519,17 @@ impl IC3 {
             else {
                 panic!();
             };
-            let olen = res.len();
-            res = res
+            let olen = latchs.len();
+            latchs = latchs
                 .into_iter()
                 .filter(|l| self.lift.unsat_has(*l))
                 .collect();
-            if res.len() == olen || !strengthen {
+            if latchs.len() == olen || !strengthen {
                 break;
             }
         }
         self.lift.unset_domain();
-        (res, inputs)
+        (latchs, inputs)
     }
 
     pub fn new_var(&mut self) -> Var {
