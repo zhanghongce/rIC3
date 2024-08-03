@@ -26,9 +26,7 @@ impl Portfolio {
         // ic3
         new_engine(&["--ic3"]);
         // ic3
-        new_engine(&["--ic3", "--rseed 5"]);
-        // ic3 with ctg
-        new_engine(&["--ic3", "--ic3-ctg"]);
+        new_engine(&["--ic3", "--ic3-ctp"]);
         // ic3 with ctg
         new_engine(&["--ic3", "--ic3-ctg"]);
         // ic3 with xor

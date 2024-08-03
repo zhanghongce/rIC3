@@ -195,6 +195,8 @@ impl IC3 {
                             .copied()
                             .chain(cube.iter().copied()),
                     );
+                } else {
+                    self.add_lemma(frame, cube.clone(), false, None);
                 }
             } else {
                 self.statistic.mic_drop.fail();
