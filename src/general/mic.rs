@@ -1,5 +1,5 @@
 use super::{solver::BlockResult, IC3};
-use logic_form::{Cube, Lemma, Lit};
+use logic_form::{Cube, Lit};
 use std::{collections::HashSet, time::Instant};
 
 impl IC3 {

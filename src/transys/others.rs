@@ -15,7 +15,8 @@ impl Transys {
             Clause::from([!bad_next, bad]),
         ];
         self.latchs.push(bad_latch.var());
-        self.init_map[bad_latch.var()] = None;
+        self.init_map[bad_latch.var()] = Some(false);
+        self.init.push(!bad_latch);
         self.is_latch[bad_latch.var()] = true;
         self.next_map[bad_latch] = bad_next;
         self.next_map[!bad_latch] = !bad_next;
