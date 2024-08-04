@@ -78,7 +78,7 @@ impl IMC {
         println!("{itp}");
         let mut solver = Solver::new();
         self.uts.ts.load_init(&mut solver);
-        self.uts.ts.load_trans(&mut solver);
+        self.uts.ts.load_trans(&mut solver, true);
 
         // let mut abc = Abc::new();
         // abc.read_aig(&itp);
