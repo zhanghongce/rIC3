@@ -18,7 +18,7 @@ pub struct Transys {
     pub inputs: Vec<Var>,
     pub latchs: Vec<Var>,
     pub init: Cube,
-    pub bad: Lit,
+    pub bad: Cube,
     pub init_map: VarMap<Option<bool>>,
     pub constraints: Cube,
     pub trans: Vec<Clause>,
@@ -263,7 +263,7 @@ impl Transys {
                 inputs,
                 latchs,
                 init,
-                bad,
+                bad: Cube::from([bad]),
                 init_map,
                 constraints,
                 trans,
@@ -441,7 +441,9 @@ impl Transys {
             simp_solver.set_frozen(*l, true);
             simp_solver.set_frozen(self.lit_next(l.lit()).var(), true)
         }
-        simp_solver.set_frozen(self.bad.var(), true);
+        for b in self.bad.iter() {
+            simp_solver.set_frozen(b.var(), true);
+        }
         for c in self.constraints.iter() {
             if assert_constrain {
                 simp_solver.add_clause(&[*c]);

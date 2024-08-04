@@ -44,9 +44,10 @@ impl IMC {
             if self.options.verbose > 0 {
                 println!("bmc depth: {k}");
             }
-            let bad = self.uts.lit_next(self.uts.ts.bad, k);
-            itp.label_clause(false);
-            solver.add_clause(&[bad]);
+            for b in self.uts.lits_next(&self.uts.ts.bad, k) {
+                itp.label_clause(false);
+                solver.add_clause(&[b]);
+            }
             if solver.solve(&[]) {
                 solver.disconnect_tracer(&itp);
                 println!("bmc found cex in depth {k}");

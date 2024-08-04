@@ -46,8 +46,11 @@ impl TransysUnroll {
 
     #[inline]
     #[allow(unused)]
-    pub fn lits_next<R: FromIterator<Lit>>(&self, lits: &[Lit], num: usize) -> R {
-        lits.iter().map(|l| self.lit_next(*l, num)).collect()
+    pub fn lits_next<'a, R: FromIterator<Lit> + AsRef<[Lit]>>(&'a self, lits: &R, num: usize) -> R {
+        lits.as_ref()
+            .iter()
+            .map(|l| self.lit_next(*l, num))
+            .collect()
     }
 
     pub fn unroll(&mut self) {

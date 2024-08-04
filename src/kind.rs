@@ -40,7 +40,7 @@ impl Kind {
                 if self.options.verbose > 0 {
                     println!("kind depth: {kind_bound}");
                 }
-                if !solver.solve(&[self.uts.lit_next(self.uts.ts.bad, kind_bound)]) {
+                if !solver.solve(&self.uts.lits_next(&self.uts.ts.bad, kind_bound)) {
                     println!("k-induction proofed in depth {kind_bound}");
                     return true;
                 }
@@ -51,7 +51,7 @@ impl Kind {
             }
             if !self.options.kind_options.no_bmc {
                 let mut assump = self.uts.ts.init.clone();
-                assump.push(self.uts.lit_next(self.uts.ts.bad, k));
+                assump.extend_from_slice(&self.uts.lits_next(&self.uts.ts.bad, k));
                 if self.options.verbose > 0 {
                     println!("kind bmc depth: {k}");
                 }
@@ -63,7 +63,7 @@ impl Kind {
                 }
             }
             for s in k + 1 - step..=k {
-                solver.add_clause(&[!self.uts.lit_next(self.uts.ts.bad, s)]);
+                solver.add_clause(&!self.uts.lits_next(&self.uts.ts.bad, s));
             }
         }
         unreachable!();
@@ -78,10 +78,12 @@ impl Kind {
             self.uts.load_trans(&mut solver, k, true);
         }
         for k in 0..depth {
-            solver.add_clause(&[!self.uts.lit_next(self.uts.ts.bad, k)]);
+            solver.add_clause(&!self.uts.lits_next(&self.uts.ts.bad, k));
             self.load_pre_lemmas(&mut solver, k);
         }
-        solver.add_clause(&[self.uts.lit_next(self.uts.ts.bad, depth)]);
+        for b in self.uts.lits_next(&self.uts.ts.bad, depth).iter() {
+            solver.add_clause(&[*b]);
+        }
         println!("kind depth: {depth}");
         if !solver.solve(&[]) {
             println!("kind proofed in depth {depth}");

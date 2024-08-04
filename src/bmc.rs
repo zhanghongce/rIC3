@@ -33,7 +33,7 @@ impl BMC {
                 self.uts.load_trans(&mut solver, s, true);
             }
             let mut assump = self.uts.ts.init.clone();
-            assump.push(self.uts.lit_next(self.uts.ts.bad, k));
+            assump.extend_from_slice(&self.uts.lits_next(&self.uts.ts.bad, k));
             if self.options.verbose > 0 {
                 println!("bmc depth: {k}");
             }
@@ -62,7 +62,9 @@ impl BMC {
             if self.options.verbose > 0 {
                 println!("bmc depth: {k}");
             }
-            solver.add_clause(&[self.uts.lit_next(self.uts.ts.bad, k)]);
+            for b in self.uts.lits_next(&self.uts.ts.bad, k) {
+                solver.add_clause(&[b]);
+            }
             if solver.solve(&[]) {
                 if self.options.verbose > 0 {
                     println!("bmc found cex in depth {k}");

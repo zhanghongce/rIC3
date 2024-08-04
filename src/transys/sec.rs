@@ -15,10 +15,8 @@ impl Transys {
         for k in 0..=uts.num_unroll {
             uts.load_trans(&mut solver, k, true);
             for (x, y) in eqs.iter() {
-                let cls: Clause = uts.lits_next(&[*x, !*y], k);
-                solver.add_clause(&cls);
-                let cls: Clause = uts.lits_next(&[!*x, *y], k);
-                solver.add_clause(&cls);
+                solver.add_clause(&uts.lits_next(&Clause::from([*x, !*y]), k));
+                solver.add_clause(&uts.lits_next(&Clause::from([!*x, *y]), k));
             }
         }
         for i in 0..uts.ts.latchs.len() {

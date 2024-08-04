@@ -409,9 +409,9 @@ impl Solver {
 impl IC3 {
     pub fn get_bad(&mut self) -> Option<(Cube, Cube)> {
         let solver = self.solvers.last_mut().unwrap();
-        solver.assump = Cube::from([self.ts.bad]);
+        solver.assump = self.ts.bad.clone();
         let res = solver
-            .solve_with_domain(&[self.ts.bad], vec![], false, false)
+            .solve_with_domain(&self.ts.bad, vec![], false, false)
             .unwrap();
         if res {
             Some(self.get_predecessor(self.solvers.len(), true))
