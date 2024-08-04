@@ -17,14 +17,7 @@ impl Ic3Solver {
     pub fn new(ts: &Rc<Transys>, frame: usize) -> Self {
         let ts = ts.clone();
         let mut solver = Box::new(SatSolver::new());
-        let false_lit: Lit = solver.new_var().into();
-        solver.add_clause(&[!false_lit]);
-        while solver.num_var() < ts.num_var {
-            solver.new_var();
-        }
-        for cls in ts.trans.iter() {
-            solver.add_clause(cls)
-        }
+        ts.load_trans(solver.as_mut(), true);
         Self {
             solver,
             ts,
@@ -231,8 +224,10 @@ impl IC3 {
         }
         let act: Lit = self.lift.solver.new_var().into();
         let mut assumption = Cube::from([act]);
-        let mut cls = !&unblock.assumption;
-        cls.push(!act);
+        let mut cls = unblock.assumption.clone();
+        cls.extend_from_slice(&self.ts.constraints);
+        cls.push(act);
+        let cls = !cls;
         let mut inputs = Cube::new();
         self.lift.solver.add_clause(&cls);
         for input in self.ts.inputs.iter() {

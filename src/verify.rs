@@ -1,4 +1,4 @@
-use crate::IC3;
+use crate::{transys::Transys, IC3};
 // use aig::AigEdge;
 use logic_form::{Clause, Lemma};
 use minisat::Solver;
@@ -9,54 +9,38 @@ use std::{
     // process::Command,
 };
 
-impl IC3 {
-    fn invariant(&self) -> Vec<Lemma> {
-        let invariant = self
-            .frame
-            .iter()
-            .position(|frame| frame.is_empty())
-            .unwrap();
-        let mut invariants = Vec::new();
-        for i in invariant..self.frame.len() {
-            for cube in self.frame[i].iter() {
-                invariants.push(cube.deref().clone());
-            }
-        }
-        invariants.sort();
-        invariants
+pub fn verify_invariant(ts: &Transys, invariants: &[Lemma]) -> bool {
+    let mut solver = Solver::new();
+    while solver.num_var() < ts.num_var {
+        solver.new_var();
     }
-
-    fn verify_invariant(&mut self, invariants: &[Lemma]) -> bool {
-        let mut solver = Solver::new();
-        while solver.num_var() < self.ts.num_var {
-            solver.new_var();
-        }
-        for cls in self.ts.trans.iter() {
-            solver.add_clause(cls)
-        }
-        for lemma in invariants {
-            solver.add_clause(&!lemma.deref());
-        }
-        for c in self.ts.constraints.iter() {
-            solver.add_clause(&Clause::from([*c]));
-        }
-        if solver.solve(&self.ts.bad) {
+    for cls in ts.trans.iter() {
+        solver.add_clause(cls)
+    }
+    for lemma in invariants {
+        solver.add_clause(&!lemma.deref());
+    }
+    for c in ts.constraints.iter() {
+        solver.add_clause(&Clause::from([*c]));
+    }
+    if solver.solve(&ts.bad) {
+        return false;
+    }
+    for lemma in invariants {
+        let mut assump = ts.constraints.clone();
+        assump.extend_from_slice(&ts.bad);
+        if solver.solve(&ts.cube_next(lemma)) {
             return false;
         }
-        for lemma in invariants {
-            let mut assump = self.ts.constraints.clone();
-            assump.extend_from_slice(&self.ts.bad);
-            if solver.solve(&self.ts.cube_next(lemma)) {
-                return false;
-            }
-        }
-        true
     }
+    true
+}
 
+impl IC3 {
     pub fn verify(&mut self) -> bool {
-        let invariants = self.invariant();
+        let invariants = self.frame.invariant();
 
-        if !self.verify_invariant(&invariants) {
+        if !verify_invariant(&self.ts, &invariants) {
             println!("invariant varify failed");
             return false;
         }

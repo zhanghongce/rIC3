@@ -107,6 +107,18 @@ impl Frames {
         None
     }
 
+    pub fn invariant(&self) -> Vec<Lemma> {
+        let invariant = self.iter().position(|frame| frame.is_empty()).unwrap();
+        let mut invariants = Vec::new();
+        for i in invariant..self.len() {
+            for cube in self[i].iter() {
+                invariants.push(cube.deref().clone());
+            }
+        }
+        invariants.sort();
+        invariants
+    }
+
     pub fn _parent_lemma(&self, lemma: &Lemma, frame: usize) -> Option<Lemma> {
         if frame == 1 {
             return None;

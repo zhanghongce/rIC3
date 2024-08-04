@@ -1,5 +1,5 @@
 use super::IC3;
-use crate::{frame::FrameLemma, proofoblig::ProofObligation};
+use crate::{frame::FrameLemma, proofoblig::ProofObligation, verify::verify_invariant};
 use logic_form::{Cube, Lemma};
 
 impl IC3 {
@@ -77,5 +77,21 @@ impl IC3 {
             println!();
             println!("{:#?}", self.statistic);
         }
+    }
+
+    pub fn verify(&mut self) -> bool {
+        let invariants = self.frame.invariant();
+
+        if !verify_invariant(&self.ts, &invariants) {
+            println!("invariant varify failed");
+            return false;
+        }
+        if self.options.verbose > 0 {
+            println!(
+                "inductive invariant verified with {} lemmas!",
+                invariants.len()
+            );
+        }
+        true
     }
 }

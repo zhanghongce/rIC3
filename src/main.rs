@@ -38,9 +38,9 @@ fn main() {
             IMC::new(option, ts).check()
         } else {
             if option.ic3_options.bwd {
-                IC3::new(option, ts, pre_lemmas).check_with_int_hanlder()
-            } else {
                 general::IC3::new(option, ts).check()
+            } else {
+                IC3::new(option, ts, pre_lemmas).check_with_int_hanlder()
             }
         }
     };

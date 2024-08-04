@@ -169,7 +169,7 @@ impl IC3 {
                         self.statistic.overall_block_time += start.elapsed();
                         self.statistic();
                         if self.options.verify {
-                            todo!()
+                            assert!(self.verify());
                         }
                         return true;
                     }
@@ -202,7 +202,7 @@ impl IC3 {
             if propagate {
                 self.statistic();
                 if self.options.verify {
-                    todo!()
+                    assert!(self.verify());
                 }
                 return true;
             }
