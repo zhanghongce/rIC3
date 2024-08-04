@@ -109,6 +109,37 @@ impl IC3 {
         Some(true)
     }
 
+    #[allow(unused)]
+    fn trivial_block(&mut self, frame: usize, lemma: Lemma, limit: &mut usize) -> bool {
+        if frame == 0 {
+            return false;
+        }
+        if self.ts.cube_subsume_init(&lemma) {
+            return false;
+        }
+        if *limit == 0 {
+            return false;
+        }
+        *limit -= 1;
+        loop {
+            match self.blocked_with_ordered(frame, &lemma, false, true) {
+                BlockResult::Yes(blocked) => {
+                    let mut mic = self.inductive_core(blocked);
+                    mic = self.mic(frame, mic, 0);
+                    let (frame, mic) = self.push_lemma(frame, mic);
+                    self.add_lemma(frame - 1, mic, false, None);
+                    return true;
+                }
+                BlockResult::No(ub) => {
+                    let model = Lemma::new(self.get_predecessor(ub).0);
+                    if !self.trivial_block(frame - 1, model, limit) {
+                        return false;
+                    }
+                }
+            }
+        }
+    }
+
     fn propagate(&mut self) -> bool {
         for frame_idx in self.frame.early..self.level() {
             self.frame[frame_idx].sort_by_key(|x| x.len());

@@ -1,5 +1,5 @@
 use super::{solver::BlockResult, IC3};
-use logic_form::{Cube, Lit};
+use logic_form::{Cube, Lemma, Lit};
 use std::{collections::HashSet, time::Instant};
 
 impl IC3 {
@@ -29,13 +29,7 @@ impl IC3 {
         }
     }
 
-    fn ctg_down(
-        &mut self,
-        frame: usize,
-        cube: &Cube,
-        keep: &HashSet<Lit>,
-        level: usize,
-    ) -> Option<Cube> {
+    fn ctg_down(&mut self, frame: usize, cube: &Cube, keep: &HashSet<Lit>) -> Option<Cube> {
         let mut cube = cube.clone();
         self.statistic.num_down += 1;
         let mut ctgs = 0;
@@ -55,12 +49,19 @@ impl IC3 {
                         {
                             ctgs += 1;
                             let core = self.inductive_core(blocked);
-                            let mic = self.mic(frame - 1, core, level - 1);
+                            let mic = self.mic(frame - 1, core, 0);
                             let (frame, mic) = self.push_lemma(frame - 1, mic);
                             self.add_lemma(frame - 1, mic, false, None);
                             continue;
                         }
                     }
+                    // if ctgs < 3 && frame > 1 && !self.ts.cube_subsume_init(&model) {
+                    //     let mut limit = 5;
+                    //     if self.trivial_block(frame - 1, Lemma::new(model.clone()), &mut limit) {
+                    //         ctgs += 1;
+                    //         continue;
+                    //     }
+                    // }
                     ctgs = 0;
                     let cex_set: HashSet<Lit> = HashSet::from_iter(model);
                     let mut cube_new = Cube::new();
@@ -116,7 +117,7 @@ impl IC3 {
             let res = if level == 0 {
                 self.down(frame, &removed_cube, &keep)
             } else {
-                self.ctg_down(frame, &removed_cube, &keep, level)
+                self.ctg_down(frame, &removed_cube, &keep)
             };
             if let Some(new_cube) = res {
                 self.statistic.mic_drop.success();
