@@ -86,6 +86,10 @@ pub struct IC3Options {
     /// ic3 with internal signals (FMCAD'21)
     #[arg(long = "ic3-inn", default_value_t = false, requires = "ic3")]
     pub inn: bool,
+
+    /// ic3 with backward
+    #[arg(long = "ic3-bwd", default_value_t = false, requires = "ic3")]
+    pub bwd: bool,
 }
 
 #[derive(Args, Clone, Debug)]

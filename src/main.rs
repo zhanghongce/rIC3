@@ -1,6 +1,8 @@
 use aig::Aig;
 use clap::Parser;
-use rIC3::{bmc::BMC, imc::IMC, kind::Kind, portfolio::Portfolio, transys::Transys, Options, IC3};
+use rIC3::{
+    bmc::BMC, general, imc::IMC, kind::Kind, portfolio::Portfolio, transys::Transys, Options, IC3,
+};
 use std::process::exit;
 
 fn main() {
@@ -35,7 +37,11 @@ fn main() {
         } else if option.imc {
             IMC::new(option, ts).check()
         } else {
-            IC3::new(option, ts, pre_lemmas).check_with_int_hanlder()
+            if option.ic3_options.bwd {
+                IC3::new(option, ts, pre_lemmas).check_with_int_hanlder()
+            } else {
+                general::IC3::new(option, ts).check()
+            }
         }
     };
     if verbose > 0 {
