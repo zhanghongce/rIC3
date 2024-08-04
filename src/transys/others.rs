@@ -11,10 +11,21 @@ impl Transys {
         let bad_latch = self.new_var().lit();
         let bad_next = self.new_var().lit();
         let trans = vec![
-            Clause::from([bad, !bad_latch]),
-            Clause::from([!bad, bad_latch]),
+            Clause::from([bad_next, !bad]),
+            Clause::from([!bad_next, bad]),
         ];
-        self.add_latch(bad_latch.var(), bad_next, None, trans, vec![bad.var()]);
+        self.latchs.push(bad_latch.var());
+        self.init_map[bad_latch.var()] = None;
+        self.is_latch[bad_latch.var()] = true;
+        self.next_map[bad_latch] = bad_next;
+        self.next_map[!bad_latch] = !bad_next;
+        self.prev_map[bad_next] = bad_latch;
+        self.prev_map[!bad_next] = !bad_latch;
+        self.max_latch = self.max_latch.max(bad_latch.var());
+        self.dependence[bad_next.var()] = vec![bad.var()];
+        for t in trans {
+            self.trans.push(t);
+        }
         self.bad = Cube::from([bad_latch]);
     }
 

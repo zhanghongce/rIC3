@@ -135,7 +135,10 @@ impl IC3 {
 }
 
 impl IC3 {
-    pub fn new(options: Options, ts: Transys) -> Self {
+    pub fn new(options: Options, mut ts: Transys) -> Self {
+        if options.ic3_options.bwd {
+            ts = ts.reverse();
+        }
         let ts = Rc::new(ts);
         let statistic = Statistic::new(&options.model);
         let activity = Activity::new(&ts);

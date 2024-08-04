@@ -246,6 +246,9 @@ impl IC3 {
                 None => (),
             }
         }
+        if self.options.ic3_options.bwd {
+            return (latchs, inputs);
+        }
         self.activity.sort_by_activity(&mut latchs, false);
         assumption.extend_from_slice(&latchs);
         let res: Cube = if self.lift.solver.solve(&assumption) {
