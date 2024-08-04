@@ -4,7 +4,7 @@ use std::{
     env::current_exe,
     mem::take,
     process::{Command, Stdio},
-    sync::mpsc::channel,
+    sync::{Arc, Condvar, Mutex},
     thread::spawn,
 };
 
@@ -43,13 +43,14 @@ impl Portfolio {
     }
 
     pub fn check(&mut self) -> bool {
-        let (tx, rx) = channel::<(String, bool)>();
         let mut engines = Vec::new();
+        let result = Arc::new((Mutex::new(None), Condvar::new()));
+        let lock = result.0.lock().unwrap();
         for mut engine in take(&mut self.engines) {
             let mut child = engine.stderr(Stdio::piped()).spawn().unwrap();
             engines.push(child.id() as i32);
-            let tx = tx.clone();
             let option = self.option.clone();
+            let result = result.clone();
             spawn(move || {
                 let config = engine
                     .get_args()
@@ -60,36 +61,43 @@ impl Portfolio {
                 if option.verbose > 1 {
                     println!("start engine: {config}");
                 }
-                let output = child
+                let status = child
                     .controlled()
                     .memory_limit(1024 * 1024 * 1024 * 16)
                     .wait()
+                    .unwrap()
                     .unwrap();
-                if let Some(status) = output {
-                    let res = match status.code() {
-                        Some(10) => false,
-                        Some(20) => true,
-                        e => {
-                            if option.verbose > 0 {
-                                println!("{config} unsuccessfully exited, exit code: {:?}", e);
-                            }
-                            return;
+                let res = match status.code() {
+                    Some(10) => false,
+                    Some(20) => true,
+                    e => {
+                        if option.verbose > 0 && result.0.lock().unwrap().is_none() {
+                            println!("{config} unsuccessfully exited, exit code: {:?}", e);
                         }
-                    };
-                    let _ = tx.send((config, res));
-                } else {
-                    let _ = child.kill();
+                        return;
+                    }
                 };
+                let mut lock = result.0.lock().unwrap();
+                if lock.is_none() {
+                    *lock = Some((res, config));
+                    result.1.notify_one();
+                }
             });
         }
-        let (config, res) = rx.recv().unwrap();
-        println!("best configuration: {config}");
-        for pid in engines {
-            let _ = nix::sys::signal::kill(
-                nix::unistd::Pid::from_raw(pid),
-                nix::sys::signal::Signal::SIGKILL,
-            );
+        let result = result.1.wait(lock).unwrap();
+        let (res, config) = result.as_ref().unwrap();
+        println!("best configuration: {}", config);
+        let mut cmd = "(".to_string();
+        for (i, pid) in engines.into_iter().enumerate() {
+            if i != 0 {
+                cmd.push_str(" && ");
+            }
+            cmd.push_str(&format!(r#"(pstree -p {})"#, pid));
         }
-        res
+        cmd.push_str(&format!(
+            r#") | grep -oP '\(\K\d+' | sort -u | xargs -n 1 kill -9"#
+        ));
+        Command::new("sh").args(["-c", &cmd]).output().unwrap();
+        *res
     }
 }
