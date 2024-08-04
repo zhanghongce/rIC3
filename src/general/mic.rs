@@ -3,16 +3,9 @@ use logic_form::{Cube, Lit};
 use std::{collections::HashSet, time::Instant};
 
 impl IC3 {
-    fn ctg_down(
-        &mut self,
-        frame: usize,
-        cube: &Cube,
-        _keep: &HashSet<Lit>,
-        level: usize,
-    ) -> Option<Cube> {
-        let cube = cube.clone();
+    fn down(&mut self, frame: usize, cube: &Cube, keep: &HashSet<Lit>) -> Option<Cube> {
+        let mut cube = cube.clone();
         self.statistic.num_down += 1;
-        // let mut ctgs = 0;
         loop {
             if self.ts.cube_subsume_init(&cube) {
                 return None;
@@ -21,41 +14,64 @@ impl IC3 {
                 BlockResult::Yes(blocked) => {
                     return Some(self.inductive_core(blocked));
                 }
-                BlockResult::No(_) => {
-                    if level == 0 {
-                        return None;
+                BlockResult::No(unblocked) => {
+                    let mut cube_new = Cube::new();
+                    for lit in cube {
+                        if let Some(true) = unblocked.lit_value(lit) {
+                            cube_new.push(lit);
+                        } else if keep.contains(&lit) {
+                            return None;
+                        }
                     }
-                    todo!();
-                    //     let model = self.unblocked_model(unblocked);
-                    //     if ctgs < 3 && frame > 1 && !self.model.cube_subsume_init(&model) {
-                    //         if let BlockResult::Yes(blocked) =
-                    //             self.blocked_with_ordered(frame - 1, &model, false, true)
-                    //         {
-                    //             ctgs += 1;
-                    //             let conflict = self.blocked_conflict(blocked);
-                    //             let conflict = self.mic(frame - 1, conflict, level - 1);
-                    //             let mut i = frame;
-                    //             while i <= self.depth() {
-                    //                 if let BlockResult::No(_) = self.blocked(i, &conflict, true) {
-                    //                     break;
-                    //                 }
-                    //                 i += 1;
-                    //             }
-                    //             self.add_cube(i - 1, conflict);
-                    //             continue;
-                    //         }
-                    //     }
-                    //     ctgs = 0;
-                    //     let cex_set: HashSet<Lit> = HashSet::from_iter(model);
-                    //     let mut cube_new = Cube::new();
-                    //     for lit in cube {
-                    //         if cex_set.contains(&lit) {
-                    //             cube_new.push(lit);
-                    //         } else if keep.contains(&lit) {
-                    //             return DownResult::Fail(unblocked);
-                    //         }
-                    //     }
-                    //     cube = cube_new;
+                    cube = cube_new;
+                }
+            }
+        }
+    }
+
+    fn ctg_down(
+        &mut self,
+        frame: usize,
+        cube: &Cube,
+        keep: &HashSet<Lit>,
+        level: usize,
+    ) -> Option<Cube> {
+        let mut cube = cube.clone();
+        self.statistic.num_down += 1;
+        let mut ctgs = 0;
+        loop {
+            if self.ts.cube_subsume_init(&cube) {
+                return None;
+            }
+            match self.blocked_with_ordered(frame, &cube, false, true) {
+                BlockResult::Yes(blocked) => {
+                    return Some(self.inductive_core(blocked));
+                }
+                BlockResult::No(unblocked) => {
+                    let (model, _) = self.get_predecessor(unblocked);
+                    if ctgs < 3 && frame > 1 && !self.ts.cube_subsume_init(&model) {
+                        if let BlockResult::Yes(blocked) =
+                            self.blocked_with_ordered(frame - 1, &model, false, true)
+                        {
+                            ctgs += 1;
+                            let core = self.inductive_core(blocked);
+                            let mic = self.mic(frame - 1, core, level - 1);
+                            let (frame, mic) = self.push_lemma(frame - 1, mic);
+                            self.add_lemma(frame - 1, mic, false, None);
+                            continue;
+                        }
+                    }
+                    ctgs = 0;
+                    let cex_set: HashSet<Lit> = HashSet::from_iter(model);
+                    let mut cube_new = Cube::new();
+                    for lit in cube {
+                        if cex_set.contains(&lit) {
+                            cube_new.push(lit);
+                        } else if keep.contains(&lit) {
+                            return None;
+                        }
+                    }
+                    cube = cube_new;
                 }
             }
         }
@@ -97,7 +113,12 @@ impl IC3 {
             }
             let mut removed_cube = cube.clone();
             removed_cube.remove(i);
-            if let Some(new_cube) = self.ctg_down(frame, &removed_cube, &keep, level) {
+            let res = if level == 0 {
+                self.down(frame, &removed_cube, &keep)
+            } else {
+                self.ctg_down(frame, &removed_cube, &keep, level)
+            };
+            if let Some(new_cube) = res {
                 self.statistic.mic_drop.success();
                 (cube, i) = self.handle_down_success(frame, cube, i, new_cube);
             } else {
