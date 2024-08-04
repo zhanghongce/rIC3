@@ -26,7 +26,7 @@ impl Transys {
         for t in trans {
             self.trans.push(t);
         }
-        self.bad = Cube::from([bad_latch]);
+        self.bad = Cube::from([bad_next]);
     }
 
     pub fn reverse(&self) -> Self {
@@ -46,6 +46,7 @@ impl Transys {
         for l in latchs.iter() {
             is_latch[*l] = true;
         }
+        let max_latch = *latchs.iter().max().unwrap();
         Self {
             inputs: res.inputs,
             latchs,
@@ -59,7 +60,7 @@ impl Transys {
             next_map: res.prev_map,
             prev_map: res.next_map,
             dependence: res.dependence,
-            max_latch: res.max_latch,
+            max_latch,
             latch_group: res.latch_group,
             groups: res.groups,
         }

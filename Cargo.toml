@@ -25,5 +25,5 @@ procspawn = "1.0.0"
 btor2 = { path = "../btor2-rs" }
 
 [features]
-default = ["no_bound_check"]
+default = []
 no_bound_check = ["logic-form/no_bound_check", "giputils/no_bound_check"]
