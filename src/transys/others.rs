@@ -5,6 +5,9 @@ impl Transys {
     pub fn encode_bad_to_latch(&mut self) {
         assert!(self.bad.len() == 1);
         let bad = self.bad[0];
+        if self.is_latch(bad.var()) {
+            return;
+        }
         let bad_latch = self.new_var().lit();
         let bad_next = self.new_var().lit();
         let trans = vec![
