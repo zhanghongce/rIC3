@@ -95,12 +95,16 @@ impl IC3 {
         todo!()
     }
 
-    pub fn check_witness(&mut self, mut bad: ProofObligation) -> Option<Lit> {
-        while bad.next.is_some() {
-            let next = bad.next.clone().unwrap();
+    pub fn check_witness(&mut self, b: ProofObligation) -> Option<Lit> {
+        let mut b = Some(b);
+        while let Some(bad) = b {
+            let imply = if let Some(next) = bad.next.clone() {
+                self.ts.cube_next(&next.lemma)
+            } else {
+                self.ts.bad.clone()
+            };
             let mut assump = bad.lemma.deref().clone();
             assump.extend_from_slice(&bad.input);
-            let imply = self.ts.cube_next(&next.lemma);
             self.lift.imply(
                 imply
                     .iter()
@@ -127,7 +131,7 @@ impl IC3 {
             {
                 return Some(*v);
             }
-            bad = next;
+            b = bad.next.clone();
         }
         if self.options.verbose > 0 {
             println!("witness checking passed");
