@@ -517,6 +517,12 @@ impl IC3 {
                 .lift
                 .solve_with_domain(&lift_assump, constrain, true, false)
             else {
+                for l in cls
+                    .iter()
+                    .filter(|l| !self.lift.sat_value(**l).is_some_and(|v| !v))
+                {
+                    dbg!(l);
+                }
                 panic!();
             };
             let olen = latchs.len();
