@@ -1,6 +1,10 @@
-use crate::{proofoblig::ProofObligation, transys::Transys, IC3};
+use crate::{
+    proofoblig::ProofObligation,
+    transys::{unroll::TransysUnroll, Transys},
+    IC3,
+};
 // use aig::AigEdge;
-use logic_form::{Clause, Lemma, Lit};
+use logic_form::{Clause, Cube, Lemma, Lit};
 use minisat::Solver;
 use satif::Satif;
 use std::{
@@ -137,5 +141,49 @@ impl IC3 {
             println!("witness checking passed");
         }
         None
+    }
+
+    fn check_witness_with_constrain(
+        &mut self,
+        solver: &mut cadical::Solver,
+        uts: &TransysUnroll,
+        constrain: &Cube,
+    ) -> bool {
+        let mut assumps = Cube::new();
+        for k in 0..=uts.num_unroll {
+            assumps.extend_from_slice(&uts.lits_next(constrain, k));
+        }
+        assumps.extend_from_slice(&uts.lits_next(&uts.ts.bad, uts.num_unroll));
+        solver.solve(&assumps)
+    }
+
+    pub fn check_witness_by_bmc(&mut self, b: ProofObligation) -> Option<Cube> {
+        dbg!(b.depth);
+        let mut uts = TransysUnroll::new(&self.ts);
+        uts.unroll_to(b.depth);
+        let mut solver = cadical::Solver::new();
+        for k in 0..=b.depth {
+            uts.load_trans(&mut solver, k, false);
+        }
+        uts.ts.load_init(&mut solver);
+        let mut cst = uts.ts.constraints.clone();
+        if self.check_witness_with_constrain(&mut solver, &uts, &cst) {
+            if self.options.verbose > 0 {
+                println!("witness checking passed");
+            }
+            None
+        } else {
+            let mut i = 0;
+            while i < cst.len() {
+                let mut drop = cst.clone();
+                drop.remove(i);
+                if self.check_witness_with_constrain(&mut solver, &uts, &drop) {
+                    i += 1;
+                } else {
+                    cst = drop;
+                }
+            }
+            Some(cst)
+        }
     }
 }
