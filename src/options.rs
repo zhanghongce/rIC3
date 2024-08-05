@@ -98,6 +98,9 @@ pub struct IC3Options {
 
 #[derive(Args, Clone, Debug)]
 pub struct BMCOptions {
+    /// bmc single step time limit
+    #[arg(long = "bmc-time-limit", requires = "bmc")]
+    pub time_limit: Option<usize>,
     /// use kissat solver, otherwise cadical
     #[arg(long = "bmc-kissat", default_value_t = false, requires = "bmc")]
     pub kissat: bool,
