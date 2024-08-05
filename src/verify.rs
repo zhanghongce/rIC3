@@ -158,7 +158,6 @@ impl IC3 {
     }
 
     pub fn check_witness_by_bmc(&mut self, b: ProofObligation) -> Option<Cube> {
-        dbg!(b.depth);
         let mut uts = TransysUnroll::new(&self.ts);
         uts.unroll_to(b.depth);
         let mut solver = cadical::Solver::new();
@@ -175,6 +174,10 @@ impl IC3 {
         } else {
             let mut i = 0;
             while i < cst.len() {
+                if self.abs_cst.contains(&cst[i]) {
+                    i += 1;
+                    continue;
+                }
                 let mut drop = cst.clone();
                 drop.remove(i);
                 if self.check_witness_with_constrain(&mut solver, &uts, &drop) {
@@ -183,6 +186,8 @@ impl IC3 {
                     cst = drop;
                 }
             }
+            cst.retain(|l| !self.abs_cst.contains(l));
+            assert!(!cst.is_empty());
             Some(cst)
         }
     }
