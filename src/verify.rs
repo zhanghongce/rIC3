@@ -115,7 +115,15 @@ impl IC3 {
                 .ts
                 .constraints
                 .iter()
-                .find(|l| !self.lift.sat_value(**l).is_some_and(|v| v))
+                .find(|l| self.lift.sat_value(**l).is_some_and(|v| !v))
+            {
+                return Some(*v);
+            }
+            if let Some(v) = self
+                .ts
+                .constraints
+                .iter()
+                .find(|l| self.lift.sat_value(**l).is_none())
             {
                 return Some(*v);
             }
