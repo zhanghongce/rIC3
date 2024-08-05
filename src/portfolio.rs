@@ -30,7 +30,7 @@ impl Portfolio {
         // ic3 with ctg
         new_engine(&["--ic3", "--ic3-ctg"]);
         // ic3 with xor
-        new_engine(&["--ic3", "--ic3-bwd", "--ic3-ctg"]);
+        new_engine(&["--ic3", "--ic3-abs-cst"]);
         // bmc
         new_engine(&["--bmc", "--step", "10"]);
         // bmc kissat step 70

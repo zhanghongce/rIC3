@@ -282,13 +282,6 @@ impl IC3 {
         let frame = Frames::new(&ts);
         let lift = Solver::new(options.clone(), None, &ts, &frame);
         let abs_cst = if options.ic3_options.abs_cst {
-            // let mut t = Cube::new();
-            // t.push(ts.constraints[0]);
-            // t.push(ts.constraints[1]);
-            // t.push(ts.constraints[2]);
-            // t.push(ts.constraints[5]);
-            // t.push(ts.constraints[6]);
-            // t
             Cube::new()
         } else {
             ts.constraints.clone()
