@@ -127,14 +127,22 @@ impl IC3 {
             if po.removed {
                 continue;
             }
-            if po.frame == 0 {
-                assert!(self.check_witness(po.clone()));
-                self.add_obligation(po);
-                return Some(false);
-            }
             if self.ts.cube_subsume_init(&po.lemma) {
-                assert!(self.check_witness(po.clone()));
-                return Some(false);
+                assert!(po.frame == 0 || self.options.ic3_options.abs_cst);
+                if let Some(c) = self.check_witness(po.clone()) {
+                    assert!(self.options.ic3_options.abs_cst);
+                    assert!(!self.abs_cst.contains(&c));
+                    self.abs_cst.push(c);
+                    self.obligations.clear();
+                    for f in self.frame.iter_mut() {
+                        for l in f.iter_mut() {
+                            l.po = None;
+                        }
+                    }
+                    continue;
+                } else {
+                    return Some(false);
+                }
             }
             if let Some((bf, _)) = self.frame.trivial_contained(po.frame, &po.lemma) {
                 po.frame = bf + 1;

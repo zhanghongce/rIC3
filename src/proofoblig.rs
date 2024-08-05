@@ -169,6 +169,13 @@ impl ProofObligationQueue {
         ret
     }
 
+    pub fn clear(&mut self) {
+        self.obligations.clear();
+        for n in self.num.iter_mut() {
+            *n = 0;
+        }
+    }
+
     pub fn statistic(&self) {
         println!("{:?}", self.num);
     }
