@@ -128,7 +128,10 @@ impl IC3 {
                 continue;
             }
             if self.ts.cube_subsume_init(&po.lemma) {
-                assert!(po.frame == 0 || self.options.ic3_options.abs_cst);
+                if !self.options.ic3_options.abs_cst {
+                    assert!(po.frame == 0);
+                    return Some(false);
+                }
                 if let Some(c) = self.check_witness_by_bmc(po.clone()) {
                     assert!(self.options.ic3_options.abs_cst);
                     for c in c {
