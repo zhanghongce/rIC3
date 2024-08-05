@@ -90,6 +90,10 @@ pub struct IC3Options {
     /// ic3 with backward
     #[arg(long = "ic3-bwd", default_value_t = false, requires = "ic3")]
     pub bwd: bool,
+
+    /// ic3 with abstract constrains
+    #[arg(long = "ic3-abs-cst", default_value_t = false, requires = "ic3")]
+    pub abs_cst: bool,
 }
 
 #[derive(Args, Clone, Debug)]

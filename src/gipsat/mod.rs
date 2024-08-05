@@ -464,7 +464,7 @@ impl IC3 {
     pub fn get_predecessor(&mut self, frame: usize, strengthen: bool) -> (Cube, Cube) {
         let solver = &mut self.solvers[frame - 1];
         let mut cls = solver.assump.clone();
-        cls.extend_from_slice(&self.ts.constraints);
+        cls.extend_from_slice(&self.abs_cst);
         let in_cls: HashSet<Var> = HashSet::from_iter(cls.iter().map(|l| l.var()));
         let cls = !cls;
         let mut inputs = Cube::new();

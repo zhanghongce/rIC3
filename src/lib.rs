@@ -42,9 +42,9 @@ pub struct IC3 {
     activity: Activity,
     statistic: Statistic,
     pre_lemmas: Vec<Clause>,
+    abs_cst: Cube,
 
     auxiliary_var: Vec<Var>,
-
     xor_var: HashMap<(Lit, Lit), Lit>,
 }
 
@@ -128,15 +128,13 @@ impl IC3 {
                 continue;
             }
             if po.frame == 0 {
+                assert!(self.check_witness(po.clone()));
                 self.add_obligation(po);
                 return Some(false);
             }
-            // self.sbvb();
             if self.ts.cube_subsume_init(&po.lemma) {
-                assert!(!self.solvers[0]
-                    .solve_with_domain(&po.lemma, vec![], true, false)
-                    .unwrap());
-                todo!();
+                assert!(self.check_witness(po.clone()));
+                return Some(false);
             }
             if let Some((bf, _)) = self.frame.trivial_contained(po.frame, &po.lemma) {
                 po.frame = bf + 1;
@@ -273,6 +271,11 @@ impl IC3 {
         let activity = Activity::new(&ts);
         let frame = Frames::new(&ts);
         let lift = Solver::new(options.clone(), None, &ts, &frame);
+        let abs_cst = if options.ic3_options.abs_cst {
+            Cube::new()
+        } else {
+            ts.constraints.clone()
+        };
         let mut res = Self {
             options,
             ts,
@@ -282,6 +285,7 @@ impl IC3 {
             statistic,
             obligations: ProofObligationQueue::new(),
             frame,
+            abs_cst,
             pre_lemmas,
             auxiliary_var: Vec::new(),
             xor_var: HashMap::new(),

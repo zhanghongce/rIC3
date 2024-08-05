@@ -1,4 +1,4 @@
-use crate::{transys::Transys, IC3};
+use crate::{proofoblig::ProofObligation, transys::Transys, IC3};
 // use aig::AigEdge;
 use logic_form::{Clause, Lemma};
 use minisat::Solver;
@@ -93,5 +93,37 @@ impl IC3 {
         //     false
         // }
         todo!()
+    }
+
+    pub fn check_witness(&mut self, mut bad: ProofObligation) -> bool {
+        while bad.next.is_some() {
+            let next = bad.next.clone().unwrap();
+            let mut assump = bad.lemma.deref().clone();
+            assump.extend_from_slice(&bad.input);
+            let imply = self.ts.cube_next(&next.lemma);
+            self.lift.imply(
+                imply
+                    .iter()
+                    .chain(self.ts.constraints.iter())
+                    .map(|l| l.var()),
+                assump.iter(),
+            );
+            assert!(imply
+                .iter()
+                .all(|l| self.lift.sat_value(*l).is_some_and(|v| v)));
+            if self
+                .ts
+                .constraints
+                .iter()
+                .any(|l| !self.lift.sat_value(*l).is_some_and(|v| v))
+            {
+                todo!();
+            }
+            bad = next;
+        }
+        if self.options.verbose > 0 {
+            println!("witness checking passed");
+        }
+        true
     }
 }
