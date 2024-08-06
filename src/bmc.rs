@@ -10,6 +10,7 @@ use satif::Satif;
 use std::{
     io::Write,
     process::{Command, Stdio},
+    time::Duration,
 };
 
 pub struct BMC {
@@ -65,7 +66,18 @@ impl BMC {
             for b in self.uts.lits_next(&self.uts.ts.bad, k) {
                 solver.add_clause(&[b]);
             }
-            if solver.solve(&[]) {
+            let r = if let Some(limit) = self.options.bmc_options.time_limit {
+                let Some(r) = solver.solve_with_limit(&[], Duration::from_secs(limit)) else {
+                    if self.options.verbose > 0 {
+                        println!("bmc solve timeout in depth {k}");
+                    }
+                    continue;
+                };
+                r
+            } else {
+                solver.solve(&[])
+            };
+            if r {
                 if self.options.verbose > 0 {
                     println!("bmc found cex in depth {k}");
                 }

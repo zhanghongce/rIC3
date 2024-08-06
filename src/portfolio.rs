@@ -27,15 +27,14 @@ impl Portfolio {
         new_engine(&["--ic3", "--ic3-ctg"]);
         new_engine(&["--ic3", "--ic3-ctg", "--ic3-ctp"]);
         new_engine(&["--ic3", "--ic3-ctg", "--ic3-inn"]);
+        new_engine(&["--ic3", "--ic3-ctg", "--ic3-ctp", "--ic3-inn"]);
         new_engine(&["--ic3", "--ic3-abs-cst", "--ic3-ctg", "--ic3-inn"]);
-        // bmc
+        new_engine(&["--ic3", "--ic3-bwd", "--ic3-ctg"]);
+
         new_engine(&["--bmc", "--step", "10"]);
-        // bmc kissat step 70
         new_engine(&["--bmc", "--bmc-kissat", "--step", "70"]);
-        // bmc kissat step 130
         new_engine(&["--bmc", "--bmc-kissat", "--step", "135"]);
-        // kind
-        new_engine(&["--kind", "--step", "10", "--kind-no-bmc"]);
+        new_engine(&["--kind", "--step", "1"]);
         Self { option, engines }
     }
 
