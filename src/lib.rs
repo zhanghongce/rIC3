@@ -251,13 +251,13 @@ impl IC3 {
                         break;
                     }
                     let (ctp, _) = self.get_predecessor(frame_idx + 1, false);
-                    if self.solvers[frame_idx]
+                    if self.solvers[frame_idx - 1]
                         .inductive(&ctp, true, false)
                         .unwrap()
                     {
-                        let core = self.solvers[frame_idx].inductive_core();
-                        let mic = self.mic(frame_idx + 1, core, 0, &[]);
-                        self.add_lemma(frame_idx + 1, mic, false, None);
+                        let core = self.solvers[frame_idx - 1].inductive_core();
+                        let mic = self.mic(frame_idx, core, 0, &[]);
+                        self.add_lemma(frame_idx, mic, false, None);
                     } else {
                         break;
                     }
