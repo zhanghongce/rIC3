@@ -251,9 +251,10 @@ impl IC3 {
                         break;
                     }
                     let (ctp, _) = self.get_predecessor(frame_idx + 1, false);
-                    if self.solvers[frame_idx - 1]
-                        .inductive(&ctp, true, false)
-                        .unwrap()
+                    if !self.ts.cube_subsume_init(&ctp)
+                        && self.solvers[frame_idx - 1]
+                            .inductive(&ctp, true, false)
+                            .unwrap()
                     {
                         let core = self.solvers[frame_idx - 1].inductive_core();
                         let mic = self.mic(frame_idx, core, 0, &[]);
