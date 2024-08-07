@@ -24,7 +24,7 @@ use frame::{Frame, Frames};
 use gipsat::Solver;
 use logic_form::{Clause, Cube, Lemma, Lit, Var};
 pub use options::Options;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::panic::{self, AssertUnwindSafe};
 use std::process::exit;
 use std::rc::Rc;
@@ -43,6 +43,7 @@ pub struct IC3 {
     statistic: Statistic,
     pre_lemmas: Vec<Clause>,
     abs_cst: Cube,
+    abs_trans: HashSet<Var>,
 
     auxiliary_var: Vec<Var>,
     xor_var: HashMap<(Lit, Lit), Lit>,
@@ -128,18 +129,21 @@ impl IC3 {
                 continue;
             }
             if self.ts.cube_subsume_init(&po.lemma) {
-                if !self.options.ic3_options.abs_cst {
+                if !self.options.ic3_options.abs_cst && !self.options.ic3_options.abs_trans {
                     assert!(po.frame == 0);
                     return Some(false);
                 }
                 if let Some(c) = self.check_witness_by_bmc(po.clone()) {
-                    assert!(self.options.ic3_options.abs_cst);
                     for c in c {
                         assert!(!self.abs_cst.contains(&c));
                         self.abs_cst.push(c);
                     }
                     if self.options.verbose > 1 {
-                        println!("abs cst len: {}", self.abs_cst.len());
+                        println!(
+                            "abs cst len: {}, abs trans len: {}",
+                            self.abs_cst.len(),
+                            self.abs_trans.len()
+                        );
                     }
                     self.obligations.clear();
                     for f in self.frame.iter_mut() {
@@ -293,6 +297,11 @@ impl IC3 {
         } else {
             ts.constraints.clone()
         };
+        let abs_trans = if options.ic3_options.abs_trans {
+            HashSet::new()
+        } else {
+            HashSet::from_iter(ts.latchs.iter().copied())
+        };
         let mut res = Self {
             options,
             ts,
@@ -303,6 +312,7 @@ impl IC3 {
             obligations: ProofObligationQueue::new(),
             frame,
             abs_cst,
+            abs_trans,
             pre_lemmas,
             auxiliary_var: Vec::new(),
             xor_var: HashMap::new(),
