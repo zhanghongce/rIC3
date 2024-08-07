@@ -1,5 +1,5 @@
 use crate::{proofoblig::ProofObligation, transys::Transys, IC3};
-use logic_form::{Cube, Lemma, LitSet};
+use logic_form::{Cube, Lemma, Lit, LitSet};
 use std::{
     collections::HashSet,
     ops::{Deref, DerefMut},
@@ -140,6 +140,30 @@ impl Frames {
             if c.subsume(lemma) {
                 res.push(c.lemma.clone());
             }
+        }
+        res
+    }
+
+    pub fn similar(&self, cube: &[Lit], frame: usize) -> Vec<Cube> {
+        let cube_set: HashSet<Lit> = HashSet::from_iter(cube.iter().copied());
+        let mut res = HashSet::new();
+        for frame in self.frames[frame..].iter() {
+            for lemma in frame.iter() {
+                let sec: Cube = lemma
+                    .iter()
+                    .filter(|l| cube_set.contains(l))
+                    .copied()
+                    .collect();
+                if sec.len() != cube.len() && sec.len() * 2 >= cube.len() {
+                    res.insert(sec);
+                }
+            }
+        }
+        let mut res = Vec::from_iter(res.into_iter());
+        res.sort_by_key(|x| x.len());
+        res.reverse();
+        if res.len() > 3 {
+            res.truncate(3);
         }
         res
     }

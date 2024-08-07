@@ -164,7 +164,6 @@ impl IC3 {
         level: usize,
         constrain: &[Clause],
     ) -> Cube {
-        let mut cex = Vec::new();
         let start = Instant::now();
         if level == 0 {
             self.solvers[frame - 1].set_domain(
@@ -177,6 +176,7 @@ impl IC3 {
         }
         self.statistic.avg_mic_cube_len += cube.len();
         self.statistic.num_mic += 1;
+        let mut cex = Vec::new();
         self.activity.sort_by_activity(&mut cube, true);
         let mut keep = HashSet::new();
         let mut i = 0;
@@ -213,6 +213,28 @@ impl IC3 {
         }
         if level == 0 {
             self.solvers[frame - 1].unset_domain();
+        }
+        self.activity.bump_cube_activity(&cube);
+        self.statistic.overall_mic_time += start.elapsed();
+        cube
+    }
+
+    pub fn lazy_mic(&mut self, frame: usize, mut cube: Cube, level: usize) -> Cube {
+        let start = Instant::now();
+        self.statistic.avg_mic_cube_len += cube.len();
+        self.statistic.num_mic += 1;
+        let mut cex = Vec::new();
+        let keep = HashSet::new();
+        for similar in self.frame.similar(&cube, frame) {
+            let mic = if level > 0 {
+                self.ctg_down(frame, &similar, &keep, &cube)
+            } else {
+                self.down(frame, &similar, &keep, &cube, &[], &mut cex)
+            };
+            if let Some(new_cube) = mic {
+                cube = new_cube;
+                break;
+            }
         }
         self.activity.bump_cube_activity(&cube);
         self.statistic.overall_mic_time += start.elapsed();
