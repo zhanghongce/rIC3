@@ -34,6 +34,14 @@ impl Portfolio {
         new_engine(&["--bmc", "--step", "10"]);
         new_engine(&["--bmc", "--bmc-kissat", "--step", "70"]);
         new_engine(&["--bmc", "--bmc-kissat", "--step", "135"]);
+        new_engine(&[
+            "--bmc",
+            "--bmc-kissat",
+            "--bmc-time-limit",
+            "100",
+            "--step",
+            "100",
+        ]);
         new_engine(&["--kind", "--step", "1"]);
         Self { option, engines }
     }
