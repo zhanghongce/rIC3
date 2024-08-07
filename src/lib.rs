@@ -138,6 +138,9 @@ impl IC3 {
                         assert!(!self.abs_cst.contains(&c));
                         self.abs_cst.push(c);
                     }
+                    if self.options.verbose > 1 {
+                        println!("abs cst len: {}", self.abs_cst.len());
+                    }
                     self.obligations.clear();
                     for f in self.frame.iter_mut() {
                         for l in f.iter_mut() {
@@ -154,7 +157,7 @@ impl IC3 {
                 self.add_obligation(po);
                 continue;
             }
-            if self.options.verbose > 1 {
+            if self.options.verbose > 2 {
                 self.frame.statistic();
             }
             if self

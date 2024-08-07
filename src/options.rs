@@ -94,6 +94,10 @@ pub struct IC3Options {
     /// ic3 with abstract constrains
     #[arg(long = "ic3-abs-cst", default_value_t = false, requires = "ic3")]
     pub abs_cst: bool,
+
+    /// ic3 with abstract trans
+    #[arg(long = "ic3-abs-trans", default_value_t = false, requires = "ic3")]
+    pub abs_trans: bool,
 }
 
 #[derive(Args, Clone, Debug)]
