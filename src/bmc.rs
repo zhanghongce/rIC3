@@ -2,16 +2,8 @@ use crate::{
     transys::{unroll::TransysUnroll, Transys},
     Options,
 };
-use logic_form::{
-    dimacs::{from_dimacs_str, to_dimacs},
-    Clause,
-};
 use satif::Satif;
-use std::{
-    io::Write,
-    process::{Command, Stdio},
-    time::Duration,
-};
+use std::time::Duration;
 
 pub struct BMC {
     uts: TransysUnroll,
@@ -94,19 +86,4 @@ impl BMC {
             self.check_with_cadical()
         }
     }
-}
-
-pub fn sbva(cnf: &[Clause]) -> Vec<Clause> {
-    let mut command = Command::new("../SBVA/sbva");
-    let mut sbva = command
-        .stdin(Stdio::piped())
-        .stdout(Stdio::piped())
-        .spawn()
-        .unwrap();
-    let stdin = sbva.stdin.as_mut().unwrap();
-    let cnf = to_dimacs(cnf);
-    stdin.write_all(cnf.as_bytes()).unwrap();
-    let out = sbva.wait_with_output().unwrap();
-    let simp = String::from_utf8(out.stdout).unwrap();
-    from_dimacs_str(&simp)
 }
