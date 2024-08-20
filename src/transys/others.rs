@@ -37,10 +37,10 @@ impl Transys {
             .collect();
         let bad = res.bad[0];
         let mut init_map = VarMap::new();
-        init_map.reserve(Var::new(res.num_var));
+        init_map.reserve(res.max_var);
         init_map[bad.var()] = Some(bad.polarity());
         let mut is_latch = VarMap::new();
-        is_latch.reserve(Var::new(res.num_var));
+        is_latch.reserve(res.max_var);
         for l in latchs.iter() {
             is_latch[*l] = true;
         }
@@ -53,14 +53,12 @@ impl Transys {
             init_map,
             constraints: res.constraints,
             trans: res.trans,
-            num_var: res.num_var,
+            max_var: res.max_var,
             is_latch,
             next_map: res.prev_map,
             prev_map: res.next_map,
             dependence: res.dependence,
             max_latch,
-            latch_group: res.latch_group,
-            groups: res.groups,
         }
     }
 }

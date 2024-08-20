@@ -7,19 +7,19 @@ use std::collections::HashSet;
 pub struct TransysUnroll {
     pub ts: Transys,
     pub num_unroll: usize,
-    pub num_var: usize,
+    pub max_var: Var,
     next_map: LitMap<Vec<Lit>>,
 }
 
 impl TransysUnroll {
     pub fn new(ts: &Transys) -> Self {
         let mut next_map: LitMap<Vec<_>> = LitMap::new();
-        next_map.reserve(Var::new(ts.num_var));
+        next_map.reserve(ts.max_var);
         let false_lit = Lit::constant_lit(false);
         next_map[false_lit].push(false_lit);
         next_map[!false_lit].push(!false_lit);
-        for v in 0..ts.num_var {
-            let l = Var::new(v).lit();
+        for v in Var::new(0)..=ts.max_var {
+            let l = v.lit();
             if next_map[l].is_empty() {
                 next_map[l].push(l);
                 next_map[!l].push(!l);
@@ -34,7 +34,7 @@ impl TransysUnroll {
         Self {
             ts: ts.clone(),
             num_unroll: 0,
-            num_var: ts.num_var,
+            max_var: ts.max_var,
             next_map,
         }
     }
@@ -57,11 +57,11 @@ impl TransysUnroll {
         let false_lit = Lit::constant_lit(false);
         self.next_map[false_lit].push(false_lit);
         self.next_map[!false_lit].push(!false_lit);
-        for v in 0..self.ts.num_var {
-            let l = Var::new(v).lit();
+        for v in Var::new(0)..=self.ts.max_var {
+            let l = v.lit();
             if self.next_map[l].len() == self.num_unroll + 1 {
-                let new = Var::new(self.num_var).lit();
-                self.num_var += 1;
+                self.max_var += 1;
+                let new = self.max_var.lit();
                 self.next_map[l].push(new);
                 self.next_map[!l].push(!new);
             }
@@ -83,9 +83,7 @@ impl TransysUnroll {
     }
 
     pub fn load_trans(&self, satif: &mut impl Satif, u: usize, constrain: bool) {
-        while satif.num_var() < self.num_var {
-            satif.new_var();
-        }
+        satif.new_var_to(self.max_var);
         for c in self.ts.trans.iter() {
             let c: Vec<Lit> = c.iter().map(|l| self.lit_next(*l, u)).collect();
             satif.add_clause(&c);
@@ -202,15 +200,15 @@ impl TransysUnroll {
             trans.push(self.lits_next(&c, 1));
         }
         let mut dependence = self.ts.dependence.clone();
-        dependence.reserve(Var::new(self.num_var));
+        dependence.reserve(self.max_var);
         let mut next_map = self.ts.next_map.clone();
         let mut prev_map = self.ts.prev_map.clone();
         let mut is_latch = self.ts.is_latch.clone();
-        next_map.reserve(Var::new(self.num_var));
-        prev_map.reserve(Var::new(self.num_var));
-        is_latch.reserve(Var::new(self.num_var));
-        for i in 1..self.ts.num_var {
-            let l = Var::new(i).lit();
+        next_map.reserve(self.max_var);
+        prev_map.reserve(self.max_var);
+        is_latch.reserve(self.max_var);
+        for v in Var::new(1)..=self.ts.max_var {
+            let l = v.lit();
             let n = self.lit_next(l, 1);
             next_map[l] = n;
             prev_map[n] = l;
@@ -224,15 +222,14 @@ impl TransysUnroll {
             }
         }
         let mut keep: HashSet<Var> = HashSet::from_iter(self.ts.inputs.iter().cloned());
-        for i in 0..self.ts.num_var {
+        for i in 0..self.ts.num_var() {
             let v = Var::new(i);
             if dependence[v].iter().any(|d| keep.contains(d)) {
                 keep.insert(v);
             }
         }
         let mut latchs = Vec::new();
-        for i in 1..self.ts.num_var {
-            let v = Var::new(i);
+        for v in Var::new(1)..=self.ts.max_var {
             if !keep.contains(&v) {
                 latchs.push(v);
                 is_latch[v] = true;
@@ -243,9 +240,7 @@ impl TransysUnroll {
         init_map.reserve(max_latch);
         let mut init = self.ts.init.clone();
         let mut solver = minisat::Solver::new();
-        while solver.num_var() < self.num_var {
-            solver.new_var();
-        }
+        solver.new_var_to(self.max_var);
         for cls in trans.iter() {
             solver.add_clause(cls);
         }
@@ -271,14 +266,12 @@ impl TransysUnroll {
             init_map,
             constraints: self.ts.constraints.clone(),
             trans,
-            num_var: self.num_var,
+            max_var: self.max_var,
             next_map,
             prev_map,
             dependence,
             max_latch,
-            latch_group: self.ts.latch_group.clone(),
             is_latch,
-            groups: self.ts.groups.clone(),
         }
     }
 }

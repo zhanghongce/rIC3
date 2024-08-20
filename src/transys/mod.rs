@@ -23,17 +23,20 @@ pub struct Transys {
     pub init_map: VarMap<Option<bool>>,
     pub constraints: Cube,
     pub trans: Vec<Clause>,
-    pub num_var: usize,
+    pub max_var: Var,
     is_latch: VarMap<bool>,
     next_map: LitMap<Lit>,
     prev_map: LitMap<Lit>,
     pub dependence: VarMap<Vec<Var>>,
     pub max_latch: Var,
-    pub latch_group: VarMap<u32>,
-    pub groups: HashMap<u32, Vec<Var>>,
 }
 
 impl Transys {
+    #[inline]
+    pub fn num_var(&self) -> usize {
+        Into::<usize>::into(self.max_var) + 1
+    }
+
     fn compress_deps_rec(
         v: Var,
         deps: &mut VarMap<Vec<Var>>,
@@ -76,9 +79,8 @@ impl Transys {
         deps
     }
 
-    pub fn from_aig(aig: &Aig, keep_dep: bool) -> (Self, AigRestore) {
+    fn preprocess(aig: &Aig) -> (Aig, HashMap<usize, usize>) {
         let (aig, mut remap) = aig.coi_refine();
-
         let mut remap_retain = HashSet::new();
         remap_retain.insert(AigEdge::constant_edge(false).node_id());
         for i in aig.inputs.iter() {
@@ -91,18 +93,21 @@ impl Transys {
         let mut aig = abc_preprocess(aig);
         aig.constraints
             .retain(|e| *e != AigEdge::constant_edge(true));
+        (aig, remap)
+    }
 
-        let mut simp_solver: Box<dyn Satif> = if keep_dep {
-            Box::new(SimpSolver::new())
-        } else {
-            Box::new(cadical::Solver::new())
+    pub fn from_aig(aig: &Aig) -> (Self, AigRestore) {
+        let (aig, remap) = Self::preprocess(aig);
+        let false_lit: Lit = Lit::constant_lit(false);
+        let mut max_var = false_lit.var();
+        let mut new_var = || {
+            max_var += 1;
+            max_var
         };
-        let false_lit: Lit = simp_solver.new_var().into();
         let mut dependence = VarMap::new();
         dependence.push(vec![]);
-        simp_solver.add_clause(&[!false_lit]);
         for node in aig.nodes.iter().skip(1) {
-            assert_eq!(Var::new(node.node_id()), simp_solver.new_var());
+            assert_eq!(Var::new(node.node_id()), new_var());
             let mut dep = Vec::new();
             if node.is_and() {
                 dep.push(node.fanin0().to_lit().var());
@@ -113,42 +118,36 @@ impl Transys {
         let inputs: Vec<Var> = aig.inputs.iter().map(|x| Var::new(*x)).collect();
         let latchs: Vec<Var> = aig.latchs.iter().map(|x| Var::new(x.input)).collect();
         let max_latch = *latchs.iter().max().unwrap_or(&Var::new(0));
-        let mut latch_group = VarMap::new();
-        latch_group.reserve(max_latch);
-        let mut num_group = aig.latch_group.len() as u32;
-        for l in aig.latchs.iter() {
-            latch_group[Var::new(l.input)] = match aig.latch_group.get(&l.input) {
-                Some(g) => *g,
-                None => {
-                    num_group += 1;
-                    num_group - 1
-                }
-            }
-        }
         let primes: Vec<Lit> = aig
             .latchs
             .iter()
             .map(|l| {
                 dependence.push(vec![l.next.to_lit().var()]);
-                simp_solver.new_var().lit()
+                new_var().lit()
             })
             .collect();
         let init = aig.latch_init_cube().to_cube();
-        let mut init_map = HashMap::new();
+        let mut init_map = VarMap::new();
+        init_map.reserve(max_latch);
         for l in init.iter() {
-            init_map.insert(l.var(), l.polarity());
+            init_map[l.var()] = Some(l.polarity());
         }
-        let constraints: Vec<Lit> = aig.constraints.iter().map(|c| c.to_lit()).collect();
+        let constraints: Cube = aig.constraints.iter().map(|c| c.to_lit()).collect();
         let aig_bad = if aig.bads.is_empty() {
             aig.outputs[0]
         } else {
             aig.bads[0]
         };
-        for v in inputs.iter().chain(latchs.iter()) {
-            simp_solver.set_frozen(*v, true);
-        }
-        for l in constraints.iter().chain(primes.iter()) {
-            simp_solver.set_frozen(l.var(), true);
+        let mut next_map = LitMap::new();
+        let mut prev_map = LitMap::new();
+        for (l, p) in latchs.iter().zip(primes.iter()) {
+            next_map.reserve(*l);
+            prev_map.reserve(p.var());
+            let l = l.lit();
+            next_map[l] = *p;
+            next_map[!l] = !*p;
+            prev_map[*p] = l;
+            prev_map[!*p] = !l;
         }
         let mut logic = Vec::new();
         for l in aig.latchs.iter() {
@@ -164,101 +163,95 @@ impl Transys {
             trans.push(Clause::from([primes[i], !aig.latchs[i].next.to_lit()]));
         }
         let bad = aig_bad.to_lit();
-        simp_solver.set_frozen(bad.var(), true);
-        for tran in trans.iter() {
-            simp_solver.add_clause(tran);
-        }
-        simp_solver.simplify();
-        let mut trans = simp_solver.clauses();
-        trans.push(Clause::from([!false_lit]));
-        let mut next_map = LitMap::new();
-        for (l, p) in latchs.iter().zip(primes.iter()) {
-            next_map.reserve(*l);
-            let l = l.lit();
-            next_map[l] = *p;
-            next_map[!l] = !*p;
-        }
-        let mut domain = HashSet::new();
-        for cls in trans.iter() {
-            for l in cls.iter() {
-                domain.insert(l.var());
-            }
-        }
-        dependence = Self::compress_deps(dependence, &domain);
-        for l in latchs.iter().chain(inputs.iter()) {
-            domain.insert(*l);
-        }
-        let mut domain = Vec::from_iter(domain);
-        domain.sort();
-        let mut domain_map = HashMap::new();
-        for (i, d) in domain.iter().enumerate() {
-            domain_map.insert(*d, Var::new(i));
-        }
-        let map_lit = |l: Lit| Lit::new(domain_map[&l.var()], l.polarity());
-        let inputs = inputs.into_iter().map(|v| domain_map[&v]).collect();
-        let old_latchs = latchs.clone();
-        let latchs: Vec<Var> = latchs.into_iter().map(|v| domain_map[&v]).collect();
-        let primes: Vec<Lit> = primes.into_iter().map(map_lit).collect();
-        let init = init.into_iter().map(map_lit).collect();
-        let bad = map_lit(bad);
-        let init_map = {
-            let mut new = VarMap::new();
-            for l in latchs.iter() {
-                new.reserve(*l);
-            }
-            for (k, v) in init_map.iter() {
-                new[domain_map[k]] = Some(*v);
-            }
-            new
-        };
-        let constraints = constraints.into_iter().map(map_lit).collect();
-        for c in trans.iter_mut() {
-            *c = c.iter().map(|l| map_lit(*l)).collect();
-        }
-        let num_var = domain.len();
-        let mut next_map = LitMap::new();
-        let mut prev_map = LitMap::new();
-        for (l, p) in latchs.iter().zip(primes.iter()) {
-            next_map.reserve(*l);
-            prev_map.reserve(p.var());
-            let l = l.lit();
-            next_map[l] = *p;
-            next_map[!l] = !*p;
-            prev_map[*p] = l;
-            prev_map[!*p] = !l;
-        }
-        let dependence = {
-            let mut new = VarMap::new();
-            for d in domain.iter() {
-                let dep = dependence[*d].clone();
-                let dep: Vec<Var> = dep.into_iter().map(|v| domain_map[&v]).collect();
-                new.push(dep);
-            }
-            new
-        };
-        let max_latch = domain_map[&max_latch];
-        let mut groups: HashMap<u32, Vec<Var>> = HashMap::new();
-        let latch_group = {
-            let mut new = VarMap::new();
-            new.reserve(max_latch);
-            for l in old_latchs.iter() {
-                new[domain_map[l]] = latch_group[*l];
-                let entry = groups.entry(latch_group[*l]).or_default();
-                entry.push(domain_map[l]);
-            }
-            new
-        };
         let mut is_latch = VarMap::new();
-        is_latch.reserve(Var::new(num_var));
+        is_latch.reserve(max_var);
         for l in latchs.iter() {
             is_latch[*l] = true;
         }
         let mut restore = HashMap::new();
-        for d in domain.iter() {
-            if let Some(r) = remap.get(&(**d as _)) {
-                restore.insert(domain_map[d], *r);
-            }
+        for (d, v) in remap.iter() {
+            restore.insert(Var::new(*d), *v);
         }
+
+        // for v in inputs.iter().chain(latchs.iter()) {
+        //     simp_solver.set_frozen(*v, true);
+        // }
+        // for l in constraints.iter().chain(primes.iter()) {
+        //     simp_solver.set_frozen(l.var(), true);
+        // }
+        // simp_solver.set_frozen(bad.var(), true);
+        // for tran in trans.iter() {
+        //     simp_solver.add_clause(tran);
+        // }
+        // simp_solver.simplify();
+        // let mut trans = simp_solver.clauses();
+
+        // let mut domain = HashSet::new();
+        // for cls in trans.iter() {
+        //     for l in cls.iter() {
+        //         domain.insert(l.var());
+        //     }
+        // }
+        // dependence = Self::compress_deps(dependence, &domain);
+        // for l in latchs.iter().chain(inputs.iter()) {
+        //     domain.insert(*l);
+        // }
+        // let mut domain = Vec::from_iter(domain);
+        // domain.sort();
+        // let mut domain_map = HashMap::new();
+        // for (i, d) in domain.iter().enumerate() {
+        //     domain_map.insert(*d, Var::new(i));
+        // }
+        // let map_lit = |l: Lit| Lit::new(domain_map[&l.var()], l.polarity());
+        // let inputs = inputs.into_iter().map(|v| domain_map[&v]).collect();
+        // let old_latchs = latchs.clone();
+        // let latchs: Vec<Var> = latchs.into_iter().map(|v| domain_map[&v]).collect();
+        // let primes: Vec<Lit> = primes.into_iter().map(map_lit).collect();
+        // let init = init.into_iter().map(map_lit).collect();
+        // let bad = map_lit(bad);
+        // let init_map = {
+        //     let mut new = VarMap::new();
+        //     for l in latchs.iter() {
+        //         new.reserve(*l);
+        //     }
+        //     for (k, v) in init_map.iter() {
+        //         new[domain_map[k]] = Some(*v);
+        //     }
+        //     new
+        // };
+        // let constraints = constraints.into_iter().map(map_lit).collect();
+        // for c in trans.iter_mut() {
+        //     *c = c.iter().map(|l| map_lit(*l)).collect();
+        // }
+        // let num_var = domain.len();
+        // let mut next_map = LitMap::new();
+        // let mut prev_map = LitMap::new();
+        // for (l, p) in latchs.iter().zip(primes.iter()) {
+        //     next_map.reserve(*l);
+        //     prev_map.reserve(p.var());
+        //     let l = l.lit();
+        //     next_map[l] = *p;
+        //     next_map[!l] = !*p;
+        //     prev_map[*p] = l;
+        //     prev_map[!*p] = !l;
+        // }
+        // let dependence = {
+        //     let mut new = VarMap::new();
+        //     for d in domain.iter() {
+        //         let dep = dependence[*d].clone();
+        //         let dep: Vec<Var> = dep.into_iter().map(|v| domain_map[&v]).collect();
+        //         new.push(dep);
+        //     }
+        //     new
+        // };
+        // let max_latch = domain_map[&max_latch];
+        // let mut groups: HashMap<u32, Vec<Var>> = HashMap::new();
+        // let mut restore = HashMap::new();
+        // for d in domain.iter() {
+        //     if let Some(r) = remap.get(&(**d as _)) {
+        //         restore.insert(domain_map[d], *r);
+        //     }
+        // }
         (
             Self {
                 inputs,
@@ -268,14 +261,12 @@ impl Transys {
                 init_map,
                 constraints,
                 trans,
-                num_var,
+                max_var,
                 is_latch,
                 next_map,
                 prev_map,
                 dependence,
                 max_latch,
-                latch_group,
-                groups,
             },
             AigRestore { restore },
         )
@@ -283,14 +274,13 @@ impl Transys {
 
     #[inline]
     pub fn new_var(&mut self) -> Var {
-        let var = Var(self.num_var as _);
-        self.num_var += 1;
-        self.init_map.reserve(var);
-        self.next_map.reserve(var);
-        self.prev_map.reserve(var);
-        self.is_latch.reserve(var);
-        self.dependence.reserve(var);
-        var
+        self.max_var += 1;
+        self.init_map.reserve(self.max_var);
+        self.next_map.reserve(self.max_var);
+        self.prev_map.reserve(self.max_var);
+        self.is_latch.reserve(self.max_var);
+        self.dependence.reserve(self.max_var);
+        self.max_var
     }
 
     #[inline]
@@ -382,18 +372,14 @@ impl Transys {
     }
 
     pub fn load_init(&self, satif: &mut impl Satif) {
-        while satif.num_var() < self.num_var {
-            satif.new_var();
-        }
+        satif.new_var_to(self.max_var);
         for i in self.init.iter() {
             satif.add_clause(&[*i]);
         }
     }
 
     pub fn load_trans(&self, satif: &mut impl Satif, constrain: bool) {
-        while satif.num_var() < self.num_var {
-            satif.new_var();
-        }
+        satif.new_var_to(self.max_var);
         for c in self.trans.iter() {
             satif.add_clause(c);
         }
@@ -431,9 +417,7 @@ impl Transys {
         };
         let false_lit: Lit = simp_solver.new_var().into();
         simp_solver.add_clause(&[!false_lit]);
-        while simp_solver.num_var() < self.num_var {
-            simp_solver.new_var();
-        }
+        simp_solver.new_var_to(self.max_var);
         for c in self.trans.iter().chain(lemmas.iter()) {
             simp_solver.add_clause(c);
         }

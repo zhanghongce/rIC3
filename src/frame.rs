@@ -281,23 +281,4 @@ impl IC3 {
     //         }
     //     }
     // }
-
-    pub fn symmetry_lemma(&self, lemma: &Lemma, frame: usize) -> Option<Lemma> {
-        let groups: HashSet<u32> =
-            HashSet::from_iter(lemma.iter().map(|l| self.ts.latch_group[*l]));
-        for c in self.frame[frame].iter() {
-            let mut its = c.intersection(&lemma);
-            its.sort();
-            if c.len() < 5 || its.is_empty() || its.len() + 1 < c.len() {
-                continue;
-            }
-            if c.iter().all(|l| groups.contains(&self.ts.latch_group[*l])) {
-                println!("l {:?}", lemma.deref());
-                println!("its {:?}", its);
-                println!("s {:?}", c.deref());
-                return Some(c.lemma.clone());
-            }
-        }
-        None
-    }
 }

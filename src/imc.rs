@@ -85,7 +85,7 @@ impl IMC {
         // abc.execute_command("fraig; dc2");
         // let itp = abc.write_aig();
         let mut cnf = itp.get_cnf(&itp.outputs);
-        let mut vbegin = Var::new(self.uts.ts.num_var);
+        let mut vbegin = self.uts.ts.max_var + 1;
         for cls in cnf.iter_mut() {
             for l in cls.iter_mut() {
                 if l.var() != Var(0) {

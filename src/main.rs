@@ -17,7 +17,7 @@ fn main() {
         portfolio.check()
     } else {
         let aig = Aig::from_file(&option.model);
-        let (mut ts, _) = Transys::from_aig(&aig, option.ic3);
+        let (mut ts, _) = Transys::from_aig(&aig);
         let pre_lemmas = vec![];
         if option.preprocess.sec {
             assert!(!option.ic3);

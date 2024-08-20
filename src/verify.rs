@@ -15,9 +15,7 @@ use std::{
 
 pub fn verify_invariant(ts: &Transys, invariants: &[Lemma]) -> bool {
     let mut solver = Solver::new();
-    while solver.num_var() < ts.num_var {
-        solver.new_var();
-    }
+    solver.new_var_to(ts.max_var);
     for cls in ts.trans.iter() {
         solver.add_clause(cls)
     }

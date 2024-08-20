@@ -82,7 +82,7 @@ impl Solver {
             rng: StdRng::seed_from_u64(options.rseed),
             mark: Default::default(),
         };
-        while solver.num_var() < solver.ts.num_var {
+        while solver.num_var() < solver.ts.num_var() {
             solver.new_var();
         }
         for cls in ts.trans.iter() {
@@ -242,7 +242,7 @@ impl Solver {
             }
         }
         self.statistic.avg_decide_var +=
-            self.domain.len() as f64 / (self.ts.num_var - self.trail.len() as usize) as f64;
+            self.domain.len() as f64 / (self.ts.num_var() - self.trail.len() as usize) as f64;
         true
     }
 

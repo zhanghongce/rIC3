@@ -3,7 +3,7 @@ use super::{
     Solver,
 };
 use giputils::gvec::Gvec;
-use logic_form::{Cube, Lemma, LitMap, Var};
+use logic_form::{Cube, Lemma, LitMap};
 use std::mem::take;
 
 pub struct Simplify {
@@ -90,7 +90,7 @@ impl Solver {
             })
             .collect();
         clauses.sort_by_key(|(_, l)| l.len());
-        let mut occurs: LitMap<Vec<usize>> = LitMap::new_with(Var::new(self.ts.num_var));
+        let mut occurs: LitMap<Vec<usize>> = LitMap::new_with(self.ts.max_var);
         for i in 0..clauses.len() {
             for l in clauses[i].1.iter() {
                 occurs[*l].push(i);
