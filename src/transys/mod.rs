@@ -112,7 +112,7 @@ impl Transys {
         }
         let inputs: Vec<Var> = aig.inputs.iter().map(|x| Var::new(*x)).collect();
         let latchs: Vec<Var> = aig.latchs.iter().map(|x| Var::new(x.input)).collect();
-        let max_latch = *latchs.iter().max().unwrap();
+        let max_latch = *latchs.iter().max().unwrap_or(&Var::new(0));
         let mut latch_group = VarMap::new();
         latch_group.reserve(max_latch);
         let mut num_group = aig.latch_group.len() as u32;
