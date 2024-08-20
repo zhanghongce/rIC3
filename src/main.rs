@@ -17,19 +17,12 @@ fn main() {
         portfolio.check()
     } else {
         let aig = Aig::from_file(&option.model);
-        let (mut ts, _) = Transys::from_aig(&aig);
+        let (mut ts, restore) = Transys::from_aig(&aig);
         let pre_lemmas = vec![];
         if option.preprocess.sec {
-            assert!(!option.ic3);
-            let sec = ts.sec();
-            if option.verbose > 0 {
-                println!("sec find {} equivalent latchs", sec.len());
-            }
-            ts.simplify_eq_latchs(&sec, option.ic3);
+            panic!("sec not support");
         }
-        if !option.ic3 {
-            ts.simplify(&[], false, true);
-        }
+        (ts, _) = ts.simplify(&[], option.ic3, !option.ic3, &restore);
         if option.bmc {
             BMC::new(option, ts).check()
         } else if option.kind {
