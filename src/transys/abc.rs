@@ -52,9 +52,10 @@ pub fn abc_preprocess(mut aig: Aig) -> Aig {
     let path = tmpfile.path().as_os_str().to_str().unwrap();
     aig.to_file(path);
     let mut join = procspawn::spawn(path.to_string(), preprocess);
-    if join.join_timeout(Duration::from_secs(10)).is_ok() {
+    if join.join_timeout(Duration::from_secs(50)).is_ok() {
         aig = Aig::from_file(path);
     } else {
+        println!("abc preprocess timeout");
         let _ = join.kill();
     }
     drop(tmpfile);
