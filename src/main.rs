@@ -34,9 +34,11 @@ fn main() {
             Box::new(IC3::new(option.clone(), ts, pre_lemmas))
         };
         let res = engine.check();
-        if option.certifaiger {
-            let certifaiger = engine.certifaiger(&aig, &restore);
-            check_certifaiger(&option.model, &certifaiger);
+        if let Some(true) = res {
+            if option.certifaiger {
+                let certifaiger = engine.certifaiger(&aig, &restore);
+                check_certifaiger(&option.model, &certifaiger);
+            }
         }
         res
     };

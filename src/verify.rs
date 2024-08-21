@@ -160,8 +160,8 @@ pub fn check_certifaiger(aig: &str, certifaiger: &Aig) {
         .arg(certifaiger_path)
         .output()
         .expect("certifaiger not found");
+    io::stdout().write_all(&output.stdout).unwrap();
     if output.status.success() {
-        io::stdout().write_all(&output.stdout).unwrap();
         println!("certifaiger check passed");
     } else {
         panic!("certifaiger check failed");
