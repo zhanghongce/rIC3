@@ -258,6 +258,9 @@ impl Engine for IC3 {
                 .push(certifaiger.new_ands_node(cube.into_iter().map(AigEdge::from_lit)));
         }
         let invariants = certifaiger.new_ors_node(certifaiger_dnf.into_iter());
+        let constrains: Vec<AigEdge> = certifaiger.constraints.iter().map(|e| !*e).collect();
+        let constrains = certifaiger.new_ors_node(constrains.into_iter());
+        let invariants = certifaiger.new_or_node(invariants, constrains);
         certifaiger.bads.clear();
         certifaiger.outputs.clear();
         certifaiger.outputs.push(invariants);

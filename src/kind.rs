@@ -96,17 +96,20 @@ impl Engine for Kind {
     }
 
     fn certifaiger(&mut self, aig: &Aig) -> Aig {
-        let mut certifaiger = aig.unroll();
-        let bads: Vec<AigEdge> = certifaiger
-            .bads
-            .iter()
-            .chain(certifaiger.outputs.iter())
-            .copied()
-            .collect();
-        let inv = certifaiger.new_ors_node(bads.into_iter());
-        certifaiger.bads.clear();
-        certifaiger.outputs.clear();
-        certifaiger.outputs.push(inv);
+        let mut certifaiger = aig.clone();
+        let n = certifaiger.new_leaf_node();
+        certifaiger.new_input(n);
+        certifaiger = certifaiger.reencode();
+        // let bads: Vec<AigEdge> = certifaiger
+        //     .bads
+        //     .iter()
+        //     .chain(certifaiger.outputs.iter())
+        //     .copied()
+        //     .collect();
+        // let inv = certifaiger.new_ors_node(bads.into_iter());
+        // certifaiger.bads.clear();
+        // certifaiger.outputs.clear();
+        // certifaiger.outputs.push(inv);
         certifaiger
     }
 }
