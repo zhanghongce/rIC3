@@ -37,6 +37,10 @@ pub trait Engine {
     fn certifaiger(&mut self, _aig: &Aig) -> Aig {
         panic!("unsupport certifaiger");
     }
+
+    fn witness(&mut self, _aig: &Aig) -> Aig {
+        panic!("unsupport witness");
+    }
 }
 
 pub struct IC3 {

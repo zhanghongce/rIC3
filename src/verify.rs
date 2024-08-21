@@ -152,18 +152,19 @@ impl IC3 {
 }
 
 pub fn check_certifaiger(engine: &mut Box<dyn Engine>, aig: &Aig, option: &Options) {
-    if option.certifaiger.is_none() && !option.certifaiger_check {
+    if option.verify_path.is_none() && !option.certifaiger {
         return;
     }
     let certifaiger = engine.certifaiger(&aig);
-    if let Some(witness) = &option.certifaiger {
+    if let Some(witness) = &option.verify_path {
         certifaiger.to_file(witness);
     }
-    if !option.certifaiger_check {
+    if !option.certifaiger {
         return;
     }
     let certifaiger_file = tempfile::NamedTempFile::new().unwrap();
     let certifaiger_path = certifaiger_file.path().as_os_str().to_str().unwrap();
+    certifaiger.to_file(certifaiger_path);
     let output = Command::new("/root/certifaiger/build/check")
         .arg(&option.model)
         .arg(certifaiger_path)
