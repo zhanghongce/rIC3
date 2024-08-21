@@ -16,6 +16,10 @@ pub struct Options {
     #[arg(long, default_value_t = false, group = "engine")]
     pub ic3: bool,
 
+    /// general ic3 engine
+    #[arg(long, default_value_t = false, group = "engine")]
+    pub gic3: bool,
+
     #[command(flatten)]
     pub ic3_options: IC3Options,
 
@@ -33,10 +37,6 @@ pub struct Options {
     #[command(flatten)]
     pub kind_options: KindOptions,
 
-    /// imc engine
-    #[arg(long, default_value_t = false, group = "engine")]
-    pub imc: bool,
-
     /// portfolio
     #[arg(long, default_value_t = false, group = "engine")]
     pub portfolio: bool,
@@ -52,16 +52,12 @@ pub struct Options {
     #[arg(long, default_value_t = 0)]
     pub rseed: u64,
 
-    /// print witness
-    #[arg(long, default_value_t = false)]
-    pub witness: bool,
-
     /// verify
     #[arg(long, default_value_t = true)]
     pub verify: bool,
 
     /// verify by certifaiger
-    #[arg(long, default_value_t = false, requires = "verify")]
+    #[arg(long, default_value_t = true)]
     pub certifaiger: bool,
 
     /// verbose level

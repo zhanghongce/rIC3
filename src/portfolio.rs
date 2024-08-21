@@ -46,7 +46,7 @@ impl Portfolio {
         Self { option, engines }
     }
 
-    pub fn check(&mut self) -> bool {
+    pub fn check(&mut self) -> Option<bool> {
         let mut engines = Vec::new();
         let result = Arc::new((Mutex::new(None), Condvar::new()));
         let lock = result.0.lock().unwrap();
@@ -102,6 +102,6 @@ impl Portfolio {
             r#") | grep -oP '\(\K\d+' | sort -u | xargs -n 1 kill -9"#
         ));
         Command::new("sh").args(["-c", &cmd]).output().unwrap();
-        *res
+        Some(*res)
     }
 }

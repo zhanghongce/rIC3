@@ -8,7 +8,7 @@ use crate::{
     proofoblig::{ProofObligation, ProofObligationQueue},
     statistic::Statistic,
     transys::Transys,
-    Options,
+    Engine, Options,
 };
 use logic_form::{Cube, Lemma};
 use solver::{BlockResult, BlockResultYes, Ic3Solver, Lift};
@@ -188,8 +188,10 @@ impl IC3 {
         res.extend();
         res
     }
+}
 
-    pub fn check(&mut self) -> bool {
+impl Engine for IC3 {
+    fn check(&mut self) -> Option<bool> {
         loop {
             let start = Instant::now();
             loop {
@@ -197,7 +199,7 @@ impl IC3 {
                     Some(false) => {
                         self.statistic.overall_block_time += start.elapsed();
                         self.statistic();
-                        return false;
+                        return Some(false);
                     }
                     None => {
                         self.statistic.overall_block_time += start.elapsed();
@@ -205,7 +207,7 @@ impl IC3 {
                         if self.options.verify {
                             assert!(self.verify());
                         }
-                        return true;
+                        return Some(true);
                     }
                     _ => (),
                 }
@@ -238,7 +240,7 @@ impl IC3 {
                 if self.options.verify {
                     assert!(self.verify());
                 }
-                return true;
+                return Some(true);
             }
         }
     }

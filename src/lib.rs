@@ -14,23 +14,30 @@ pub mod portfolio;
 mod proofoblig;
 mod statistic;
 pub mod transys;
-mod verify;
+pub mod verify;
 pub mod wl;
 
 use crate::proofoblig::{ProofObligation, ProofObligationQueue};
 use crate::statistic::Statistic;
 use activity::Activity;
+use aig::{Aig, AigEdge};
 use frame::{Frame, Frames};
 use gipsat::Solver;
 use logic_form::{Clause, Cube, Lemma, Lit, Var};
 pub use options::Options;
 use std::collections::{HashMap, HashSet};
-use std::panic::{self, AssertUnwindSafe};
-use std::process::exit;
 use std::rc::Rc;
 use std::time::Instant;
 use transys::unroll::TransysUnroll;
-use transys::Transys;
+use transys::{Transys, TransysRestore};
+
+pub trait Engine {
+    fn check(&mut self) -> Option<bool>;
+
+    fn certifaiger(&mut self, _aig: &Aig, _restore: &TransysRestore) -> Aig {
+        panic!("unsupport certifaiger");
+    }
+}
 
 pub struct IC3 {
     options: Options,
@@ -318,7 +325,23 @@ impl IC3 {
         res
     }
 
-    pub fn check(&mut self) -> bool {
+    // pub fn check_with_int_hanlder(&mut self) -> bool {
+    //     let ic3 = self as *mut IC3 as usize;
+    //     ctrlc::set_handler(move || {
+    //         let ic3 = unsafe { &mut *(ic3 as *mut IC3) };
+    //         ic3.statistic();
+    //         exit(130);
+    //     })
+    //     .unwrap();
+    //     panic::catch_unwind(AssertUnwindSafe(|| self.check())).unwrap_or_else(|_| {
+    //         self.statistic();
+    //         panic!();
+    //     })
+    // }
+}
+
+impl Engine for IC3 {
+    fn check(&mut self) -> Option<bool> {
         loop {
             let start = Instant::now();
             loop {
@@ -326,18 +349,13 @@ impl IC3 {
                     Some(false) => {
                         self.statistic.overall_block_time += start.elapsed();
                         self.statistic();
-                        if self.options.witness {
-                            dbg!(self.witness());
-                        }
-                        return false;
+                        return Some(false);
                     }
                     None => {
                         self.statistic.overall_block_time += start.elapsed();
                         self.statistic();
-                        if self.options.verify {
-                            assert!(self.verify());
-                        }
-                        return true;
+                        self.verify();
+                        return Some(true);
                     }
                     _ => (),
                 }
@@ -367,25 +385,30 @@ impl IC3 {
             self.statistic.overall_propagate_time += start.elapsed();
             if propagate {
                 self.statistic();
-                if self.options.verify {
-                    assert!(self.verify());
-                }
-                return true;
+                self.verify();
+                return Some(true);
             }
         }
     }
 
-    pub fn check_with_int_hanlder(&mut self) -> bool {
-        let ic3 = self as *mut IC3 as usize;
-        ctrlc::set_handler(move || {
-            let ic3 = unsafe { &mut *(ic3 as *mut IC3) };
-            ic3.statistic();
-            exit(130);
-        })
-        .unwrap();
-        panic::catch_unwind(AssertUnwindSafe(|| self.check())).unwrap_or_else(|_| {
-            self.statistic();
-            panic!();
-        })
+    fn certifaiger(&mut self, aig: &Aig, restore: &TransysRestore) -> Aig {
+        let invariants = self.frame.invariant();
+        let invariants = invariants
+            .iter()
+            .map(|l| Cube::from_iter(l.iter().map(|l| restore.restore(*l))));
+        let mut certifaiger = aig.clone();
+        let mut certifaiger_dnf = vec![];
+        for cube in invariants {
+            certifaiger_dnf
+                .push(certifaiger.new_ands_node(cube.into_iter().map(AigEdge::from_lit)));
+        }
+        let invariants = certifaiger.new_ors_node(certifaiger_dnf.into_iter());
+        // let constrains: Vec<AigEdge> = certifaiger.constraints.iter().map(|e| !*e).collect();
+        // let constrains = certifaiger.new_ors_node(constrains.into_iter());
+        // let invariants = certifaiger.new_or_node(invariants, constrains);
+        certifaiger.bads.clear();
+        certifaiger.outputs.clear();
+        certifaiger.outputs.push(invariants);
+        certifaiger
     }
 }

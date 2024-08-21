@@ -1,6 +1,6 @@
 use crate::{
     transys::{unroll::TransysUnroll, Transys},
-    Options,
+    Engine, Options,
 };
 use satif::Satif;
 use std::time::Duration;
@@ -16,7 +16,7 @@ impl BMC {
         Self { uts, options }
     }
 
-    fn check_with_cadical(&mut self) -> bool {
+    fn check_with_cadical(&mut self) -> Option<bool> {
         let mut solver = cadical::Solver::new();
         let step = self.options.step as usize;
         for k in (step - 1..).step_by(step) {
@@ -34,7 +34,7 @@ impl BMC {
                 if self.options.verbose > 0 {
                     println!("bmc found cex in depth {k}");
                 }
-                return false;
+                return Some(false);
             }
             // for s in last_bound..=k {
             //     solver.add_clause(&[!self.uts.lit_next(self.uts.ts.bad, s)]);
@@ -43,7 +43,7 @@ impl BMC {
         unreachable!();
     }
 
-    fn check_with_kissat(&mut self) -> bool {
+    fn check_with_kissat(&mut self) -> Option<bool> {
         let step = self.options.step as usize;
         for k in (step..).step_by(step) {
             let mut solver = kissat::Solver::new();
@@ -73,13 +73,15 @@ impl BMC {
                 if self.options.verbose > 0 {
                     println!("bmc found cex in depth {k}");
                 }
-                return false;
+                return Some(false);
             }
         }
         unreachable!()
     }
+}
 
-    pub fn check(&mut self) -> bool {
+impl Engine for BMC {
+    fn check(&mut self) -> Option<bool> {
         if self.options.bmc_options.kissat {
             self.check_with_kissat()
         } else {
