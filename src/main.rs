@@ -35,10 +35,7 @@ fn main() {
         };
         let res = engine.check();
         if let Some(true) = res {
-            if option.certifaiger {
-                let certifaiger = engine.certifaiger(&aig);
-                check_certifaiger(&option.model, &certifaiger);
-            }
+            check_certifaiger(&mut engine, &aig, &option);
         }
         res
     };

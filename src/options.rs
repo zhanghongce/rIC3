@@ -3,17 +3,24 @@ use clap::{ArgGroup, Args, Parser};
 /// rIC3 model checker
 #[derive(Parser, Debug, Clone)]
 #[command(version, about)]
-#[command(group = ArgGroup::new("engine").required(true).multiple(false))]
+#[command(group = ArgGroup::new("engine").required(false).multiple(false))]
 pub struct Options {
     /// model file in aiger format
     pub model: String,
+
+    /// certifaiger witness circuit path
+    pub certifaiger: Option<String>,
+
+    /// verify by certifaiger
+    #[arg(long, default_value_t = true)]
+    pub certifaiger_check: bool,
 
     /// word level engin
     #[arg(long, default_value_t = false)]
     pub wl: bool,
 
     /// ic3 engine
-    #[arg(long, default_value_t = false, group = "engine")]
+    #[arg(long, default_value_t = true, group = "engine")]
     pub ic3: bool,
 
     /// general ic3 engine
@@ -55,10 +62,6 @@ pub struct Options {
     /// verify
     #[arg(long, default_value_t = true)]
     pub verify: bool,
-
-    /// verify by certifaiger
-    #[arg(long, default_value_t = true)]
-    pub certifaiger: bool,
 
     /// verbose level
     #[arg(short, default_value_t = 1)]

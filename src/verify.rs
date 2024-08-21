@@ -1,7 +1,7 @@
 use crate::{
     proofoblig::ProofObligation,
     transys::{unroll::TransysUnroll, Transys},
-    IC3,
+    Engine, Options, IC3,
 };
 use aig::Aig;
 // use aig::AigEdge;
@@ -151,12 +151,21 @@ impl IC3 {
     }
 }
 
-pub fn check_certifaiger(aig: &str, certifaiger: &Aig) {
+pub fn check_certifaiger(engine: &mut Box<dyn Engine>, aig: &Aig, option: &Options) {
+    if option.certifaiger.is_none() && !option.certifaiger_check {
+        return;
+    }
+    let certifaiger = engine.certifaiger(&aig);
+    if let Some(witness) = &option.certifaiger {
+        certifaiger.to_file(witness);
+    }
+    if !option.certifaiger_check {
+        return;
+    }
     let certifaiger_file = tempfile::NamedTempFile::new().unwrap();
     let certifaiger_path = certifaiger_file.path().as_os_str().to_str().unwrap();
-    certifaiger.to_file(certifaiger_path);
     let output = Command::new("/root/certifaiger/build/check")
-        .arg(aig)
+        .arg(&option.model)
         .arg(certifaiger_path)
         .output()
         .expect("certifaiger not found");
