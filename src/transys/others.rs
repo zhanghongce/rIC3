@@ -3,6 +3,7 @@ use logic_form::{Clause, Cube, Var, VarMap};
 
 impl Transys {
     pub fn encode_bad_to_latch(&mut self) {
+        todo!();
         assert!(self.bad.len() == 1);
         let bad = self.bad[0];
         let bad_latch = self.new_var().lit();
@@ -28,37 +29,38 @@ impl Transys {
     }
 
     pub fn reverse(&self) -> Self {
-        let mut res = self.clone();
-        res.encode_bad_to_latch();
-        let latchs: Vec<Var> = res
-            .latchs
-            .iter()
-            .map(|v| res.lit_next(v.lit()).var())
-            .collect();
-        let bad = res.bad[0];
-        let mut init_map = VarMap::new();
-        init_map.reserve(res.max_var);
-        init_map[bad.var()] = Some(bad.polarity());
-        let mut is_latch = VarMap::new();
-        is_latch.reserve(res.max_var);
-        for l in latchs.iter() {
-            is_latch[*l] = true;
-        }
-        let max_latch = *latchs.iter().max().unwrap();
-        Self {
-            inputs: res.inputs,
-            latchs,
-            init: res.bad,
-            bad: res.init,
-            init_map,
-            constraints: res.constraints,
-            trans: res.trans,
-            max_var: res.max_var,
-            is_latch,
-            next_map: res.prev_map,
-            prev_map: res.next_map,
-            dependence: res.dependence,
-            max_latch,
-        }
+        // let mut res = self.clone();
+        // res.encode_bad_to_latch();
+        // let latchs: Vec<Var> = res
+        //     .latchs
+        //     .iter()
+        //     .map(|v| res.lit_next(v.lit()).var())
+        //     .collect();
+        // let bad = res.bad[0];
+        // let mut init_map = VarMap::new();
+        // init_map.reserve(res.max_var);
+        // init_map[bad.var()] = Some(bad.polarity());
+        // let mut is_latch = VarMap::new();
+        // is_latch.reserve(res.max_var);
+        // for l in latchs.iter() {
+        //     is_latch[*l] = true;
+        // }
+        // let max_latch = *latchs.iter().max().unwrap();
+        // Self {
+        //     inputs: res.inputs,
+        //     latchs,
+        //     init: res.bad,
+        //     bad: res.init,
+        //     init_map,
+        //     constraints: res.constraints,
+        //     trans: res.trans,
+        //     max_var: res.max_var,
+        //     is_latch,
+        //     next_map: res.prev_map,
+        //     prev_map: res.next_map,
+        //     dependence: res.dependence,
+        //     max_latch,
+        // }
+        todo!();
     }
 }

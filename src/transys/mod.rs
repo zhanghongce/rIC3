@@ -28,6 +28,7 @@ pub struct Transys {
     prev_map: LitMap<Lit>,
     pub dependence: VarMap<Vec<Var>>,
     pub max_latch: Var,
+    restore: HashMap<Var, Var>,
 }
 
 impl Transys {
@@ -36,7 +37,7 @@ impl Transys {
         Into::<usize>::into(self.max_var) + 1
     }
 
-    pub fn from_aig(aig: &Aig) -> (Self, TransysRestore) {
+    pub fn from_aig(aig: &Aig) -> Self {
         let (aig, remap) = Self::preprocess(aig);
         let false_lit: Lit = Lit::constant_lit(false);
         let mut max_var = false_lit.var();
@@ -111,24 +112,22 @@ impl Transys {
         for (d, v) in remap.iter() {
             restore.insert(Var::new(*d), Var::new(*v));
         }
-        (
-            Self {
-                inputs,
-                latchs,
-                init,
-                bad: Cube::from([bad]),
-                init_map,
-                constraints,
-                trans,
-                max_var,
-                is_latch,
-                next_map,
-                prev_map,
-                dependence,
-                max_latch,
-            },
-            TransysRestore { restore },
-        )
+        Self {
+            inputs,
+            latchs,
+            init,
+            bad: Cube::from([bad]),
+            init_map,
+            constraints,
+            trans,
+            max_var,
+            is_latch,
+            next_map,
+            prev_map,
+            dependence,
+            max_latch,
+            restore,
+        }
     }
 
     #[inline]
@@ -254,6 +253,12 @@ impl Transys {
         }
     }
 
+    #[inline]
+    pub fn restore(&self, lit: Lit) -> Lit {
+        let var = self.restore[&lit.var()];
+        Lit::new(var, lit.polarity())
+    }
+
     // pub fn simplify_eq_latchs(&mut self, eqs: &[(Lit, Lit)], keep_dep: bool) {
     //     let mut marks = HashSet::new();
     //     let mut map = HashMap::new();
@@ -272,17 +277,4 @@ impl Transys {
     //     }
     //     self.simplify(&[], keep_dep, true)
     // }
-}
-
-#[derive(Debug, Clone)]
-pub struct TransysRestore {
-    pub restore: HashMap<Var, Var>,
-}
-
-impl TransysRestore {
-    #[inline]
-    pub fn restore(&self, lit: Lit) -> Lit {
-        let var = self.restore[&lit.var()];
-        Lit::new(var, lit.polarity())
-    }
 }

@@ -1,4 +1,4 @@
-use super::{abc::abc_preprocess, Transys, TransysRestore};
+use super::{abc::abc_preprocess, Transys};
 use aig::{Aig, AigEdge};
 use logic_form::{Clause, Lit, LitMap, Var, VarMap};
 use minisat::SimpSolver;
@@ -65,13 +65,7 @@ impl Transys {
         deps
     }
 
-    pub fn simplify(
-        &self,
-        lemmas: &[Clause],
-        keep_dep: bool,
-        assert_constrain: bool,
-        restore: &TransysRestore,
-    ) -> (Self, TransysRestore) {
+    pub fn simplify(&self, lemmas: &[Clause], keep_dep: bool, assert_constrain: bool) -> Self {
         let mut simp_solver: Box<dyn Satif> = if keep_dep {
             Box::new(SimpSolver::new())
         } else {
@@ -158,29 +152,27 @@ impl Transys {
         for l in latchs.iter() {
             is_latch[*l] = true;
         }
-        let mut rst = HashMap::new();
+        let mut restore = HashMap::new();
         for d in domain.iter() {
-            if let Some(r) = restore.restore.get(d) {
-                rst.insert(domain_map[d], *r);
+            if let Some(r) = self.restore.get(d) {
+                restore.insert(domain_map[d], *r);
             }
         }
-        (
-            Self {
-                inputs,
-                latchs,
-                init,
-                bad,
-                init_map,
-                constraints,
-                trans,
-                max_var,
-                is_latch,
-                next_map,
-                prev_map,
-                dependence,
-                max_latch,
-            },
-            TransysRestore { restore: rst },
-        )
+        Self {
+            inputs,
+            latchs,
+            init,
+            bad,
+            init_map,
+            constraints,
+            trans,
+            max_var,
+            is_latch,
+            next_map,
+            prev_map,
+            dependence,
+            max_latch,
+            restore,
+        }
     }
 }

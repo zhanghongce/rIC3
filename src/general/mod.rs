@@ -10,6 +10,7 @@ use crate::{
     transys::Transys,
     Engine, Options,
 };
+use aig::{Aig, AigEdge};
 use logic_form::{Cube, Lemma};
 use solver::{BlockResult, BlockResultYes, Ic3Solver, Lift};
 use std::{rc::Rc, time::Instant};
@@ -243,5 +244,23 @@ impl Engine for IC3 {
                 return Some(true);
             }
         }
+    }
+
+    fn certifaiger(&mut self, aig: &Aig) -> Aig {
+        let invariants = self.frame.invariant();
+        let invariants = invariants
+            .iter()
+            .map(|l| Cube::from_iter(l.iter().map(|l| self.ts.restore(*l))));
+        let mut certifaiger = aig.clone();
+        let mut certifaiger_dnf = vec![];
+        for cube in invariants {
+            certifaiger_dnf
+                .push(certifaiger.new_ands_node(cube.into_iter().map(AigEdge::from_lit)));
+        }
+        let invariants = certifaiger.new_ors_node(certifaiger_dnf.into_iter());
+        certifaiger.bads.clear();
+        certifaiger.outputs.clear();
+        certifaiger.outputs.push(invariants);
+        certifaiger
     }
 }

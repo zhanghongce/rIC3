@@ -18,12 +18,12 @@ fn main() {
         portfolio.check()
     } else {
         let aig = Aig::from_file(&option.model);
-        let (mut ts, mut restore) = Transys::from_aig(&aig);
+        let mut ts = Transys::from_aig(&aig);
         let pre_lemmas = vec![];
         if option.preprocess.sec {
             panic!("sec not support");
         }
-        (ts, restore) = ts.simplify(&[], option.ic3, !option.ic3, &restore);
+        ts = ts.simplify(&[], option.ic3, !option.ic3);
         let mut engine: Box<dyn Engine> = if option.bmc {
             Box::new(BMC::new(option.clone(), ts))
         } else if option.kind {
@@ -36,7 +36,7 @@ fn main() {
         let res = engine.check();
         if let Some(true) = res {
             if option.certifaiger {
-                let certifaiger = engine.certifaiger(&aig, &restore);
+                let certifaiger = engine.certifaiger(&aig);
                 check_certifaiger(&option.model, &certifaiger);
             }
         }

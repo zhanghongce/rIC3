@@ -29,12 +29,12 @@ use std::collections::{HashMap, HashSet};
 use std::rc::Rc;
 use std::time::Instant;
 use transys::unroll::TransysUnroll;
-use transys::{Transys, TransysRestore};
+use transys::Transys;
 
 pub trait Engine {
     fn check(&mut self) -> Option<bool>;
 
-    fn certifaiger(&mut self, _aig: &Aig, _restore: &TransysRestore) -> Aig {
+    fn certifaiger(&mut self, _aig: &Aig) -> Aig {
         panic!("unsupport certifaiger");
     }
 }
@@ -391,11 +391,11 @@ impl Engine for IC3 {
         }
     }
 
-    fn certifaiger(&mut self, aig: &Aig, restore: &TransysRestore) -> Aig {
+    fn certifaiger(&mut self, aig: &Aig) -> Aig {
         let invariants = self.frame.invariant();
         let invariants = invariants
             .iter()
-            .map(|l| Cube::from_iter(l.iter().map(|l| restore.restore(*l))));
+            .map(|l| Cube::from_iter(l.iter().map(|l| self.ts.restore(*l))));
         let mut certifaiger = aig.clone();
         let mut certifaiger_dnf = vec![];
         for cube in invariants {
@@ -403,9 +403,6 @@ impl Engine for IC3 {
                 .push(certifaiger.new_ands_node(cube.into_iter().map(AigEdge::from_lit)));
         }
         let invariants = certifaiger.new_ors_node(certifaiger_dnf.into_iter());
-        // let constrains: Vec<AigEdge> = certifaiger.constraints.iter().map(|e| !*e).collect();
-        // let constrains = certifaiger.new_ors_node(constrains.into_iter());
-        // let invariants = certifaiger.new_or_node(invariants, constrains);
         certifaiger.bads.clear();
         certifaiger.outputs.clear();
         certifaiger.outputs.push(invariants);
