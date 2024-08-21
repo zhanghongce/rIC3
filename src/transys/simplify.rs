@@ -125,7 +125,11 @@ impl Transys {
         for l in self.latchs.iter() {
             init_map[domain_map[l]] = self.init_map[*l];
         }
-        let constraints = self.constraints.iter().map(map_lit).collect();
+        let constraints = if assert_constrain {
+            Default::default()
+        } else {
+            self.constraints.iter().map(map_lit).collect()
+        };
         for c in trans.iter_mut() {
             *c = c.iter().map(|l| map_lit(l)).collect();
         }

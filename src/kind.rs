@@ -2,6 +2,7 @@ use crate::{
     transys::{unroll::TransysUnroll, Transys},
     Engine, Options,
 };
+use aig::{Aig, AigEdge};
 use logic_form::Clause;
 use satif::Satif;
 
@@ -92,5 +93,20 @@ impl Engine for Kind {
             }
         }
         unreachable!();
+    }
+
+    fn certifaiger(&mut self, aig: &Aig) -> Aig {
+        let mut certifaiger = aig.unroll();
+        let bads: Vec<AigEdge> = certifaiger
+            .bads
+            .iter()
+            .chain(certifaiger.outputs.iter())
+            .copied()
+            .collect();
+        let inv = certifaiger.new_ors_node(bads.into_iter());
+        certifaiger.bads.clear();
+        certifaiger.outputs.clear();
+        certifaiger.outputs.push(inv);
+        certifaiger
     }
 }
