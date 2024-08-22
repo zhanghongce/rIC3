@@ -47,6 +47,7 @@ fn preprocess(f: String) {
     abc_aig.to_file(&f, false);
 }
 
+#[allow(unused)]
 pub fn abc_preprocess(mut aig: Aig) -> Aig {
     let tmpfile = tempfile::NamedTempFile::new().unwrap();
     let path = tmpfile.path().as_os_str().to_str().unwrap();
