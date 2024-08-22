@@ -159,14 +159,14 @@ pub fn check_certifaiger(engine: &mut Box<dyn Engine>, aig: &Aig, option: &Optio
     }
     let certifaiger = engine.certifaiger(&aig);
     if let Some(witness) = &option.verify_path {
-        certifaiger.to_file(witness);
+        certifaiger.to_file(witness, true);
     }
     if !option.verify {
         return;
     }
     let certifaiger_file = tempfile::NamedTempFile::new().unwrap();
     let certifaiger_path = certifaiger_file.path().as_os_str().to_str().unwrap();
-    certifaiger.to_file(certifaiger_path);
+    certifaiger.to_file(certifaiger_path, true);
     let output = Command::new("/root/certifaiger/build/check")
         .arg(&option.model)
         .arg(certifaiger_path)

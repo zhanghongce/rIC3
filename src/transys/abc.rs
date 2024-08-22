@@ -44,13 +44,13 @@ fn preprocess(f: String) {
     assert!(abc_aig.latchs.len() == num_latchs);
     assert!(abc_aig.constraints.len() == num_constraints);
 
-    abc_aig.to_file(&f);
+    abc_aig.to_file(&f, false);
 }
 
 pub fn abc_preprocess(mut aig: Aig) -> Aig {
     let tmpfile = tempfile::NamedTempFile::new().unwrap();
     let path = tmpfile.path().as_os_str().to_str().unwrap();
-    aig.to_file(path);
+    aig.to_file(path, false);
     let mut join = procspawn::spawn(path.to_string(), preprocess);
     if join.join_timeout(Duration::from_secs(50)).is_ok() {
         aig = Aig::from_file(path);
