@@ -23,6 +23,9 @@ fn main() {
         portfolio.check()
     } else {
         let aig = Aig::from_file(&option.model);
+        if aig.bads.len() + aig.outputs.len() == 0 {
+            panic!("no property to be checked");
+        }
         let mut ts = Transys::from_aig(&aig);
         let pre_lemmas = vec![];
         if option.preprocess.sec {
