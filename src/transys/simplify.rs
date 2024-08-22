@@ -7,6 +7,14 @@ use std::collections::{HashMap, HashSet};
 
 impl Transys {
     pub fn preprocess(aig: &Aig) -> (Aig, HashMap<usize, usize>) {
+        // let mut remap = HashMap::new();
+        // for l in aig.inputs.iter() {
+        //     remap.insert(*l, *l);
+        // }
+        // for l in aig.latchs.iter() {
+        //     remap.insert(l.input, l.input);
+        // }
+        // (aig.clone(), remap)
         let (aig, mut remap) = aig.coi_refine();
         let mut remap_retain = HashSet::new();
         remap_retain.insert(AigEdge::constant_edge(false).node_id());

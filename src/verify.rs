@@ -78,23 +78,8 @@ impl IC3 {
             );
             assert!(imply
                 .iter()
+                .chain(self.ts.constraints.iter())
                 .all(|l| self.lift.sat_value(*l).is_some_and(|v| v)));
-            if let Some(v) = self
-                .ts
-                .constraints
-                .iter()
-                .find(|l| self.lift.sat_value(**l).is_some_and(|v| !v))
-            {
-                return Some(*v);
-            }
-            if let Some(v) = self
-                .ts
-                .constraints
-                .iter()
-                .find(|l| self.lift.sat_value(**l).is_none())
-            {
-                return Some(*v);
-            }
             b = bad.next.clone();
         }
         if self.options.verbose > 0 {
@@ -192,15 +177,14 @@ pub fn check_witness(engine: &mut Box<dyn Engine>, aig: &Aig, option: &Options) 
         HashMap::from_iter(witness[0].iter().map(|l| (l.var(), l.polarity())));
     let mut line = String::new();
     for l in aig.latchs.iter() {
-        line.push(if let Some(r) = map.get(&Var::new(l.input)) {
-            if *r {
-                '1'
-            } else {
-                '0'
-            }
+        let r = if let Some(r) = l.init {
+            r
+        } else if let Some(r) = map.get(&Var::new(l.input)) {
+            *r
         } else {
-            'x'
-        })
+            true
+        };
+        line.push(if r { '1' } else { '0' })
     }
     line.push('\n');
     wit.push(line);
@@ -208,15 +192,12 @@ pub fn check_witness(engine: &mut Box<dyn Engine>, aig: &Aig, option: &Options) 
         let map: HashMap<Var, bool> = HashMap::from_iter(c.iter().map(|l| (l.var(), l.polarity())));
         let mut line = String::new();
         for l in aig.inputs.iter() {
-            line.push(if let Some(r) = map.get(&Var::new(*l)) {
-                if *r {
-                    '1'
-                } else {
-                    '0'
-                }
+            let r = if let Some(r) = map.get(&Var::new(*l)) {
+                *r
             } else {
-                'x'
-            })
+                true
+            };
+            line.push(if r { '1' } else { '0' })
         }
         line.push('\n');
         wit.push(line);
