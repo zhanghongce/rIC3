@@ -165,14 +165,10 @@ pub fn check_certifaiger(engine: &mut Box<dyn Engine>, aig: &Aig, option: &Optio
     }
 }
 
-pub fn check_witness(engine: &mut Box<dyn Engine>, aig: &Aig, option: &Options) {
-    if option.certify_path.is_none() && option.not_certify {
-        return;
-    }
-    let witness = engine.witness();
+pub fn witness_encode(aig: &Aig, witness: &[Cube]) -> String {
     let mut wit = Vec::new();
-    wit.push("1\n".to_string());
-    wit.push("b0\n".to_string());
+    wit.push("1".to_string());
+    wit.push("b0".to_string());
     let map: HashMap<Var, bool> =
         HashMap::from_iter(witness[0].iter().map(|l| (l.var(), l.polarity())));
     let mut line = String::new();
@@ -186,7 +182,6 @@ pub fn check_witness(engine: &mut Box<dyn Engine>, aig: &Aig, option: &Options) 
         };
         line.push(if r { '1' } else { '0' })
     }
-    line.push('\n');
     wit.push(line);
     for c in witness[1..].iter() {
         let map: HashMap<Var, bool> = HashMap::from_iter(c.iter().map(|l| (l.var(), l.polarity())));
@@ -199,23 +194,26 @@ pub fn check_witness(engine: &mut Box<dyn Engine>, aig: &Aig, option: &Options) 
             };
             line.push(if r { '1' } else { '0' })
         }
-        line.push('\n');
         wit.push(line);
     }
     wit.push(".\n".to_string());
+    wit.join("\n")
+}
+
+pub fn check_witness(engine: &mut Box<dyn Engine>, aig: &Aig, option: &Options) {
+    if option.certify_path.is_none() && option.not_certify {
+        return;
+    }
+    let witness = engine.witness(aig);
     if let Some(witness_file) = &option.certify_path {
         let mut file: File = File::create(witness_file).unwrap();
-        for l in wit.iter() {
-            file.write_all(l.as_bytes()).unwrap();
-        }
+        file.write_all(witness.as_bytes()).unwrap();
     }
     if option.not_certify {
         return;
     }
     let mut wit_file = tempfile::NamedTempFile::new().unwrap();
-    for l in wit.iter() {
-        wit_file.write_all(l.as_bytes()).unwrap();
-    }
+    wit_file.write_all(witness.as_bytes()).unwrap();
     let wit_path = wit_file.path().as_os_str().to_str().unwrap();
     let output = Command::new("/root/certifaiger/build/simulate")
         .arg(&option.model)

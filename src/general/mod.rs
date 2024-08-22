@@ -8,6 +8,7 @@ use crate::{
     proofoblig::{ProofObligation, ProofObligationQueue},
     statistic::Statistic,
     transys::Transys,
+    verify::witness_encode,
     Engine, Options,
 };
 use aig::{Aig, AigEdge};
@@ -264,15 +265,15 @@ impl Engine for IC3 {
         certifaiger
     }
 
-    fn witness(&mut self) -> Vec<Cube> {
+    fn witness(&mut self, aig: &Aig) -> String {
         let mut res: Vec<Cube> = Vec::new();
-        let b = self.obligations.pop(0).unwrap();
+        let b = self.obligations.peak().unwrap();
         res.push(b.lemma.iter().map(|l| self.ts.restore(*l)).collect());
         let mut b = Some(b);
         while let Some(bad) = b {
             res.push(bad.input.iter().map(|l| self.ts.restore(*l)).collect());
             b = bad.next.clone();
         }
-        res
+        witness_encode(aig, &res)
     }
 }

@@ -30,6 +30,7 @@ use std::rc::Rc;
 use std::time::Instant;
 use transys::unroll::TransysUnroll;
 use transys::Transys;
+use verify::witness_encode;
 
 pub trait Engine {
     fn check(&mut self) -> Option<bool>;
@@ -38,7 +39,7 @@ pub trait Engine {
         panic!("unsupport certifaiger");
     }
 
-    fn witness(&mut self) -> Vec<Cube> {
+    fn witness(&mut self, _aig: &Aig) -> String {
         panic!("unsupport witness");
     }
 }
@@ -417,7 +418,7 @@ impl Engine for IC3 {
         certifaiger
     }
 
-    fn witness(&mut self) -> Vec<Cube> {
+    fn witness(&mut self, aig: &Aig) -> String {
         let mut res: Vec<Cube> = Vec::new();
         let b = self.obligations.peak().unwrap();
         res.push(b.lemma.iter().map(|l| self.ts.restore(*l)).collect());
@@ -426,6 +427,6 @@ impl Engine for IC3 {
             res.push(bad.input.iter().map(|l| self.ts.restore(*l)).collect());
             b = bad.next.clone();
         }
-        res
+        witness_encode(aig, &res)
     }
 }

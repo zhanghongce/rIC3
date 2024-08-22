@@ -18,11 +18,10 @@ fn main() {
     if verbose > 0 {
         println!("the model to be checked: {}", option.model);
     }
-    let res = if option.portfolio {
-        let mut portfolio = Portfolio::new(option);
-        portfolio.check()
+    let aig = Aig::from_file(&option.model);
+    let mut engine: Box<dyn Engine> = if option.portfolio {
+        Box::new(Portfolio::new(option.clone()))
     } else {
-        let aig = Aig::from_file(&option.model);
         if aig.bads.len() + aig.outputs.len() == 0 {
             panic!("no property to be checked");
         }
@@ -32,7 +31,7 @@ fn main() {
             panic!("sec not support");
         }
         ts = ts.simplify(&[], option.ic3, !option.ic3);
-        let mut engine: Box<dyn Engine> = if option.bmc {
+        if option.bmc {
             Box::new(BMC::new(option.clone(), ts))
         } else if option.kind {
             Box::new(Kind::new(option.clone(), ts, pre_lemmas))
@@ -40,16 +39,15 @@ fn main() {
             Box::new(general::IC3::new(option.clone(), ts))
         } else {
             Box::new(IC3::new(option.clone(), ts, pre_lemmas))
-        };
-        let res = engine.check();
-        match res {
-            Some(true) => check_certifaiger(&mut engine, &aig, &option),
-            Some(false) => check_witness(&mut engine, &aig, &option),
-            _ => (),
         }
-        mem::forget(engine);
-        res
     };
+    let res = engine.check();
+    match res {
+        Some(true) => check_certifaiger(&mut engine, &aig, &option),
+        Some(false) => check_witness(&mut engine, &aig, &option),
+        _ => (),
+    }
+    mem::forget(engine);
     if let Some(res) = res {
         if verbose > 0 {
             println!("result: {res}");

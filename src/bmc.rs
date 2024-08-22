@@ -1,7 +1,9 @@
 use crate::{
     transys::{unroll::TransysUnroll, Transys},
+    verify::witness_encode,
     Engine, Options,
 };
+use aig::Aig;
 use logic_form::Cube;
 use satif::Satif;
 use std::time::Duration;
@@ -89,7 +91,7 @@ impl Engine for BMC {
         unreachable!();
     }
 
-    fn witness(&mut self) -> Vec<Cube> {
+    fn witness(&mut self, aig: &Aig) -> String {
         let mut wit = vec![Cube::new()];
         for l in self.uts.ts.latchs.iter() {
             let l = l.lit();
@@ -108,6 +110,6 @@ impl Engine for BMC {
             }
             wit.push(w);
         }
-        wit
+        witness_encode(aig, &wit)
     }
 }
