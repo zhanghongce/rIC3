@@ -77,6 +77,7 @@ impl IC3 {
                 continue;
             }
             if po.frame == 0 {
+                self.add_obligation(po);
                 return Some(false);
             }
             assert!(!self.ts.cube_subsume_init(&po.lemma));
@@ -265,5 +266,17 @@ impl Engine for IC3 {
         certifaiger.outputs.clear();
         certifaiger.outputs.push(invariants);
         certifaiger
+    }
+
+    fn witness(&mut self) -> Vec<Cube> {
+        let mut res: Vec<Cube> = Vec::new();
+        let b = self.obligations.pop(0).unwrap();
+        res.push(b.lemma.iter().map(|l| self.ts.restore(*l)).collect());
+        let mut b = Some(b);
+        while let Some(bad) = b {
+            res.push(bad.input.iter().map(|l| self.ts.restore(*l)).collect());
+            b = bad.next.clone();
+        }
+        res
     }
 }

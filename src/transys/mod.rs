@@ -234,7 +234,7 @@ impl Transys {
         Vec::from_iter(marked)
     }
 
-    pub fn load_init(&self, satif: &mut impl Satif) {
+    pub fn load_init<S: Satif + ?Sized>(&self, satif: &mut S) {
         satif.new_var_to(self.max_var);
         for i in self.init.iter() {
             satif.add_clause(&[*i]);

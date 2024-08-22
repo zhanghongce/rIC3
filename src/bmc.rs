@@ -2,35 +2,81 @@ use crate::{
     transys::{unroll::TransysUnroll, Transys},
     Engine, Options,
 };
+use logic_form::Cube;
 use satif::Satif;
 use std::time::Duration;
 
 pub struct BMC {
     uts: TransysUnroll,
     options: Options,
+    solver: Box<dyn Satif>,
 }
 
 impl BMC {
     pub fn new(options: Options, ts: Transys) -> Self {
         let uts = TransysUnroll::new(&ts);
-        Self { uts, options }
+        let mut solver: Box<dyn Satif> = if options.bmc_options.kissat {
+            Box::new(kissat::Solver::new())
+        } else {
+            Box::new(cadical::Solver::new())
+        };
+        ts.load_init(solver.as_mut());
+        Self {
+            uts,
+            options,
+            solver,
+        }
     }
 
-    fn check_with_cadical(&mut self) -> Option<bool> {
-        let mut solver = cadical::Solver::new();
+    pub fn reset_solver(&mut self) {
+        self.solver = if self.options.bmc_options.kissat {
+            Box::new(kissat::Solver::new())
+        } else {
+            Box::new(cadical::Solver::new())
+        };
+        self.uts.ts.load_init(self.solver.as_mut());
+    }
+}
+
+impl Engine for BMC {
+    fn check(&mut self) -> Option<bool> {
         let step = self.options.step as usize;
         for k in (step - 1..).step_by(step) {
             self.uts.unroll_to(k);
-            let last_bound = k + 1 - step;
+            let last_bound = if self.options.bmc_options.kissat {
+                self.reset_solver();
+                0
+            } else {
+                k + 1 - step
+            };
             for s in last_bound..=k {
-                self.uts.load_trans(&mut solver, s, true);
+                self.uts.load_trans(self.solver.as_mut(), s, true);
             }
-            let mut assump = self.uts.ts.init.clone();
-            assump.extend_from_slice(&self.uts.lits_next(&self.uts.ts.bad, k));
+            let mut assump = self.uts.lits_next(&self.uts.ts.bad, k);
+            if self.options.bmc_options.kissat {
+                for b in assump.iter() {
+                    self.solver.add_clause(&[*b]);
+                }
+                assump.clear();
+            }
             if self.options.verbose > 0 {
                 println!("bmc depth: {k}");
             }
-            if solver.solve(&assump) {
+            let r = if let Some(limit) = self.options.bmc_options.time_limit {
+                let Some(r) = self
+                    .solver
+                    .solve_with_limit(&assump, Duration::from_secs(limit))
+                else {
+                    if self.options.verbose > 0 {
+                        println!("bmc solve timeout in depth {k}");
+                    }
+                    continue;
+                };
+                r
+            } else {
+                self.solver.solve(&assump)
+            };
+            if r {
                 if self.options.verbose > 0 {
                     println!("bmc found cex in depth {k}");
                 }
@@ -43,49 +89,25 @@ impl BMC {
         unreachable!();
     }
 
-    fn check_with_kissat(&mut self) -> Option<bool> {
-        let step = self.options.step as usize;
-        for k in (step..).step_by(step) {
-            let mut solver = kissat::Solver::new();
-            self.uts.ts.load_init(&mut solver);
-            self.uts.unroll_to(k);
-            for k in 0..=k {
-                self.uts.load_trans(&mut solver, k, true);
+    fn witness(&mut self) -> Vec<Cube> {
+        let mut wit = vec![Cube::new()];
+        for l in self.uts.ts.latchs.iter() {
+            let l = l.lit();
+            if let Some(v) = self.solver.sat_value(l) {
+                wit[0].push(self.uts.ts.restore(l.not_if(!v)));
             }
-            if self.options.verbose > 0 {
-                println!("bmc depth: {k}");
-            }
-            for b in self.uts.lits_next(&self.uts.ts.bad, k) {
-                solver.add_clause(&[b]);
-            }
-            let r = if let Some(limit) = self.options.bmc_options.time_limit {
-                let Some(r) = solver.solve_with_limit(&[], Duration::from_secs(limit)) else {
-                    if self.options.verbose > 0 {
-                        println!("bmc solve timeout in depth {k}");
-                    }
-                    continue;
-                };
-                r
-            } else {
-                solver.solve(&[])
-            };
-            if r {
-                if self.options.verbose > 0 {
-                    println!("bmc found cex in depth {k}");
+        }
+        for k in 0..=self.uts.num_unroll {
+            let mut w = Cube::new();
+            for l in self.uts.ts.inputs.iter() {
+                let l = l.lit();
+                let kl = self.uts.lit_next(l, k);
+                if let Some(v) = self.solver.sat_value(kl) {
+                    w.push(self.uts.ts.restore(l.not_if(!v)));
                 }
-                return Some(false);
             }
+            wit.push(w);
         }
-        unreachable!()
-    }
-}
-
-impl Engine for BMC {
-    fn check(&mut self) -> Option<bool> {
-        if self.options.bmc_options.kissat {
-            self.check_with_kissat()
-        } else {
-            self.check_with_cadical()
-        }
+        wit
     }
 }

@@ -1,8 +1,13 @@
 use aig::Aig;
 use clap::Parser;
 use rIC3::{
-    bmc::BMC, general, kind::Kind, portfolio::Portfolio, transys::Transys,
-    verify::{check_certifaiger, check_witness}, Engine, Options, IC3,
+    bmc::BMC,
+    general,
+    kind::Kind,
+    portfolio::Portfolio,
+    transys::Transys,
+    verify::{check_certifaiger, check_witness},
+    Engine, Options, IC3,
 };
 use std::process::exit;
 
