@@ -9,7 +9,7 @@ use rIC3::{
     verify::{check_certifaiger, check_witness},
     Engine, Options, IC3,
 };
-use std::process::exit;
+use std::{mem, process::exit};
 
 fn main() {
     procspawn::init();
@@ -44,6 +44,7 @@ fn main() {
             Some(false) => check_witness(&mut engine, &aig, &option),
             _ => (),
         }
+        mem::forget(engine);
         res
     };
     if let Some(res) = res {
