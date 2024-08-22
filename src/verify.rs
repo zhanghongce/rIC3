@@ -185,15 +185,30 @@ pub fn check_witness(engine: &mut Box<dyn Engine>, aig: &Aig, option: &Options) 
         return;
     }
     let witness = engine.witness();
-    if let Some(witness_file) = &option.verify_path {
-        let mut file = File::create(witness_file).unwrap();
-        file.write_all(b"1\n").unwrap();
-        file.write_all(b"b0\n").unwrap();
-        let map: HashMap<Var, bool> =
-            HashMap::from_iter(witness[0].iter().map(|l| (l.var(), l.polarity())));
+    let mut wit = Vec::new();
+    wit.push("1\n".to_string());
+    wit.push("b0\n".to_string());
+    let map: HashMap<Var, bool> =
+        HashMap::from_iter(witness[0].iter().map(|l| (l.var(), l.polarity())));
+    let mut line = String::new();
+    for l in aig.latchs.iter() {
+        line.push(if let Some(r) = map.get(&Var::new(l.input)) {
+            if *r {
+                '1'
+            } else {
+                '0'
+            }
+        } else {
+            'x'
+        })
+    }
+    line.push('\n');
+    wit.push(line);
+    for c in witness[1..].iter() {
+        let map: HashMap<Var, bool> = HashMap::from_iter(c.iter().map(|l| (l.var(), l.polarity())));
         let mut line = String::new();
-        for l in aig.latchs.iter() {
-            line.push(if let Some(r) = map.get(&Var::new(l.input)) {
+        for l in aig.inputs.iter() {
+            line.push(if let Some(r) = map.get(&Var::new(*l)) {
                 if *r {
                     '1'
                 } else {
@@ -204,25 +219,32 @@ pub fn check_witness(engine: &mut Box<dyn Engine>, aig: &Aig, option: &Options) 
             })
         }
         line.push('\n');
-        file.write_all(line.as_bytes()).unwrap();
-        for c in witness[1..].iter() {
-            let map: HashMap<Var, bool> =
-                HashMap::from_iter(c.iter().map(|l| (l.var(), l.polarity())));
-            let mut line = String::new();
-            for l in aig.inputs.iter() {
-                line.push(if let Some(r) = map.get(&Var::new(*l)) {
-                    if *r {
-                        '1'
-                    } else {
-                        '0'
-                    }
-                } else {
-                    'x'
-                })
-            }
-            line.push('\n');
-            file.write_all(line.as_bytes()).unwrap();
+        wit.push(line);
+    }
+    wit.push(".\n".to_string());
+    if let Some(witness_file) = &option.verify_path {
+        let mut file: File = File::create(witness_file).unwrap();
+        for l in wit.iter() {
+            file.write_all(l.as_bytes()).unwrap();
         }
-        file.write_all(b".\n").unwrap();
+    }
+    if !option.verify {
+        return;
+    }
+    let mut wit_file = tempfile::NamedTempFile::new().unwrap();
+    for l in wit.iter() {
+        wit_file.write_all(l.as_bytes()).unwrap();
+    }
+    let wit_path = wit_file.path().as_os_str().to_str().unwrap();
+    let output = Command::new("/root/certifaiger/build/simulate")
+        .arg(&option.model)
+        .arg(wit_path)
+        .output()
+        .expect("certifaiger not found");
+    io::stdout().write_all(&output.stdout).unwrap();
+    if output.status.success() {
+        println!("certifaiger check passed");
+    } else {
+        panic!("certifaiger check failed");
     }
 }
