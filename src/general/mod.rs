@@ -206,9 +206,7 @@ impl Engine for IC3 {
                     None => {
                         self.statistic.overall_block_time += start.elapsed();
                         self.statistic();
-                        if self.options.verify {
-                            assert!(self.verify());
-                        }
+                        self.verify();
                         return Some(true);
                     }
                     _ => (),
@@ -239,9 +237,7 @@ impl Engine for IC3 {
             self.statistic.overall_propagate_time += start.elapsed();
             if propagate {
                 self.statistic();
-                if self.options.verify {
-                    assert!(self.verify());
-                }
+                self.verify();
                 return Some(true);
             }
         }

@@ -9,11 +9,11 @@ pub struct Options {
     pub model: String,
 
     /// verify
-    #[arg(long, default_value_t = true)]
-    pub verify: bool,
+    #[arg(long, default_value_t = false)]
+    pub not_certify: bool,
 
     /// certifaiger or witness output path
-    pub verify_path: Option<String>,
+    pub certify_path: Option<String>,
 
     /// word level engin
     #[arg(long, default_value_t = false)]

@@ -79,12 +79,13 @@ impl IC3 {
         }
     }
 
-    pub fn verify(&mut self) -> bool {
+    pub fn verify(&mut self) {
+        if self.options.not_certify {
+            return;
+        }
         let invariants = self.frame.invariant();
-
         if !verify_invariant(&self.ts, &invariants) {
-            println!("invariant varify failed");
-            return false;
+            panic!("invariant varify failed");
         }
         if self.options.verbose > 0 {
             println!(
@@ -92,6 +93,5 @@ impl IC3 {
                 invariants.len()
             );
         }
-        true
     }
 }

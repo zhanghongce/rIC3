@@ -44,7 +44,7 @@ pub fn verify_invariant(ts: &Transys, invariants: &[Lemma]) -> bool {
 
 impl IC3 {
     pub fn verify(&mut self) {
-        if !self.options.verify {
+        if self.options.not_certify {
             return;
         }
         let invariants = self.frame.invariant();
@@ -139,14 +139,14 @@ impl IC3 {
 }
 
 pub fn check_certifaiger(engine: &mut Box<dyn Engine>, aig: &Aig, option: &Options) {
-    if option.verify_path.is_none() && !option.verify {
+    if option.certify_path.is_none() && option.not_certify {
         return;
     }
     let certifaiger = engine.certifaiger(&aig);
-    if let Some(witness) = &option.verify_path {
+    if let Some(witness) = &option.certify_path {
         certifaiger.to_file(witness, true);
     }
-    if !option.verify {
+    if option.not_certify {
         return;
     }
     let certifaiger_file = tempfile::NamedTempFile::new().unwrap();
@@ -166,7 +166,7 @@ pub fn check_certifaiger(engine: &mut Box<dyn Engine>, aig: &Aig, option: &Optio
 }
 
 pub fn check_witness(engine: &mut Box<dyn Engine>, aig: &Aig, option: &Options) {
-    if option.verify_path.is_none() && !option.verify {
+    if option.certify_path.is_none() && option.not_certify {
         return;
     }
     let witness = engine.witness();
@@ -203,13 +203,13 @@ pub fn check_witness(engine: &mut Box<dyn Engine>, aig: &Aig, option: &Options) 
         wit.push(line);
     }
     wit.push(".\n".to_string());
-    if let Some(witness_file) = &option.verify_path {
+    if let Some(witness_file) = &option.certify_path {
         let mut file: File = File::create(witness_file).unwrap();
         for l in wit.iter() {
             file.write_all(l.as_bytes()).unwrap();
         }
     }
-    if !option.verify {
+    if option.not_certify {
         return;
     }
     let mut wit_file = tempfile::NamedTempFile::new().unwrap();

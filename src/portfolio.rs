@@ -18,7 +18,7 @@ impl Portfolio {
         let mut engines = Vec::new();
         let mut new_engine = |args: &[&str]| {
             let mut engine = Command::new(current_exe().unwrap());
-            engine.args(["-v", "0"]);
+            engine.args(["-v", "0", ""]);
             engine.arg(&option.model);
             engine.args(args);
             engines.push(engine);
@@ -29,7 +29,7 @@ impl Portfolio {
         new_engine(&["--ic3", "--ic3-ctg", "--ic3-inn"]);
         new_engine(&["--ic3", "--ic3-ctg", "--ic3-ctp", "--ic3-inn"]);
         new_engine(&["--ic3", "--ic3-abs-cst", "--ic3-ctg", "--ic3-inn"]);
-        new_engine(&["--ic3", "--ic3-bwd", "--ic3-ctg"]);
+        // new_engine(&["--ic3", "--ic3-bwd", "--ic3-ctg"]);
 
         new_engine(&["--bmc", "--step", "10"]);
         new_engine(&["--bmc", "--bmc-kissat", "--step", "70"]);
@@ -42,7 +42,7 @@ impl Portfolio {
             "--step",
             "100",
         ]);
-        new_engine(&["--kind", "--step", "1"]);
+        // new_engine(&["--kind", "--step", "1"]);
         Self { option, engines }
     }
 
