@@ -59,8 +59,8 @@ impl IC3 {
         }
     }
 
-    pub fn check_witness(&mut self, b: ProofObligation) -> Option<Lit> {
-        let mut b = Some(b);
+    pub fn check_witness(&mut self) -> Option<Lit> {
+        let mut b = self.obligations.peak();
         while let Some(bad) = b {
             let imply = if let Some(next) = bad.next.clone() {
                 self.ts.cube_next(&next.lemma)

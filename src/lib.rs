@@ -419,7 +419,7 @@ impl Engine for IC3 {
 
     fn witness(&mut self) -> Vec<Cube> {
         let mut res: Vec<Cube> = Vec::new();
-        let b = self.obligations.pop(0).unwrap();
+        let b = self.obligations.peak().unwrap();
         res.push(b.lemma.iter().map(|l| self.ts.restore(*l)).collect());
         let mut b = Some(b);
         while let Some(bad) = b {

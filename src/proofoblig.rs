@@ -161,6 +161,10 @@ impl ProofObligationQueue {
         }
     }
 
+    pub fn peak(&mut self) -> Option<ProofObligation> {
+        self.obligations.last().cloned()
+    }
+
     pub fn remove(&mut self, po: &ProofObligation) -> bool {
         let ret = self.obligations.remove(po);
         if ret {
