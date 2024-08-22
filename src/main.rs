@@ -42,7 +42,7 @@ fn main() {
         match res {
             Some(true) => check_certifaiger(&mut engine, &aig, &option),
             Some(false) => check_witness(&mut engine, &aig, &option),
-            None => (),
+            _ => (),
         }
         res
     };

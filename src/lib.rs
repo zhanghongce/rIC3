@@ -373,7 +373,7 @@ impl Engine for IC3 {
                 }
             }
             let blocked_time = start.elapsed();
-            if self.options.verbose > 0 {
+            if self.options.verbose > 1 {
                 self.frame.statistic();
                 println!(
                     "[{}:{}] frame: {}, time: {:?}",
