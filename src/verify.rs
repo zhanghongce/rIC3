@@ -5,11 +5,13 @@ use crate::{
 };
 use aig::Aig;
 // use aig::AigEdge;
-use logic_form::{Clause, Cube, Lemma, Lit};
+use logic_form::{Clause, Cube, Lemma, Lit, Var};
 use minisat::Solver;
 use satif::Satif;
 use std::{
     // io::{self, Write},
+    collections::HashMap,
+    fs::File,
     io::{self, Write},
     ops::Deref,
     process::Command, // process::Command,
@@ -152,14 +154,14 @@ impl IC3 {
 }
 
 pub fn check_certifaiger(engine: &mut Box<dyn Engine>, aig: &Aig, option: &Options) {
-    if option.verify_path.is_none() && !option.certifaiger {
+    if option.verify_path.is_none() && !option.verify {
         return;
     }
     let certifaiger = engine.certifaiger(&aig);
     if let Some(witness) = &option.verify_path {
         certifaiger.to_file(witness);
     }
-    if !option.certifaiger {
+    if !option.verify {
         return;
     }
     let certifaiger_file = tempfile::NamedTempFile::new().unwrap();
@@ -175,5 +177,52 @@ pub fn check_certifaiger(engine: &mut Box<dyn Engine>, aig: &Aig, option: &Optio
         println!("certifaiger check passed");
     } else {
         panic!("certifaiger check failed");
+    }
+}
+
+pub fn check_witness(engine: &mut Box<dyn Engine>, aig: &Aig, option: &Options) {
+    if option.verify_path.is_none() && !option.verify {
+        return;
+    }
+    let witness = engine.witness();
+    if let Some(witness_file) = &option.verify_path {
+        let mut file = File::create(witness_file).unwrap();
+        file.write_all(b"1\n").unwrap();
+        file.write_all(b"b0\n").unwrap();
+        let map: HashMap<Var, bool> =
+            HashMap::from_iter(witness[0].iter().map(|l| (l.var(), l.polarity())));
+        let mut line = String::new();
+        for l in aig.latchs.iter() {
+            line.push(if let Some(r) = map.get(&Var::new(l.input)) {
+                if *r {
+                    '1'
+                } else {
+                    '0'
+                }
+            } else {
+                'x'
+            })
+        }
+        line.push('\n');
+        file.write_all(line.as_bytes()).unwrap();
+        for c in witness[1..].iter() {
+            let map: HashMap<Var, bool> =
+                HashMap::from_iter(c.iter().map(|l| (l.var(), l.polarity())));
+            let mut line = String::new();
+            for l in aig.inputs.iter() {
+                line.push(if let Some(r) = map.get(&Var::new(*l)) {
+                    if *r {
+                        '1'
+                    } else {
+                        '0'
+                    }
+                } else {
+                    'x'
+                })
+            }
+            line.push('\n');
+            file.write_all(line.as_bytes()).unwrap();
+        }
+        file.write_all(b".\n").unwrap();
     }
 }

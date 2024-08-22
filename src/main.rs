@@ -2,7 +2,7 @@ use aig::Aig;
 use clap::Parser;
 use rIC3::{
     bmc::BMC, general, kind::Kind, portfolio::Portfolio, transys::Transys,
-    verify::check_certifaiger, Engine, Options, IC3,
+    verify::{check_certifaiger, check_witness}, Engine, Options, IC3,
 };
 use std::process::exit;
 
@@ -34,8 +34,10 @@ fn main() {
             Box::new(IC3::new(option.clone(), ts, pre_lemmas))
         };
         let res = engine.check();
-        if let Some(true) = res {
-            check_certifaiger(&mut engine, &aig, &option);
+        match res {
+            Some(true) => check_certifaiger(&mut engine, &aig, &option),
+            Some(false) => check_witness(&mut engine, &aig, &option),
+            None => (),
         }
         res
     };

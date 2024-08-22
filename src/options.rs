@@ -8,12 +8,12 @@ pub struct Options {
     /// model file in aiger format
     pub model: String,
 
+    /// verify
+    #[arg(long, default_value_t = true)]
+    pub verify: bool,
+
     /// certifaiger or witness output path
     pub verify_path: Option<String>,
-
-    /// verify by certifaiger
-    #[arg(long, default_value_t = true)]
-    pub certifaiger: bool,
 
     /// word level engin
     #[arg(long, default_value_t = false)]
@@ -58,10 +58,6 @@ pub struct Options {
     /// random seed
     #[arg(long, default_value_t = 0)]
     pub rseed: u64,
-
-    /// verify
-    #[arg(long, default_value_t = true)]
-    pub verify: bool,
 
     /// verbose level
     #[arg(short, default_value_t = 1)]
