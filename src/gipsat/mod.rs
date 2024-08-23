@@ -462,20 +462,9 @@ impl IC3 {
     }
 
     pub fn get_predecessor(&mut self, frame: usize, strengthen: bool) -> (Cube, Cube) {
+        let not_subsume_init = self.options.ic3_options.inn && frame > 1;
         let solver = &mut self.solvers[frame - 1];
-        let mut cls: Cube = if self.options.ic3_options.abs_trans {
-            solver
-                .assump
-                .iter()
-                .filter(|l| {
-                    self.abs_trans.contains(&self.ts.lit_prev(**l).var())
-                        || self.ts.bad.contains(*l)
-                })
-                .copied()
-                .collect()
-        } else {
-            solver.assump.clone()
-        };
+        let mut cls: Cube = solver.assump.clone();
         cls.extend_from_slice(&self.abs_cst);
         if cls.is_empty() {
             return (Cube::new(), Cube::new());
@@ -541,10 +530,24 @@ impl IC3 {
                 panic!();
             };
             let olen = latchs.len();
-            latchs = latchs
-                .into_iter()
-                .filter(|l| self.lift.unsat_has(*l))
+            let mut new_latchs: Cube = latchs
+                .iter()
+                .filter(|l| self.lift.unsat_has(**l))
+                .copied()
                 .collect();
+            if not_subsume_init && self.ts.cube_subsume_init(&new_latchs) {
+                let p = latchs
+                    .iter()
+                    .find(|l| self.ts.init_map[l.var()].is_some_and(|v| v != l.polarity()))
+                    .unwrap();
+                new_latchs = latchs
+                    .iter()
+                    .filter(|l| self.lift.unsat_has(**l) || l.eq(&p))
+                    .copied()
+                    .collect();
+                assert!(!self.ts.cube_subsume_init(&new_latchs));
+            }
+            latchs = new_latchs;
             if latchs.len() == olen || !strengthen {
                 break;
             }
