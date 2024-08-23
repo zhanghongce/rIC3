@@ -420,9 +420,24 @@ impl Engine for IC3 {
     }
 
     fn witness(&mut self, aig: &Aig) -> String {
-        let mut res: Vec<Cube> = Vec::new();
+        let mut res: Vec<Cube> = vec![Cube::new()];
         let b = self.obligations.peak().unwrap();
-        res.push(b.lemma.iter().map(|l| self.ts.restore(*l)).collect());
+        assert!(b.frame == 0);
+        let mut assump = if let Some(next) = b.next.clone() {
+            self.ts.cube_next(&next.lemma)
+        } else {
+            self.ts.bad.clone()
+        };
+        assump.extend_from_slice(&b.input);
+        assert!(self.solvers[0]
+            .solve_with_domain(&assump, vec![], false, false)
+            .unwrap());
+        for l in self.ts.latchs.iter() {
+            let l = l.lit();
+            if let Some(v) = self.solvers[0].sat_value(l) {
+                res[0].push(self.ts.restore(l.not_if(!v)));
+            }
+        }
         let mut b = Some(b);
         while let Some(bad) = b {
             res.push(bad.input.iter().map(|l| self.ts.restore(*l)).collect());
