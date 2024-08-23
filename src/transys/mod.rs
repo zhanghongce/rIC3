@@ -62,7 +62,7 @@ impl Transys {
             .iter()
             .map(|l| {
                 dependence.push(vec![l.next.to_lit().var()]);
-                new_var().lit()
+                new_var().lit().not_if(!l.next.to_lit().polarity())
             })
             .collect();
         let init = aig.latch_init_cube().to_cube();
@@ -109,6 +109,13 @@ impl Transys {
         let mut restore = HashMap::new();
         for (d, v) in rst.iter() {
             restore.insert(Var::new(*d), Var::new(*v));
+        }
+        for i in 0..aig.latchs.len() {
+            let n = aig.latchs[i].next.to_lit();
+            assert!(primes[i].polarity() == n.polarity());
+            if let Some(r) = restore.get(&n.var()) {
+                restore.insert(primes[i].var(), *r);
+            }
         }
         Self {
             inputs,
