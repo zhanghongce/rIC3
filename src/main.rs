@@ -2,6 +2,7 @@ use aig::Aig;
 use clap::Parser;
 use rIC3::{
     bmc::BMC,
+    frontend::aig::aig_preprocess,
     general,
     kind::Kind,
     portfolio::Portfolio,
@@ -13,38 +14,39 @@ use std::{mem, process::exit};
 
 fn main() {
     procspawn::init();
-    let option = Options::parse();
-    let verbose = option.verbose;
+    let options = Options::parse();
+    let verbose = options.verbose;
     if verbose > 0 {
-        println!("the model to be checked: {}", option.model);
+        println!("the model to be checked: {}", options.model);
     }
-    let aig = Aig::from_file(&option.model);
-    let mut engine: Box<dyn Engine> = if option.portfolio {
-        Box::new(Portfolio::new(option.clone()))
+    let aig = Aig::from_file(&options.model);
+    if aig.bads.len() + aig.outputs.len() == 0 {
+        panic!("no property to be checked");
+    }
+    let mut engine: Box<dyn Engine> = if options.portfolio {
+        Box::new(Portfolio::new(options.clone()))
     } else {
-        if aig.bads.len() + aig.outputs.len() == 0 {
-            panic!("no property to be checked");
-        }
-        let mut ts = Transys::from_aig(&aig);
+        let (aig, restore) = aig_preprocess(&aig, &options);
+        let mut ts = Transys::from_aig(&aig, &restore);
         let pre_lemmas = vec![];
-        if option.preprocess.sec {
+        if options.preprocess.sec {
             panic!("sec not support");
         }
-        ts = ts.simplify(&[], option.ic3, !option.ic3);
-        if option.bmc {
-            Box::new(BMC::new(option.clone(), ts))
-        } else if option.kind {
-            Box::new(Kind::new(option.clone(), ts, pre_lemmas))
-        } else if option.gic3 {
-            Box::new(general::IC3::new(option.clone(), ts))
+        ts = ts.simplify(&[], options.ic3, !options.ic3);
+        if options.bmc {
+            Box::new(BMC::new(options.clone(), ts))
+        } else if options.kind {
+            Box::new(Kind::new(options.clone(), ts, pre_lemmas))
+        } else if options.gic3 {
+            Box::new(general::IC3::new(options.clone(), ts))
         } else {
-            Box::new(IC3::new(option.clone(), ts, pre_lemmas))
+            Box::new(IC3::new(options.clone(), ts, pre_lemmas))
         }
     };
     let res = engine.check();
     match res {
-        Some(true) => check_certifaiger(&mut engine, &aig, &option),
-        Some(false) => check_witness(&mut engine, &aig, &option),
+        Some(true) => check_certifaiger(&mut engine, &aig, &options),
+        Some(false) => check_witness(&mut engine, &aig, &options),
         _ => (),
     }
     mem::forget(engine);

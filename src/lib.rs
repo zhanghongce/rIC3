@@ -4,6 +4,7 @@
 mod activity;
 pub mod bmc;
 mod frame;
+pub mod frontend;
 pub mod general;
 mod gipsat;
 pub mod imc;

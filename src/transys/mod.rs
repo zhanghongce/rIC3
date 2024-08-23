@@ -1,4 +1,3 @@
-mod abc;
 pub mod others;
 pub mod sec;
 pub mod simplify;
@@ -37,8 +36,7 @@ impl Transys {
         Into::<usize>::into(self.max_var) + 1
     }
 
-    pub fn from_aig(aig: &Aig) -> Self {
-        let (aig, remap) = Self::preprocess(aig);
+    pub fn from_aig(aig: &Aig, rst: &HashMap<usize, usize>) -> Self {
         let false_lit: Lit = Lit::constant_lit(false);
         let mut max_var = false_lit.var();
         let mut new_var = || {
@@ -109,7 +107,7 @@ impl Transys {
             is_latch[*l] = true;
         }
         let mut restore = HashMap::new();
-        for (d, v) in remap.iter() {
+        for (d, v) in rst.iter() {
             restore.insert(Var::new(*d), Var::new(*v));
         }
         Self {

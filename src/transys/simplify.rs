@@ -1,36 +1,10 @@
 use super::Transys;
-use aig::{Aig, AigEdge};
 use logic_form::{Clause, Lit, LitMap, Var, VarMap};
 use minisat::SimpSolver;
 use satif::Satif;
 use std::collections::{HashMap, HashSet};
 
 impl Transys {
-    pub fn preprocess(aig: &Aig) -> (Aig, HashMap<usize, usize>) {
-        // let mut remap = HashMap::new();
-        // for l in aig.inputs.iter() {
-        //     remap.insert(*l, *l);
-        // }
-        // for l in aig.latchs.iter() {
-        //     remap.insert(l.input, l.input);
-        // }
-        // (aig.clone(), remap)
-        let (mut aig, remap) = aig.coi_refine();
-        // let mut remap_retain = HashSet::new();
-        // remap_retain.insert(AigEdge::constant_edge(false).node_id());
-        // for i in aig.inputs.iter() {
-        //     remap_retain.insert(*i);
-        // }
-        // for l in aig.latchs.iter() {
-        //     remap_retain.insert(l.input);
-        // }
-        // remap.retain(|x, _| remap_retain.contains(x));
-        // let mut aig = abc_preprocess(aig);
-        aig.constraints
-            .retain(|e| *e != AigEdge::constant_edge(true));
-        (aig, remap)
-    }
-
     fn compress_deps_rec(
         v: Var,
         deps: &mut VarMap<Vec<Var>>,
