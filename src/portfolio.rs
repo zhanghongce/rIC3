@@ -108,9 +108,8 @@ impl Engine for Portfolio {
             });
         }
         let mut result = result.1.wait(lock).unwrap();
-        let result = take(&mut *result);
-        let (res, config, certify_file) = result.unwrap();
-        self.certify_file = certify_file;
+        self.certify_file = take(&mut result.as_mut().unwrap().2);
+        let (res, config, _) = result.as_ref().unwrap();
         println!("best configuration: {}", config);
         let mut cmd = "(".to_string();
         for (i, pid) in engines.into_iter().enumerate() {
@@ -123,7 +122,7 @@ impl Engine for Portfolio {
             r#") | grep -oP '\(\K\d+' | sort -u | xargs -n 1 kill -9"#
         ));
         Command::new("sh").args(["-c", &cmd]).output().unwrap();
-        Some(res)
+        Some(*res)
     }
 
     fn certifaiger(&mut self, _aig: &aig::Aig) -> Aig {
