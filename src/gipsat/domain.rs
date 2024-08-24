@@ -63,22 +63,22 @@ impl Domain {
         &mut self,
         domain: impl Iterator<Item = Var>,
         ts: &Rc<Transys>,
-        value: &Value,
+        _value: &Value,
     ) {
         self.reset();
         for r in domain {
-            if value.v(r.lit()).is_none() {
-                self.domain.insert(r);
-            }
+            // if value.v(r.lit()).is_none() {
+            self.domain.insert(r);
+            // }
         }
         let mut now = self.fixed;
         while now < self.domain.len() {
             let v = self.domain[now];
             now += 1;
             for d in ts.dependence[v].iter() {
-                if value.v(d.lit()).is_none() {
-                    self.domain.insert(*d);
-                }
+                // if value.v(d.lit()).is_none() {
+                self.domain.insert(*d);
+                // }
             }
         }
     }
@@ -122,7 +122,7 @@ impl Solver {
         if deps {
             let mut queue = self.ts.dependence[var].clone();
             while let Some(d) = queue.pop() {
-                if self.domain.has(d) || !self.value.v(d.lit()).is_none() {
+                if self.domain.has(d) {
                     continue;
                 }
                 self.domain.domain.insert(d);

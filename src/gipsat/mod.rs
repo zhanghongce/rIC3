@@ -48,6 +48,7 @@ pub struct Solver {
     _frame: Frames,
 
     assump: Cube,
+    constrain: Vec<Clause>,
 
     mark: LitSet,
     rng: StdRng,
@@ -78,6 +79,7 @@ impl Solver {
             prepared_vsids: false,
             constrain_act: Var(0),
             assump: Default::default(),
+            constrain: Default::default(),
             statistic: Default::default(),
             rng: StdRng::seed_from_u64(options.rseed),
             mark: Default::default(),
@@ -299,9 +301,10 @@ impl Solver {
             constrain.push(Clause::from_iter(cube.iter().map(|l| !*l)));
         }
         let res = self
-            .solve_with_domain(&assump, constrain, true, limit)
+            .solve_with_domain(&assump, constrain.clone(), true, limit)
             .map(|l| !l);
         self.assump = assump;
+        self.constrain = constrain;
         res
     }
 
@@ -410,6 +413,7 @@ impl IC3 {
     pub fn get_bad(&mut self) -> Option<(Cube, Cube)> {
         let solver = self.solvers.last_mut().unwrap();
         solver.assump = self.ts.bad.clone();
+        solver.constrain = Default::default();
         let res = solver
             .solve_with_domain(&self.ts.bad, vec![], false, false)
             .unwrap();
@@ -517,18 +521,30 @@ impl IC3 {
             let mut lift_assump = inputs.clone();
             lift_assump.extend_from_slice(&latchs);
             let constrain = vec![cls.clone()];
-            let Some(false) = self
+            if self
                 .lift
                 .solve_with_domain(&lift_assump, constrain, true, false)
-            else {
-                for l in cls
-                    .iter()
-                    .filter(|l| !self.lift.sat_value(**l).is_some_and(|v| !v))
-                {
-                    dbg!(l);
-                }
+                .unwrap()
+            {
                 panic!();
-            };
+                // let reassump = self.solvers[frame - 1].assump.clone();
+                // let reconstrain = self.solvers[frame - 1].constrain.clone();
+                // assert!(!self.solvers[frame - 1].temporary_domain);
+                // let domain = self.ts.get_coi(
+                //     reassump
+                //         .iter()
+                //         .chain(reconstrain.iter().map(|c| c.iter()).flatten())
+                //         .map(|l| l.var()),
+                // );
+                // self.solvers[frame - 1].set_domain(domain.iter().map(|v| v.lit()));
+                // assert!(self.solvers[frame - 1]
+                //     .solve_with_domain(&reassump, reconstrain, true, false)
+                //     .unwrap());
+                // self.solvers[frame - 1].unset_domain();
+                // drop(order);
+                // self.lift.unset_domain();
+                // return self.get_predecessor(frame, strengthen);
+            }
             let olen = latchs.len();
             let mut new_latchs: Cube = latchs
                 .iter()

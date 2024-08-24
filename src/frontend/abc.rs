@@ -24,7 +24,7 @@ fn preprocess(f: String) {
     let mut abc = Abc::new();
     abc.read_aig(&aig);
     drop(aig);
-    abc.execute_command("&get; &fraig -y; &put;");
+    abc.execute_command("&get; &fraig -y; &put; rewrite; refactor;");
     let mut abc_aig = abc.write_aig();
     for i in 0..num_latchs {
         let mut l = latchs[i];
