@@ -235,7 +235,7 @@ impl TransysUnroll {
                 is_latch[v] = true;
             }
         }
-        let max_latch = *latchs.last().unwrap();
+        let max_latch = *latchs.last().unwrap_or(&Var::new(0));
         let mut init_map = self.ts.init_map.clone();
         init_map.reserve(max_latch);
         let mut init = self.ts.init.clone();
