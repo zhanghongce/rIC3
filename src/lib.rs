@@ -26,7 +26,7 @@ use frame::{Frame, Frames};
 use gipsat::Solver;
 use logic_form::{Clause, Cube, Lemma, Lit, Var};
 pub use options::Options;
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 use std::rc::Rc;
 use std::time::Instant;
 use transys::unroll::TransysUnroll;
@@ -180,7 +180,11 @@ impl IC3 {
                     return None;
                 }
             } else {
-                let (model, inputs) = self.get_predecessor(po.frame, true);
+                let (model, inputs) = self.get_predecessor(
+                    po.frame,
+                    true,
+                    self.options.ic3_options.inn && po.frame > 1,
+                );
                 self.add_obligation(ProofObligation::new(
                     po.frame - 1,
                     Lemma::new(model),
@@ -230,7 +234,7 @@ impl IC3 {
                 self.add_lemma(frame - 1, mic, false, None);
                 return true;
             } else {
-                let model = Lemma::new(self.get_predecessor(frame, true).0);
+                let model = Lemma::new(self.get_predecessor(frame, true, false).0);
                 if !self.trivial_block(frame - 1, model, constrain, limit) {
                     return false;
                 }
@@ -265,7 +269,7 @@ impl IC3 {
                     if !self.options.ic3_options.ctp {
                         break;
                     }
-                    let (ctp, _) = self.get_predecessor(frame_idx + 1, false);
+                    let (ctp, _) = self.get_predecessor(frame_idx + 1, false, false);
                     if !self.ts.cube_subsume_init(&ctp)
                         && self.solvers[frame_idx - 1]
                             .inductive(&ctp, true, false)

@@ -103,7 +103,7 @@ impl IC3 {
                     return None;
                 }
             }
-            let (model, _) = self.get_predecessor(frame, true);
+            let (model, _) = self.get_predecessor(frame, true, false);
             let cex_set: HashSet<Lit> = HashSet::from_iter(model.iter().cloned());
             for lit in cube.iter() {
                 if keep.contains(lit) && !cex_set.contains(lit) {

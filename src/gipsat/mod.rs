@@ -418,7 +418,8 @@ impl IC3 {
             .solve_with_domain(&self.ts.bad, vec![], false, false)
             .unwrap();
         if res {
-            Some(self.get_predecessor(self.solvers.len(), true))
+            let frame = self.solvers.len();
+            Some(self.get_predecessor(frame, true, self.options.ic3_options.inn && frame > 1))
         } else {
             None
         }
@@ -465,8 +466,12 @@ impl IC3 {
         )
     }
 
-    pub fn get_predecessor(&mut self, frame: usize, strengthen: bool) -> (Cube, Cube) {
-        let not_subsume_init = self.options.ic3_options.inn && frame > 1;
+    pub fn get_predecessor(
+        &mut self,
+        frame: usize,
+        strengthen: bool,
+        not_subsume_init: bool,
+    ) -> (Cube, Cube) {
         let solver = &mut self.solvers[frame - 1];
         let mut cls: Cube = solver.assump.clone();
         cls.extend_from_slice(&self.abs_cst);

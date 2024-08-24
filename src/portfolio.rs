@@ -30,10 +30,10 @@ impl Portfolio {
         };
         new_engine(&["--ic3"]);
         new_engine(&["--ic3", "--ic3-ctg"]);
+        new_engine(&["--ic3", "--ic3-ctg", "--ic3-abs-cst"]);
         new_engine(&["--ic3", "--ic3-ctg", "--ic3-ctp"]);
         new_engine(&["--ic3", "--ic3-ctg", "--ic3-inn"]);
         new_engine(&["--ic3", "--ic3-ctg", "--ic3-ctp", "--ic3-inn"]);
-        new_engine(&["--ic3", "--ic3-abs-cst", "--ic3-ctg", "--ic3-inn"]);
         // new_engine(&["--ic3", "--ic3-bwd", "--ic3-ctg"]);
 
         new_engine(&["--bmc", "--step", "10"]);
@@ -77,7 +77,7 @@ impl Engine for Portfolio {
             spawn(move || {
                 let config = engine
                     .get_args()
-                    .skip(2)
+                    .skip(4)
                     .map(|cstr| cstr.to_str().unwrap())
                     .collect::<Vec<&str>>()
                     .join(" ");
