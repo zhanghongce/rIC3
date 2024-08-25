@@ -138,11 +138,22 @@ impl IC3 {
     }
 }
 
-pub fn check_certifaiger(engine: &mut Box<dyn Engine>, aig: &Aig, option: &Options) {
+pub fn check_certifaiger(engine: &mut Box<dyn Engine>, aig: &mut Aig, option: &Options) {
     if option.certify_path.is_none() && option.not_certify {
         return;
     }
-    let certifaiger = engine.certifaiger(&aig);
+    let mut certifaiger = engine.certifaiger(&aig);
+    certifaiger = certifaiger.reencode();
+    certifaiger.symbols.clear();
+    for i in 0..aig.inputs.len() {
+        certifaiger.set_symbol(certifaiger.inputs[i], &format!("= {}", aig.inputs[i] * 2));
+    }
+    for i in 0..aig.latchs.len() {
+        certifaiger.set_symbol(
+            certifaiger.latchs[i].input,
+            &format!("= {}", aig.latchs[i].input * 2),
+        );
+    }
     if let Some(witness) = &option.certify_path {
         certifaiger.to_file(witness, true);
     }

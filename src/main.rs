@@ -19,7 +19,7 @@ fn main() {
     if verbose > 0 {
         println!("the model to be checked: {}", options.model);
     }
-    let aig = Aig::from_file(&options.model);
+    let mut aig = Aig::from_file(&options.model);
     if aig.bads.len() + aig.outputs.len() == 0 {
         panic!("no property to be checked");
     }
@@ -45,7 +45,7 @@ fn main() {
     };
     let res = engine.check();
     match res {
-        Some(true) => check_certifaiger(&mut engine, &aig, &options),
+        Some(true) => check_certifaiger(&mut engine, &mut aig, &options),
         Some(false) => check_witness(&mut engine, &aig, &options),
         _ => (),
     }
