@@ -21,7 +21,11 @@ fn main() {
     }
     let mut aig = Aig::from_file(&options.model);
     if aig.bads.len() + aig.outputs.len() == 0 {
-        panic!("no property to be checked");
+        println!("warning: no property to be checked");
+        if let Some(witness) = &options.certify_path {
+            aig.to_file(witness, true);
+        }
+        exit(20);
     }
     let mut engine: Box<dyn Engine> = if options.portfolio {
         Box::new(Portfolio::new(options.clone()))
