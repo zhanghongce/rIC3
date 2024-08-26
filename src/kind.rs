@@ -104,8 +104,78 @@ impl Engine for Kind {
 
     fn certifaiger(&mut self, aig: &Aig) -> Aig {
         let mut certifaiger = aig.clone();
-        certifaiger = certifaiger.unroll_to(self.uts.num_unroll - 1);
-        certifaiger.latchs = aig.latchs.clone();
+        let ni = aig.inputs.len();
+        let nl = aig.latchs.len();
+        let k = self.uts.num_unroll;
+        for _ in 1..k {
+            certifaiger.merge(aig);
+        }
+        let inputs = certifaiger.inputs.clone();
+        certifaiger.inputs.truncate(ni);
+        let latchs = certifaiger.latchs.clone();
+        certifaiger.latchs.truncate(nl);
+        let bads: Vec<AigEdge> = certifaiger
+            .bads
+            .iter()
+            .chain(certifaiger.outputs.iter())
+            .copied()
+            .collect();
+        certifaiger.bads.clear();
+        certifaiger.outputs.clear();
+        let sum = inputs.len() + latchs.len();
+        let mut aux_latchs: Vec<AigEdge> = Vec::new();
+        for i in 0..k {
+            let input = certifaiger.new_leaf_node();
+            aux_latchs.push(input.into());
+            let (next, init) = if i == 0 {
+                (input.into(), Some(true))
+            } else {
+                (aux_latchs[i - 1], Some(false))
+            };
+            certifaiger.new_latch(input, next, init);
+        }
+        for i in 1..k {
+            for j in 0..ni {
+                certifaiger.new_latch(inputs[j + i * ni], inputs[j + (i - 1) * ni].into(), None);
+            }
+            for j in 0..nl {
+                certifaiger.new_latch(
+                    latchs[j + i * nl].input,
+                    latchs[j + (i - 1) * nl].input.into(),
+                    None,
+                );
+            }
+        }
+        for i in 0..k {
+            let al = aux_latchs[i];
+            let p = certifaiger.new_imply_node(al, !bads[i]);
+            certifaiger.bads.push(!p);
+        }
+        for i in 1..k {
+            let al = aux_latchs[i];
+            let al_next = aux_latchs[i - 1];
+            let p = certifaiger.new_imply_node(al, al_next);
+            certifaiger.bads.push(!p);
+            let mut eqs = Vec::new();
+            let mut init = Vec::new();
+            for j in 0..nl {
+                if let Some(linit) = latchs[j].init {
+                    init.push(AigEdge::new(latchs[(i - 1) * nl + j].input, !linit))
+                }
+                eqs.push(certifaiger.new_eq_node(
+                    latchs[j + i * nl].next,
+                    latchs[j + (i - 1) * nl].input.into(),
+                ));
+            }
+            let p = certifaiger.new_ands_node(eqs.into_iter());
+            let p = certifaiger.new_imply_node(al, p);
+            certifaiger.bads.push(!p);
+            let init = certifaiger.new_ands_node(init.into_iter());
+            let p = certifaiger.new_and_node(!al, al_next);
+            let p = certifaiger.new_imply_node(p, init);
+            certifaiger.bads.push(!p);
+        }
+        certifaiger.bads.push(!aux_latchs[0]);
         let bads: Vec<AigEdge> = certifaiger
             .bads
             .iter()
@@ -116,6 +186,7 @@ impl Engine for Kind {
         certifaiger.bads.clear();
         certifaiger.outputs.clear();
         certifaiger.outputs.push(bads);
+        assert!(certifaiger.inputs.len() + certifaiger.latchs.len() == sum + k);
         certifaiger
     }
 
