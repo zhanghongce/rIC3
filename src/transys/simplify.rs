@@ -54,39 +54,46 @@ impl Transys {
             Box::new(cadical::Solver::new())
         };
         let false_lit: Lit = simp_solver.new_var().into();
+        simp_solver.add_clause(&[!false_lit]);
         simp_solver.new_var_to(self.max_var);
         for c in self.trans.iter().chain(lemmas.iter()) {
             simp_solver.add_clause(c);
         }
+        let mut frozens = Vec::new();
         for i in self.inputs.iter() {
-            simp_solver.set_frozen(*i, true)
+            frozens.push(*i);
         }
         for l in self.latchs.iter() {
-            simp_solver.set_frozen(*l, true);
-            simp_solver.set_frozen(self.var_next(*l), true)
+            frozens.push(*l);
+            frozens.push(self.var_next(*l))
         }
         for b in self.bad.iter() {
-            simp_solver.set_frozen(b.var(), true);
+            frozens.push(b.var());
         }
         for c in self.constraints.iter() {
             if assert_constrain {
                 simp_solver.add_clause(&[*c]);
             } else {
-                simp_solver.set_frozen(c.var(), true);
+                frozens.push(c.var());
             }
         }
-        simp_solver.simplify();
+        for f in frozens.iter() {
+            simp_solver.set_frozen(*f, true);
+        }
+        if let Some(false) = simp_solver.simplify() {
+            println!("warning: model trans simplified with unsat");
+        }
         let mut trans = simp_solver.clauses();
         trans.push(Clause::from([!false_lit]));
         let mut max_var = false_lit.var();
-
-        let mut domain = HashSet::new();
+        let mut domain = HashSet::from_iter(frozens);
+        max_var = *domain.iter().max().unwrap_or(&max_var);
         for cls in trans.iter() {
             for l in cls.iter() {
-                max_var = max_var.max(l.var());
                 domain.insert(l.var());
             }
         }
+        max_var = *domain.iter().max().unwrap_or(&max_var);
         for l in self.latchs.iter().chain(self.inputs.iter()) {
             domain.insert(*l);
         }
