@@ -154,6 +154,10 @@ pub fn check_certifaiger(engine: &mut Box<dyn Engine>, aig: &mut Aig, option: &O
             &format!("= {}", aig.latchs[i].input * 2),
         );
     }
+    verify_certifaiger(aig, option);
+}
+
+pub fn verify_certifaiger(certifaiger: &Aig, option: &Options) {
     if let Some(witness) = &option.certify_path {
         certifaiger.to_file(witness, true);
     }

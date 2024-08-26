@@ -7,7 +7,7 @@ use rIC3::{
     kind::Kind,
     portfolio::Portfolio,
     transys::Transys,
-    verify::{check_certifaiger, check_witness},
+    verify::{check_certifaiger, check_witness, verify_certifaiger},
     Engine, Options, IC3,
 };
 use std::{mem, process::exit};
@@ -22,9 +22,7 @@ fn main() {
     let mut aig = Aig::from_file(&options.model);
     if aig.bads.len() + aig.outputs.len() == 0 {
         println!("warning: no property to be checked");
-        if let Some(witness) = &options.certify_path {
-            aig.to_file(witness, true);
-        }
+        verify_certifaiger(&aig, &options);
         exit(20);
     }
     let mut engine: Box<dyn Engine> = if options.portfolio {
