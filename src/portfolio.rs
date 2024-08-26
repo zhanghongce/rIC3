@@ -29,6 +29,7 @@ impl Portfolio {
             engines.push(engine);
         };
         new_engine(&["--ic3"]);
+        new_engine(&["--ic3", "--rseed", "55"]);
         new_engine(&["--ic3", "--ic3-ctg"]);
         new_engine(&["--ic3", "--ic3-ctg", "--ic3-abs-cst"]);
         new_engine(&["--ic3", "--ic3-ctg", "--ic3-ctp"]);
@@ -47,7 +48,7 @@ impl Portfolio {
             "--step",
             "100",
         ]);
-        // new_engine(&["--kind", "--step", "1"]);
+        new_engine(&["--kind", "--step", "1"]);
         Self {
             option,
             engines,
