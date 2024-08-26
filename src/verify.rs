@@ -154,7 +154,7 @@ pub fn check_certifaiger(engine: &mut Box<dyn Engine>, aig: &mut Aig, option: &O
             &format!("= {}", aig.latchs[i].input * 2),
         );
     }
-    verify_certifaiger(aig, option);
+    verify_certifaiger(&certifaiger, option);
 }
 
 pub fn verify_certifaiger(certifaiger: &Aig, option: &Options) {
