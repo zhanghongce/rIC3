@@ -102,23 +102,6 @@ impl Engine for Kind {
         unreachable!();
     }
 
-    fn certifaiger(&mut self, aig: &Aig) -> Aig {
-        let mut certifaiger = aig.clone();
-        certifaiger = certifaiger.unroll_to(self.uts.num_unroll - 1);
-        certifaiger.latchs = aig.latchs.clone();
-        let bads: Vec<AigEdge> = certifaiger
-            .bads
-            .iter()
-            .chain(certifaiger.outputs.iter())
-            .copied()
-            .collect();
-        let inv = certifaiger.new_ors_node(bads.into_iter());
-        certifaiger.bads.clear();
-        certifaiger.outputs.clear();
-        certifaiger.outputs.push(inv);
-        certifaiger
-    }
-
     fn witness(&mut self, aig: &Aig) -> String {
         let mut wit = vec![Cube::new()];
         for l in self.uts.ts.latchs.iter() {
