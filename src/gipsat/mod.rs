@@ -97,12 +97,15 @@ impl Solver {
                 solver.add_clause_inner(&[*c], ClauseKind::Trans);
             }
         }
-        assert!(solver.highest_level() == 0);
-        assert!(solver.propagate() == CREF_NONE);
-        solver.simplify_satisfied();
         if id.is_some() {
             solver.domain.calculate_constrain(&solver.ts, &solver.value);
         }
+        assert!(solver.highest_level() == 0);
+        if solver.propagate() != CREF_NONE {
+            solver.trivial_unsat = true;
+            solver.unsat_core.clear();
+        }
+        solver.simplify_satisfied();
         solver
     }
 
