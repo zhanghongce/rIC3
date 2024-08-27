@@ -162,7 +162,9 @@ impl Solver {
                 Lbool::TRUE | Lbool::FALSE => todo!(),
                 _ => {
                     self.assign(clause[0], CREF_NONE);
-                    assert!(self.propagate() == CREF_NONE);
+                    if self.propagate() != CREF_NONE {
+                        self.trivial_unsat = true;
+                    }
                     CREF_NONE
                 }
             }
