@@ -50,6 +50,7 @@ pub struct Solver {
     assump: Cube,
     constrain: Vec<Clause>,
 
+    trivial_unsat: bool,
     mark: LitSet,
     rng: StdRng,
     pub statistic: SolverStatistic,
@@ -81,6 +82,7 @@ impl Solver {
             assump: Default::default(),
             constrain: Default::default(),
             statistic: Default::default(),
+            trivial_unsat: false,
             rng: StdRng::seed_from_u64(options.rseed),
             mark: Default::default(),
         };
@@ -138,15 +140,17 @@ impl Solver {
                 _ => clause.push(*l),
             }
         }
-        assert!(!clause.is_empty());
         Some(clause)
     }
 
     fn add_clause_inner(&mut self, clause: &[Lit], mut kind: ClauseKind) -> CRef {
-        let clause = match self.simplify_clause(clause) {
-            Some(clause) => clause,
-            None => return CREF_NONE,
+        let Some(clause) = self.simplify_clause(clause) else {
+            return CREF_NONE;
         };
+        if clause.is_empty() {
+            self.trivial_unsat = true;
+            return CREF_NONE;
+        }
         for l in clause.iter() {
             if self.constrain_act == l.var() {
                 kind = ClauseKind::Temporary;
@@ -224,6 +228,7 @@ impl Solver {
         for mut c in constrain {
             c.push(!self.constrain_act.lit());
             if let Some(c) = self.simplify_clause(&c) {
+                assert!(!c.is_empty());
                 if c.len() == 1 {
                     return false;
                 }
@@ -255,6 +260,10 @@ impl Solver {
         bucket: bool,
         limit: bool,
     ) -> Option<bool> {
+        if self.trivial_unsat {
+            self.unsat_core.clear();
+            return Some(false);
+        }
         assert!(!assump.is_empty());
         self.statistic.num_solve += 1;
         if self.temporary_domain {
