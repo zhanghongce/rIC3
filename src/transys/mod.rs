@@ -204,6 +204,11 @@ impl Transys {
     }
 
     #[inline]
+    pub fn cube_prev(&self, cube: &[Lit]) -> Cube {
+        cube.iter().map(|l| self.lit_prev(*l)).collect()
+    }
+
+    #[inline]
     pub fn cube_subsume_init(&self, x: &[Lit]) -> bool {
         for x in x {
             if let Some(init) = self.init_map[x.var()] {

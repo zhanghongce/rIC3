@@ -228,6 +228,9 @@ impl TransysUnroll {
                 keep.insert(v);
             }
         }
+        for l in self.ts.latchs.iter() {
+            keep.insert(self.ts.var_next(*l));
+        }
         let mut latchs = Vec::new();
         for v in Var::new(1)..=self.ts.max_var {
             if !keep.contains(&v) {
