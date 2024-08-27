@@ -268,10 +268,12 @@ impl Solver {
         }
         assert!(!assump.is_empty());
         self.statistic.num_solve += 1;
-        if self.temporary_domain {
-            assert!(bucket);
-        }
         let mut assumption;
+        if self.propagate() != CREF_NONE {
+            self.trivial_unsat = true;
+            self.unsat_core.clear();
+            return Some(false);
+        }
         let assump = if !constrain.is_empty() {
             assumption = Cube::new();
             assumption.push(self.constrain_act.lit());
