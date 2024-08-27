@@ -277,7 +277,9 @@ impl IC3 {
                     {
                         let core = self.solvers[frame_idx - 1].inductive_core();
                         let mic = self.mic(frame_idx, core, 0, &[]);
-                        self.add_lemma(frame_idx, mic, false, None);
+                        if self.add_lemma(frame_idx, mic, false, None) {
+                            return true;
+                        }
                     } else {
                         break;
                     }
