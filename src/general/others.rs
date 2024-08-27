@@ -80,7 +80,7 @@ impl IC3 {
     }
 
     pub fn verify(&mut self) {
-        if self.options.not_certify {
+        if self.options.no_certify {
             return;
         }
         let invariants = self.frame.invariant();

@@ -22,7 +22,7 @@ tempfile = "3.10.1"
 process_control = "4.1.0"
 nix = { version = "0.27.1", features = ["signal"] }
 procspawn = "1.0.0"
-btor2 = { path = "../btor2-rs" }
+btor = { path = "../btor-rs" }
 
 [features]
 default = ["no_bound_check"]

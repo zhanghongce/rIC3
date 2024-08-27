@@ -1,4 +1,5 @@
 use aig::Aig;
+use btor::btor_to_aiger;
 use clap::Parser;
 use rIC3::{
     bmc::BMC,
@@ -14,12 +15,18 @@ use std::{mem, process::exit};
 
 fn main() {
     procspawn::init();
-    let options = Options::parse();
+    let mut options = Options::parse();
     let verbose = options.verbose;
     if verbose > 0 {
         println!("the model to be checked: {}", options.model);
     }
-    let mut aig = Aig::from_file(&options.model);
+    let mut aig = if options.model.ends_with(".btor") || options.model.ends_with(".btor2") {
+        options.certify_path = None;
+        options.no_certify = true;
+        btor_to_aiger(&options.model)
+    } else {
+        Aig::from_file(&options.model)
+    };
     if aig.bads.len() + aig.outputs.len() == 0 {
         println!("warning: no property to be checked");
         verify_certifaiger(&aig, &options);

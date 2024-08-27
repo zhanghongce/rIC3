@@ -5,12 +5,13 @@ use clap::{ArgGroup, Args, Parser};
 #[command(version, about)]
 #[command(group = ArgGroup::new("engine").required(false).multiple(false))]
 pub struct Options {
-    /// model file in aiger format
+    /// model file in aiger format or in btor2 format.
+    /// for btor model, the file name should be suffixed with .btor or .btor2
     pub model: String,
 
     /// verify
     #[arg(long, default_value_t = false)]
-    pub not_certify: bool,
+    pub no_certify: bool,
 
     /// certifaiger or witness output path
     pub certify_path: Option<String>,

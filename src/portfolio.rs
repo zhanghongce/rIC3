@@ -63,7 +63,7 @@ impl Engine for Portfolio {
         let result = Arc::new((Mutex::new(None), Condvar::new()));
         let lock = result.0.lock().unwrap();
         for mut engine in take(&mut self.engines) {
-            let certify_file = if self.option.certify_path.is_some() || !self.option.not_certify {
+            let certify_file = if self.option.certify_path.is_some() || !self.option.no_certify {
                 let certify_file = tempfile::NamedTempFile::new().unwrap();
                 let certify_path = certify_file.path().as_os_str().to_str().unwrap();
                 engine.arg(&certify_path);

@@ -44,7 +44,7 @@ pub fn verify_invariant(ts: &Transys, invariants: &[Lemma]) -> bool {
 
 impl IC3 {
     pub fn verify(&mut self) {
-        if self.options.not_certify {
+        if self.options.no_certify {
             return;
         }
         let invariants = self.frame.invariant();
@@ -139,7 +139,7 @@ impl IC3 {
 }
 
 pub fn check_certifaiger(engine: &mut Box<dyn Engine>, aig: &mut Aig, option: &Options) {
-    if option.certify_path.is_none() && option.not_certify {
+    if option.certify_path.is_none() && option.no_certify {
         return;
     }
     let mut certifaiger = engine.certifaiger(&aig);
@@ -161,7 +161,7 @@ pub fn verify_certifaiger(certifaiger: &Aig, option: &Options) {
     if let Some(witness) = &option.certify_path {
         certifaiger.to_file(witness, true);
     }
-    if option.not_certify {
+    if option.no_certify {
         return;
     }
     let certifaiger_file = tempfile::NamedTempFile::new().unwrap();
@@ -216,7 +216,7 @@ pub fn witness_encode(aig: &Aig, witness: &[Cube]) -> String {
 }
 
 pub fn check_witness(engine: &mut Box<dyn Engine>, aig: &Aig, option: &Options) {
-    if option.certify_path.is_none() && option.not_certify {
+    if option.certify_path.is_none() && option.no_certify {
         return;
     }
     let witness = engine.witness(aig);
@@ -224,7 +224,7 @@ pub fn check_witness(engine: &mut Box<dyn Engine>, aig: &Aig, option: &Options) 
         let mut file: File = File::create(witness_file).unwrap();
         file.write_all(witness.as_bytes()).unwrap();
     }
-    if option.not_certify {
+    if option.no_certify {
         return;
     }
     let mut wit_file = tempfile::NamedTempFile::new().unwrap();
