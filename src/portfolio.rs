@@ -24,7 +24,7 @@ impl Portfolio {
         let mut new_engine = |args: &[&str]| {
             let mut engine = Command::new(current_exe().unwrap());
             engine.arg(&option.model);
-            engine.args(["-v", "0", "--not-certify"]);
+            engine.args(["-v", "0", "--no-certify"]);
             engine.args(args);
             engines.push(engine);
         };
