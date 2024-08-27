@@ -31,7 +31,7 @@ impl Portfolio {
         new_engine(&["--ic3"]);
         new_engine(&["--ic3", "--rseed", "55"]);
         new_engine(&["--ic3", "--ic3-ctg"]);
-        new_engine(&["--ic3", "--ic3-ctg", "--ic3-abs-cst"]);
+        new_engine(&["--ic3", "--ic3-ctg", "--ic3-abs-cst", "--rseed", "55"]);
         new_engine(&["--ic3", "--ic3-ctg", "--ic3-ctp"]);
         new_engine(&["--ic3", "--ic3-ctg", "--ic3-inn"]);
         new_engine(&["--ic3", "--ic3-ctg", "--ic3-ctp", "--ic3-inn"]);
