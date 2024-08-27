@@ -172,7 +172,9 @@ pub fn verify_certifaiger(certifaiger: &Aig, option: &Options) {
         .arg(certifaiger_path)
         .output()
         .expect("certifaiger not found");
-    io::stdout().write_all(&output.stdout).unwrap();
+    if option.verbose > 1 {
+        io::stdout().write_all(&output.stdout).unwrap();
+    }
     if output.status.success() {
         println!("certifaiger check passed");
     } else {
@@ -235,7 +237,9 @@ pub fn check_witness(engine: &mut Box<dyn Engine>, aig: &Aig, option: &Options) 
         .arg(wit_path)
         .output()
         .expect("certifaiger not found");
-    io::stdout().write_all(&output.stdout).unwrap();
+    if option.verbose > 1 {
+        io::stdout().write_all(&output.stdout).unwrap();
+    }
     if output.status.success() {
         println!("certifaiger check passed");
     } else {

@@ -106,6 +106,7 @@ impl Engine for Kind {
         let mut certifaiger = aig.clone();
         let ni = aig.inputs.len();
         let nl = aig.latchs.len();
+        let nc = aig.constraints.len();
         let k = self.uts.num_unroll;
         for _ in 1..k {
             certifaiger.merge(aig);
@@ -114,7 +115,7 @@ impl Engine for Kind {
         certifaiger.inputs.truncate(ni);
         let latchs = certifaiger.latchs.clone();
         certifaiger.latchs.truncate(nl);
-        let bads: Vec<AigEdge> = certifaiger
+        let mut bads: Vec<AigEdge> = certifaiger
             .bads
             .iter()
             .chain(certifaiger.outputs.iter())
@@ -122,6 +123,15 @@ impl Engine for Kind {
             .collect();
         certifaiger.bads.clear();
         certifaiger.outputs.clear();
+        let mut constrains = Vec::new();
+        for i in 0..k {
+            let c = certifaiger.constraints[i * nc..(i + 1) * nc].to_vec();
+            constrains.push(certifaiger.new_ands_node(c.into_iter()));
+        }
+        certifaiger.constraints.truncate(nc);
+        for i in 0..k {
+            bads[i] = certifaiger.new_or_node(bads[i], !constrains[i]);
+        }
         let sum = inputs.len() + latchs.len();
         let mut aux_latchs: Vec<AigEdge> = Vec::new();
         for i in 0..k {
