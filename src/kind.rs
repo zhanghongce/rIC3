@@ -53,7 +53,7 @@ impl Kind {
     // }
 
     pub fn reset_solver(&mut self) {
-        self.solver = if self.options.bmc_options.bmc_kissat {
+        self.solver = if self.options.kind_options.kind_kissat {
             Box::new(kissat::Solver::new())
         } else {
             Box::new(cadical::Solver::new())
@@ -67,7 +67,19 @@ impl Engine for Kind {
         self.uts.load_trans(self.solver.as_mut(), 0, true);
         for k in (step..).step_by(step) {
             let bmc_k = k - 1;
-            let start = k - step + 1;
+            let start = k + 1 - step;
+            if self.options.kind_options.kind_kissat {
+                self.reset_solver();
+                for i in 0..start {
+                    self.uts.load_trans(self.solver.as_mut(), i, true);
+                }
+                if bmc_k >= step {
+                    for i in 0..=bmc_k - step {
+                        self.solver
+                            .add_clause(&!self.uts.lits_next(&self.uts.ts.bad, i));
+                    }
+                }
+            }
             self.uts.unroll_to(bmc_k);
             for i in start..=bmc_k {
                 self.uts.load_trans(self.solver.as_mut(), i, true);
@@ -85,7 +97,7 @@ impl Engine for Kind {
                     return Some(false);
                 }
             }
-            for i in bmc_k - step + 1..=bmc_k {
+            for i in bmc_k + 1 - step..=bmc_k {
                 self.solver
                     .add_clause(&!self.uts.lits_next(&self.uts.ts.bad, i));
             }
@@ -94,7 +106,15 @@ impl Engine for Kind {
             if self.options.verbose > 0 {
                 println!("kind depth: {k}");
             }
-            if !self.solver.solve(&self.uts.lits_next(&self.uts.ts.bad, k)) {
+            let res = if self.options.kind_options.kind_kissat {
+                for l in self.uts.lits_next(&self.uts.ts.bad, k) {
+                    self.solver.add_clause(&[l]);
+                }
+                self.solver.solve(&[])
+            } else {
+                self.solver.solve(&self.uts.lits_next(&self.uts.ts.bad, k))
+            };
+            if !res {
                 println!("k-induction proofed in depth {k}");
                 return Some(true);
             }
