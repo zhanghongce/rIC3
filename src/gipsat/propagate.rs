@@ -89,7 +89,9 @@ impl Solver {
                     return cid;
                 }
                 let assign = cref[0];
-                self.assign(assign, cid);
+                if !self.assign_full(assign, cid) {
+                    return cid;
+                }
                 w += 1;
             }
         }

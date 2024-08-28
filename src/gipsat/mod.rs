@@ -548,43 +548,24 @@ impl IC3 {
                 .unwrap()
             {
                 panic!();
-                // let reassump = self.solvers[frame - 1].assump.clone();
-                // let reconstrain = self.solvers[frame - 1].constrain.clone();
-                // assert!(!self.solvers[frame - 1].temporary_domain);
-                // let domain = self.ts.get_coi(
-                //     reassump
-                //         .iter()
-                //         .chain(reconstrain.iter().map(|c| c.iter()).flatten())
-                //         .map(|l| l.var()),
-                // );
-                // self.solvers[frame - 1].set_domain(domain.iter().map(|v| v.lit()));
-                // assert!(self.solvers[frame - 1]
-                //     .solve_with_domain(&reassump, reconstrain, true, false)
-                //     .unwrap());
-                // self.solvers[frame - 1].unset_domain();
-                // drop(order);
-                // self.lift.unset_domain();
-                // return self.get_predecessor(frame, strengthen);
             }
             let olen = latchs.len();
-            let mut new_latchs: Cube = latchs
+            latchs = latchs
                 .iter()
                 .filter(|l| self.lift.unsat_has(**l))
                 .copied()
                 .collect();
-            if not_subsume_init && self.ts.cube_subsume_init(&new_latchs) {
-                let p = latchs
+            if not_subsume_init && self.ts.cube_subsume_init(&latchs) {
+                let latchs_set: HashSet<Lit> = HashSet::from_iter(latchs.iter().copied());
+                let p = self
+                    .ts
+                    .init
                     .iter()
-                    .find(|l| self.ts.init_map[l.var()].is_some_and(|v| v != l.polarity()))
+                    .find(|l| !latchs_set.contains(*l))
                     .unwrap();
-                new_latchs = latchs
-                    .iter()
-                    .filter(|l| self.lift.unsat_has(**l) || l.eq(&p))
-                    .copied()
-                    .collect();
-                assert!(!self.ts.cube_subsume_init(&new_latchs));
+                latchs.push(!*p);
+                assert!(!self.ts.cube_subsume_init(&latchs));
             }
-            latchs = new_latchs;
             if latchs.len() == olen || !strengthen {
                 break;
             }

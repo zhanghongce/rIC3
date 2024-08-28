@@ -47,6 +47,17 @@ impl Solver {
     }
 
     #[inline]
+    pub fn assign_full(&mut self, lit: Lit, reason: CRef) -> bool {
+        if self.highest_level() == 0 {
+            if lit.var() == self.constrain_act {
+                return false;
+            }
+        }
+        self.assign(lit, reason);
+        true
+    }
+
+    #[inline]
     pub fn new_level(&mut self) {
         self.pos_in_trail.push(self.trail.len())
     }
@@ -100,13 +111,17 @@ impl Solver {
             if conflict != CREF_NONE {
                 num_conflict += 1.0;
                 if self.highest_level() == 0 {
+                    self.unsat_core.clear();
                     return Some(false);
                 }
                 let (learnt, btl) = self.analyze(conflict);
                 self.backtrack(btl, true);
                 if learnt.len() == 1 {
                     assert!(btl == 0);
-                    self.assign(learnt[0], CREF_NONE);
+                    if !self.assign_full(learnt[0], CREF_NONE) {
+                        self.unsat_core.clear();
+                        return Some(false);
+                    }
                 } else {
                     let mut kind = ClauseKind::Learnt;
                     for l in learnt.iter() {
