@@ -18,7 +18,7 @@ pub struct BMC {
 impl BMC {
     pub fn new(options: Options, ts: Transys) -> Self {
         let uts = TransysUnroll::new(&ts);
-        let mut solver: Box<dyn Satif> = if options.bmc_options.kissat {
+        let mut solver: Box<dyn Satif> = if options.bmc_options.bmc_kissat {
             Box::new(kissat::Solver::new())
         } else {
             Box::new(cadical::Solver::new())
@@ -32,7 +32,7 @@ impl BMC {
     }
 
     pub fn reset_solver(&mut self) {
-        self.solver = if self.options.bmc_options.kissat {
+        self.solver = if self.options.bmc_options.bmc_kissat {
             Box::new(kissat::Solver::new())
         } else {
             Box::new(cadical::Solver::new())
@@ -46,7 +46,7 @@ impl Engine for BMC {
         let step = self.options.step as usize;
         for k in (step - 1..).step_by(step) {
             self.uts.unroll_to(k);
-            let last_bound = if self.options.bmc_options.kissat {
+            let last_bound = if self.options.bmc_options.bmc_kissat {
                 self.reset_solver();
                 0
             } else {
@@ -56,7 +56,7 @@ impl Engine for BMC {
                 self.uts.load_trans(self.solver.as_mut(), s, true);
             }
             let mut assump = self.uts.lits_next(&self.uts.ts.bad, k);
-            if self.options.bmc_options.kissat {
+            if self.options.bmc_options.bmc_kissat {
                 for b in assump.iter() {
                     self.solver.add_clause(&[*b]);
                 }

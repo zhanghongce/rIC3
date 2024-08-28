@@ -62,53 +62,56 @@ pub enum Engine {
 #[derive(Args, Clone, Debug)]
 pub struct IC3Options {
     /// ic3 counterexample to generalization
-    #[arg(long = "ic3-ctg", default_value_t = false, requires = "ic3")]
+    #[arg(long = "ic3-ctg", default_value_t = false)]
     pub ctg: bool,
 
     /// max number of ctg
-    #[arg(long = "ic3-ctg-max", default_value_t = 3, requires = "ic3")]
+    #[arg(long = "ic3-ctg-max", default_value_t = 3)]
     pub ctg_max: usize,
 
     /// ctg limit
-    #[arg(long = "ic3-ctg-limit", default_value_t = 5, requires = "ic3")]
+    #[arg(long = "ic3-ctg-limit", default_value_t = 5)]
     pub ctg_limit: usize,
 
     /// ic3 xor generalization
-    #[arg(long = "ic3-xor", default_value_t = false, requires = "ic3")]
+    #[arg(long = "ic3-xor", default_value_t = false)]
     pub xor: bool,
 
     /// ic3 counterexample to propagation
-    #[arg(long = "ic3-ctp", default_value_t = false, requires = "ic3")]
+    #[arg(long = "ic3-ctp", default_value_t = false)]
     pub ctp: bool,
 
     /// ic3 with internal signals (FMCAD'21)
-    #[arg(long = "ic3-inn", default_value_t = false, requires = "ic3")]
+    #[arg(long = "ic3-inn", default_value_t = false)]
     pub inn: bool,
 
     /// ic3 with backward
-    #[arg(long = "ic3-bwd", default_value_t = false, requires = "ic3")]
+    #[arg(long = "ic3-bwd", default_value_t = false)]
     pub bwd: bool,
 
     /// ic3 with abstract constrains
-    #[arg(long = "ic3-abs-cst", default_value_t = false, requires = "ic3")]
+    #[arg(long = "ic3-abs-cst", default_value_t = false)]
     pub abs_cst: bool,
 }
 
 #[derive(Args, Clone, Debug)]
 pub struct BMCOptions {
     /// bmc single step time limit
-    #[arg(long = "bmc-time-limit", requires = "bmc")]
+    #[arg(long = "bmc-time-limit")]
     pub time_limit: Option<u64>,
     /// use kissat solver, otherwise cadical
-    #[arg(long = "bmc-kissat", default_value_t = false, requires = "bmc")]
-    pub kissat: bool,
+    #[arg(long = "bmc-kissat", default_value_t = false)]
+    pub bmc_kissat: bool,
 }
 
 #[derive(Args, Clone, Debug)]
 pub struct KindOptions {
     /// no bmc check in kind
-    #[arg(long = "kind-no-bmc", default_value_t = false, requires = "kind")]
+    #[arg(long = "kind-no-bmc", default_value_t = false)]
     pub no_bmc: bool,
+    /// use kissat solver, otherwise cadical
+    #[arg(long = "kind-kissat", default_value_t = false)]
+    pub kind_kissat: bool,
 }
 
 #[derive(Args, Clone, Debug)]

@@ -11,7 +11,7 @@ minisat = { path = "../minisat-rs" }
 cadical = { path = "../cadical-rs" }
 kissat = { path = "../kissat-rs" }
 logic-form = { path = "../logic-form" }
-clap = { version = "4.5.11", features = ["derive"] }
+clap = { version = "4.5.16", features = ["derive"] }
 rand = "0.8.5"
 ctrlc = { version = "3.4.1", features = ["termination"] }
 giputils = { path = "../giputils" }

@@ -11,14 +11,18 @@ use satif::Satif;
 pub struct Kind {
     uts: TransysUnroll,
     options: Options,
-    solver: cadical::Solver,
+    solver: Box<dyn Satif>,
     pre_lemmas: Vec<Clause>,
 }
 
 impl Kind {
     pub fn new(options: Options, ts: Transys, pre_lemmas: Vec<Clause>) -> Self {
         let uts = TransysUnroll::new(&ts);
-        let solver = cadical::Solver::new();
+        let solver: Box<dyn Satif> = if options.kind_options.kind_kissat {
+            Box::new(kissat::Solver::new())
+        } else {
+            Box::new(cadical::Solver::new())
+        };
         Self {
             uts,
             options,
@@ -64,7 +68,7 @@ impl Engine for Kind {
         for k in (step - 1..).step_by(step) {
             self.uts.unroll_to(k);
             let kind_bound = k + 1 - step;
-            self.uts.load_trans(&mut self.solver, kind_bound, true);
+            self.uts.load_trans(self.solver.as_mut(), kind_bound, true);
             self.load_pre_lemmas(kind_bound);
             if kind_bound > 0 {
                 if self.options.verbose > 0 {
@@ -79,7 +83,7 @@ impl Engine for Kind {
                 }
             }
             for s in kind_bound + 1..=k {
-                self.uts.load_trans(&mut self.solver, s, true);
+                self.uts.load_trans(self.solver.as_mut(), s, true);
                 self.load_pre_lemmas(s);
             }
             if !self.options.kind_options.no_bmc {
