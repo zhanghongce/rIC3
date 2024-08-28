@@ -123,7 +123,6 @@ impl IC3 {
         let mut mic = self.solvers[po.frame - 1].inductive_core();
         let level = if self.options.ic3_options.ctg { 1 } else { 0 };
         mic = self.mic(po.frame, mic, level, &[]);
-        // mic = self.lazy_mic(po.frame, mic, level);
         let (frame, mic) = self.push_lemma(po.frame, mic);
         self.statistic.avg_po_cube_len += po.lemma.len();
         po.frame = frame;
@@ -306,12 +305,11 @@ impl IC3 {
 
 impl IC3 {
     pub fn new(options: Options, mut ts: Transys, pre_lemmas: Vec<Clause>) -> Self {
-        // dbg!(&ts);
         if options.ic3_options.inn {
             let mut uts = TransysUnroll::new(&ts);
             uts.unroll();
             ts = uts.interal_signals();
-            // ts = ts.simplify(&[], true, false);
+            ts = ts.simplify(&[], true, false);
         }
         let ts = Rc::new(ts);
         let statistic = Statistic::new(&options.model);
