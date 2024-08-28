@@ -109,17 +109,16 @@ impl Engine for Portfolio {
         self.certify_file = take(&mut result.as_mut().unwrap().2);
         let (res, config, _) = result.as_ref().unwrap();
         println!("best configuration: {}", config);
-        let mut cmd = "(".to_string();
-        for (i, pid) in engines.into_iter().enumerate() {
-            if i != 0 {
-                cmd.push_str(" && ");
-            }
-            cmd.push_str(&format!(r#"(pstree -p {})"#, pid));
+        for pid in engines {
+            Command::new("pkill")
+                .args(["-9", "-P", &format!("{pid}")])
+                .output()
+                .unwrap();
+            Command::new("kill")
+                .args(["-9", &format!("{pid}")])
+                .output()
+                .unwrap();
         }
-        cmd.push_str(&format!(
-            r#") | grep -oP '\(\K\d+' | sort -u | xargs -n 1 kill -9"#
-        ));
-        Command::new("sh").args(["-c", &cmd]).output().unwrap();
         Some(*res)
     }
 
