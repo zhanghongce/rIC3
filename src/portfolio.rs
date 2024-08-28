@@ -21,35 +21,31 @@ pub struct Portfolio {
 impl Portfolio {
     pub fn new(option: Options) -> Self {
         let mut engines = Vec::new();
-        let mut new_engine = |args: &[&str]| {
+        let mut new_engine = |args: &str| {
+            let args = args.split(" ");
             let mut engine = Command::new(current_exe().unwrap());
             engine.arg(&option.model);
-            engine.args(["-v", "0", "--no-certify"]);
-            engine.args(args);
+            engine.arg("-v");
+            engine.arg("0");
+            for a in args {
+                engine.arg(a);
+            }
             engines.push(engine);
         };
-        new_engine(&["-e", "ic3"]);
-        new_engine(&["-e", "ic3", "--rseed", "55"]);
-        new_engine(&["-e", "ic3", "--ic3-ctg"]);
-        new_engine(&["-e", "ic3", "--ic3-ctg", "--ic3-abs-cst", "--rseed", "55"]);
-        new_engine(&["-e", "ic3", "--ic3-ctg", "--ic3-ctp"]);
-        new_engine(&["-e", "ic3", "--ic3-ctg", "--ic3-inn"]);
-        new_engine(&["-e", "ic3", "--ic3-ctg", "--ic3-ctp", "--ic3-inn"]);
-        // new_engine(&["-e", "ic3", "--ic3-bwd", "--ic3-ctg"]);
+        new_engine("-e ic3");
+        new_engine("-e ic3 --rseed 55");
+        new_engine("-e ic3 --ic3-ctg");
+        new_engine("-e ic3 --ic3-ctg --ic3-abs-cst --rseed 55");
+        new_engine("-e ic3 --ic3-ctg --ic3-ctp");
+        new_engine("-e ic3 --ic3-ctg --ic3-inn");
+        new_engine("-e ic3 --ic3-ctg --ic3-ctp --ic3-inn");
+        new_engine("-e ic3 --ic3-ctg --ic3-ctg-max 5 --ic3-ctg-limit 15");
 
-        new_engine(&["-e", "bmc", "--step", "10"]);
-        new_engine(&["-e", "bmc", "--bmc-kissat", "--step", "70"]);
-        new_engine(&["-e", "bmc", "--bmc-kissat", "--step", "135"]);
-        new_engine(&[
-            "-e",
-            "bmc",
-            "--bmc-kissat",
-            "--bmc-time-limit",
-            "100",
-            "--step",
-            "100",
-        ]);
-        new_engine(&["-e", "kind", "--step", "1"]);
+        new_engine("-e bmc --step 10");
+        new_engine("-e bmc --bmc-kissat --step 70");
+        new_engine("-e bmc --bmc-kissat --step 135");
+        new_engine("-e bmc --bmc-kissat --bmc-time-limit 100 --step 100");
+        new_engine("-e kind --step 1");
         Self {
             option,
             engines,
@@ -64,7 +60,7 @@ impl Engine for Portfolio {
         let result = Arc::new((Mutex::new(None), Condvar::new()));
         let lock = result.0.lock().unwrap();
         for mut engine in take(&mut self.engines) {
-            let certify_file = if self.option.certify_path.is_some() || !self.option.no_certify {
+            let certify_file = if self.option.certify_path.is_some() || self.option.certify {
                 let certify_file = tempfile::NamedTempFile::new().unwrap();
                 let certify_path = certify_file.path().as_os_str().to_str().unwrap();
                 engine.arg(&certify_path);

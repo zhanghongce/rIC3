@@ -14,8 +14,8 @@ pub struct Options {
     pub model: String,
 
     /// verify
-    #[arg(long, default_value_t = true)]
-    pub no_certify: bool,
+    #[arg(long, default_value_t = false)]
+    pub certify: bool,
 
     /// certifaiger or witness output path
     pub certify_path: Option<String>,

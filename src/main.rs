@@ -23,7 +23,7 @@ fn main() {
     }
     let mut aig = if options.model.ends_with(".btor") || options.model.ends_with(".btor2") {
         options.certify_path = None;
-        options.no_certify = true;
+        options.certify = false;
         btor_to_aiger(&options.model)
     } else {
         Aig::from_file(&options.model)
