@@ -1,7 +1,6 @@
 mod analyze;
 mod cdb;
 mod domain;
-pub mod option;
 mod propagate;
 mod search;
 mod simplify;
@@ -54,6 +53,7 @@ pub struct Solver {
     mark: LitSet,
     rng: StdRng,
     pub statistic: SolverStatistic,
+    options: Options,
 }
 
 impl Solver {
@@ -85,6 +85,7 @@ impl Solver {
             trivial_unsat: false,
             rng: StdRng::seed_from_u64(options.rseed),
             mark: Default::default(),
+            options,
         };
         while solver.num_var() < solver.ts.num_var() {
             solver.new_var();
@@ -337,14 +338,13 @@ impl Solver {
         }
         if self.ts.cube_subsume_init(&ans) {
             ans = Cube::new();
-            let new = self
-                .assump
-                .iter()
-                .find(|l| {
-                    let l = self.ts.lit_prev(**l);
-                    self.ts.init_map[l.var()].is_some_and(|i| i != l.polarity())
-                })
-                .unwrap();
+            let Some(new) = self.assump.iter().find(|l| {
+                let l = self.ts.lit_prev(**l);
+                self.ts.init_map[l.var()].is_some_and(|i| i != l.polarity())
+            }) else {
+                assert!(self.options.ic3_options.inn);
+                return ans;
+            };
             for l in self.assump.iter() {
                 if self.unsat_has(*l) || l.eq(new) {
                     ans.push(self.ts.lit_prev(*l));
@@ -435,7 +435,10 @@ impl IC3 {
             .unwrap();
         if res {
             let frame = self.solvers.len();
-            Some(self.get_predecessor(frame, true, self.options.ic3_options.inn && frame > 1))
+            Some(self.get_predecessor(
+                frame, true, false,
+                // self.options.ic3_options.inn && frame > 1
+            ))
         } else {
             None
         }

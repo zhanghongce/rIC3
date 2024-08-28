@@ -158,6 +158,10 @@ impl IC3 {
                     } else {
                         return Some(false);
                     }
+                } else if self.options.ic3_options.inn && po.frame > 0 {
+                    assert!(!self.solvers[0]
+                        .solve_with_domain(&po.lemma, vec![], true, false)
+                        .unwrap());
                 } else {
                     self.add_obligation(po.clone());
                     assert!(po.frame == 0);
@@ -181,9 +185,7 @@ impl IC3 {
                 }
             } else {
                 let (model, inputs) = self.get_predecessor(
-                    po.frame,
-                    true,
-                    self.options.ic3_options.inn && po.frame > 1,
+                    po.frame, true, false, // self.options.ic3_options.inn && po.frame > 1,
                 );
                 self.add_obligation(ProofObligation::new(
                     po.frame - 1,
@@ -296,10 +298,12 @@ impl IC3 {
 
 impl IC3 {
     pub fn new(options: Options, mut ts: Transys, pre_lemmas: Vec<Clause>) -> Self {
+        // dbg!(&ts);
         if options.ic3_options.inn {
             let mut uts = TransysUnroll::new(&ts);
             uts.unroll();
             ts = uts.interal_signals();
+            // ts = ts.simplify(&[], true, false);
         }
         let ts = Rc::new(ts);
         let statistic = Statistic::new(&options.model);

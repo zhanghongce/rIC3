@@ -219,7 +219,9 @@ impl IC3 {
         if contained_check && self.frame.trivial_contained(frame, &lemma).is_some() {
             return false;
         }
-        assert!(!self.ts.cube_subsume_init(lemma.cube()));
+        if self.ts.cube_subsume_init(lemma.cube()) {
+            assert!(self.options.ic3_options.inn);
+        }
         let mut begin = None;
         let mut inv_found = false;
         'fl: for i in (1..=frame).rev() {
