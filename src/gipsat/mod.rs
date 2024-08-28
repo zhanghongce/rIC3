@@ -53,6 +53,7 @@ pub struct Solver {
     mark: LitSet,
     rng: StdRng,
     pub statistic: SolverStatistic,
+    #[allow(unused)]
     options: Options,
 }
 
@@ -338,13 +339,14 @@ impl Solver {
         }
         if self.ts.cube_subsume_init(&ans) {
             ans = Cube::new();
-            let Some(new) = self.assump.iter().find(|l| {
-                let l = self.ts.lit_prev(**l);
-                self.ts.init_map[l.var()].is_some_and(|i| i != l.polarity())
-            }) else {
-                assert!(self.options.ic3_options.inn);
-                return ans;
-            };
+            let new = self
+                .assump
+                .iter()
+                .find(|l| {
+                    let l = self.ts.lit_prev(**l);
+                    self.ts.init_map[l.var()].is_some_and(|i| i != l.polarity())
+                })
+                .unwrap();
             for l in self.assump.iter() {
                 if self.unsat_has(*l) || l.eq(new) {
                     ans.push(self.ts.lit_prev(*l));

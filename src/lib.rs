@@ -115,6 +115,11 @@ impl IC3 {
     }
 
     fn generalize(&mut self, mut po: ProofObligation) -> bool {
+        if self.options.ic3_options.inn && self.ts.cube_subsume_init(&po.lemma) {
+            po.frame += 1;
+            self.add_obligation(po.clone());
+            return self.add_lemma(po.frame - 1, po.lemma.cube().clone(), false, Some(po));
+        }
         let mut mic = self.solvers[po.frame - 1].inductive_core();
         let level = if self.options.ic3_options.ctg { 1 } else { 0 };
         mic = self.mic(po.frame, mic, level, &[]);
@@ -257,7 +262,12 @@ impl IC3 {
                         .blocked_with_ordered(frame_idx + 1, &lemma, false, false, false)
                         .unwrap()
                     {
-                        let core = self.solvers[frame_idx].inductive_core();
+                        let core =
+                            if self.options.ic3_options.inn && self.ts.cube_subsume_init(&lemma) {
+                                lemma.cube().clone()
+                            } else {
+                                self.solvers[frame_idx].inductive_core()
+                            };
                         if let Some(po) = &mut lemma.po {
                             if po.frame < frame_idx + 2 && self.obligations.remove(po) {
                                 po.frame = frame_idx + 2;
