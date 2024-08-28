@@ -65,6 +65,14 @@ pub struct IC3Options {
     #[arg(long = "ic3-ctg", default_value_t = false, requires = "ic3")]
     pub ctg: bool,
 
+    /// max number of ctg
+    #[arg(long = "ic3-ctg-max", default_value_t = 3, requires = "ic3")]
+    pub ctg_max: usize,
+
+    /// ctg limit
+    #[arg(long = "ic3-ctg-limit", default_value_t = 5, requires = "ic3")]
+    pub ctg_limit: usize,
+
     /// ic3 xor generalization
     #[arg(long = "ic3-xor", default_value_t = false, requires = "ic3")]
     pub xor: bool,
