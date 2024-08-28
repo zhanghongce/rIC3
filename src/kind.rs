@@ -5,18 +5,17 @@ use crate::{
     Engine,
 };
 use aig::{Aig, AigEdge};
-use logic_form::{Clause, Cube};
+use logic_form::Cube;
 use satif::Satif;
 
 pub struct Kind {
     uts: TransysUnroll,
     options: Options,
     solver: Box<dyn Satif>,
-    pre_lemmas: Vec<Clause>,
 }
 
 impl Kind {
-    pub fn new(options: Options, ts: Transys, pre_lemmas: Vec<Clause>) -> Self {
+    pub fn new(options: Options, ts: Transys) -> Self {
         let uts = TransysUnroll::new(&ts);
         let solver: Box<dyn Satif> = if options.kind_options.kind_kissat {
             Box::new(kissat::Solver::new())
@@ -26,15 +25,7 @@ impl Kind {
         Self {
             uts,
             options,
-            pre_lemmas,
             solver,
-        }
-    }
-
-    fn load_pre_lemmas(&mut self, k: usize) {
-        for cls in self.pre_lemmas.iter() {
-            let cls: Clause = self.uts.lits_next(cls, k);
-            self.solver.add_clause(&cls);
         }
     }
 
@@ -60,48 +51,52 @@ impl Kind {
     //     }
     //     false
     // }
+
+    pub fn reset_solver(&mut self) {
+        self.solver = if self.options.bmc_options.bmc_kissat {
+            Box::new(kissat::Solver::new())
+        } else {
+            Box::new(cadical::Solver::new())
+        };
+    }
 }
 
 impl Engine for Kind {
     fn check(&mut self) -> Option<bool> {
         let step = self.options.step as usize;
-        for k in (step - 1..).step_by(step) {
-            self.uts.unroll_to(k);
-            let kind_bound = k + 1 - step;
-            self.uts.load_trans(self.solver.as_mut(), kind_bound, true);
-            self.load_pre_lemmas(kind_bound);
-            if kind_bound > 0 {
-                if self.options.verbose > 0 {
-                    println!("kind depth: {kind_bound}");
-                }
-                if !self
-                    .solver
-                    .solve(&self.uts.lits_next(&self.uts.ts.bad, kind_bound))
-                {
-                    println!("k-induction proofed in depth {kind_bound}");
-                    return Some(true);
-                }
-            }
-            for s in kind_bound + 1..=k {
-                self.uts.load_trans(self.solver.as_mut(), s, true);
-                self.load_pre_lemmas(s);
+        self.uts.load_trans(self.solver.as_mut(), 0, true);
+        for k in (step..).step_by(step) {
+            let bmc_k = k - 1;
+            let start = k - step + 1;
+            self.uts.unroll_to(bmc_k);
+            for i in start..=bmc_k {
+                self.uts.load_trans(self.solver.as_mut(), i, true);
             }
             if !self.options.kind_options.no_bmc {
                 let mut assump = self.uts.ts.init.clone();
-                assump.extend_from_slice(&self.uts.lits_next(&self.uts.ts.bad, k));
+                assump.extend_from_slice(&self.uts.lits_next(&self.uts.ts.bad, bmc_k));
                 if self.options.verbose > 0 {
-                    println!("kind bmc depth: {k}");
+                    println!("kind bmc depth: {bmc_k}");
                 }
                 if self.solver.solve(&assump) {
                     if self.options.verbose > 0 {
-                        println!("bmc found cex in depth {k}");
+                        println!("bmc found cex in depth {bmc_k}");
                     }
                     return Some(false);
                 }
             }
-            for s in k + 1 - step..=k {
+            for i in bmc_k - step + 1..=bmc_k {
                 self.solver
-                    .add_clause(&!self.uts.lits_next(&self.uts.ts.bad, s));
+                    .add_clause(&!self.uts.lits_next(&self.uts.ts.bad, i));
+            }
+            self.uts.unroll_to(k);
+            self.uts.load_trans(self.solver.as_mut(), k, true);
+            if self.options.verbose > 0 {
+                println!("kind depth: {k}");
+            }
+            if !self.solver.solve(&self.uts.lits_next(&self.uts.ts.bad, k)) {
+                println!("k-induction proofed in depth {k}");
+                return Some(true);
             }
         }
         unreachable!();
