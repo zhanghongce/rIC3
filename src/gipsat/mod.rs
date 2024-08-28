@@ -437,10 +437,7 @@ impl IC3 {
             .unwrap();
         if res {
             let frame = self.solvers.len();
-            Some(self.get_predecessor(
-                frame, true, false,
-                // self.options.ic3_options.inn && frame > 1
-            ))
+            Some(self.get_predecessor(frame, true))
         } else {
             None
         }
@@ -487,12 +484,7 @@ impl IC3 {
         )
     }
 
-    pub fn get_predecessor(
-        &mut self,
-        frame: usize,
-        strengthen: bool,
-        not_subsume_init: bool,
-    ) -> (Cube, Cube) {
+    pub fn get_predecessor(&mut self, frame: usize, strengthen: bool) -> (Cube, Cube) {
         let solver = &mut self.solvers[frame - 1];
         let mut cls: Cube = solver.assump.clone();
         cls.extend_from_slice(&self.abs_cst);
@@ -560,17 +552,6 @@ impl IC3 {
                 .filter(|l| self.lift.unsat_has(**l))
                 .copied()
                 .collect();
-            if not_subsume_init && self.ts.cube_subsume_init(&latchs) {
-                let latchs_set: HashSet<Lit> = HashSet::from_iter(latchs.iter().copied());
-                let p = self
-                    .ts
-                    .init
-                    .iter()
-                    .find(|l| !latchs_set.contains(*l))
-                    .unwrap();
-                latchs.push(!*p);
-                assert!(!self.ts.cube_subsume_init(&latchs));
-            }
             if latchs.len() == olen || !strengthen {
                 break;
             }
