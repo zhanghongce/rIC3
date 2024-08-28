@@ -1,6 +1,6 @@
 use crate::{
+    options::Options,
     transys::{unroll::TransysUnroll, Transys},
-    Options,
 };
 use aig::Aig;
 use cadical::{itp::Interpolant, Solver};

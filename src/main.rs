@@ -6,10 +6,11 @@ use rIC3::{
     frontend::aig::aig_preprocess,
     general,
     kind::Kind,
+    options::{self, Options},
     portfolio::Portfolio,
     transys::Transys,
     verify::{check_certifaiger, check_witness, verify_certifaiger},
-    Engine, Options, IC3,
+    Engine, IC3,
 };
 use std::{mem, process::exit};
 
@@ -32,7 +33,7 @@ fn main() {
         verify_certifaiger(&aig, &options);
         exit(20);
     }
-    let mut engine: Box<dyn Engine> = if options.portfolio {
+    let mut engine: Box<dyn Engine> = if let options::Engine::Portfolio = options.engine {
         Box::new(Portfolio::new(options.clone()))
     } else {
         let (aig, restore) = aig_preprocess(&aig, &options);
@@ -41,15 +42,14 @@ fn main() {
         if options.preprocess.sec {
             panic!("sec not support");
         }
-        ts = ts.simplify(&[], options.ic3, !options.ic3);
-        if options.bmc {
-            Box::new(BMC::new(options.clone(), ts))
-        } else if options.kind {
-            Box::new(Kind::new(options.clone(), ts, pre_lemmas))
-        } else if options.gic3 {
-            Box::new(general::IC3::new(options.clone(), ts))
-        } else {
-            Box::new(IC3::new(options.clone(), ts, pre_lemmas))
+        let ic3 = matches!(options.engine, options::Engine::IC3);
+        ts = ts.simplify(&[], ic3, !ic3);
+        match options.engine {
+            options::Engine::IC3 => Box::new(IC3::new(options.clone(), ts, pre_lemmas)),
+            options::Engine::GIC3 => Box::new(general::IC3::new(options.clone(), ts)),
+            options::Engine::Kind => Box::new(Kind::new(options.clone(), ts, pre_lemmas)),
+            options::Engine::BMC => Box::new(BMC::new(options.clone(), ts)),
+            _ => unreachable!(),
         }
     };
     let res = engine.check();

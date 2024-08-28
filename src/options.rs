@@ -1,10 +1,14 @@
-use clap::{ArgGroup, Args, Parser};
+use clap::{ArgGroup, Args, Parser, ValueEnum};
 
 /// rIC3 model checker
 #[derive(Parser, Debug, Clone)]
 #[command(version, about)]
 #[command(group = ArgGroup::new("engine").required(false).multiple(false))]
 pub struct Options {
+    /// model checking engine
+    #[arg(short, long, value_enum, default_value_t = Engine::Portfolio)]
+    pub engine: Engine,
+
     /// model file in aiger format or in btor2 format.
     /// for btor model, the file name should be suffixed with .btor or .btor2
     pub model: String,
@@ -16,38 +20,14 @@ pub struct Options {
     /// certifaiger or witness output path
     pub certify_path: Option<String>,
 
-    /// word level engin
-    #[arg(long, default_value_t = false)]
-    pub wl: bool,
-
-    /// ic3 engine
-    #[arg(long, default_value_t = true, group = "engine")]
-    pub ic3: bool,
-
-    /// general ic3 engine
-    #[arg(long, default_value_t = false, group = "engine")]
-    pub gic3: bool,
-
     #[command(flatten)]
     pub ic3_options: IC3Options,
-
-    /// bmc engine
-    #[arg(long, default_value_t = false, group = "engine")]
-    pub bmc: bool,
 
     #[command(flatten)]
     pub bmc_options: BMCOptions,
 
-    /// k-induction engine
-    #[arg(long, default_value_t = false, group = "engine")]
-    pub kind: bool,
-
     #[command(flatten)]
     pub kind_options: KindOptions,
-
-    /// portfolio
-    #[arg(long, default_value_t = false, group = "engine")]
-    pub portfolio: bool,
 
     #[command(flatten)]
     pub preprocess: PreprocessOptions,
@@ -63,6 +43,20 @@ pub struct Options {
     /// verbose level
     #[arg(short, default_value_t = 1)]
     pub verbose: usize,
+}
+
+#[derive(Copy, Clone, ValueEnum, Debug)]
+pub enum Engine {
+    /// ic3
+    IC3,
+    /// general ic3
+    GIC3,
+    /// k-induction
+    Kind,
+    /// bmc
+    BMC,
+    /// portfolio
+    Portfolio,
 }
 
 #[derive(Args, Clone, Debug)]

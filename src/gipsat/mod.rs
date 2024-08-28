@@ -8,7 +8,7 @@ pub mod statistic;
 mod utils;
 mod vsids;
 
-use crate::{frame::Frames, transys::Transys, Options, IC3};
+use crate::{frame::Frames, options::Options, transys::Transys, IC3};
 use analyze::Analyze;
 use cdb::{CRef, ClauseDB, ClauseKind, CREF_NONE};
 use domain::Domain;

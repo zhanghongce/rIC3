@@ -1,7 +1,8 @@
 use crate::{
+    options::Options,
     transys::{unroll::TransysUnroll, Transys},
     verify::witness_encode,
-    Engine, Options,
+    Engine,
 };
 use aig::{Aig, AigEdge};
 use logic_form::{Clause, Cube};

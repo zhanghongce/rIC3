@@ -28,27 +28,28 @@ impl Portfolio {
             engine.args(args);
             engines.push(engine);
         };
-        new_engine(&["--ic3"]);
-        new_engine(&["--ic3", "--rseed", "55"]);
-        new_engine(&["--ic3", "--ic3-ctg"]);
-        new_engine(&["--ic3", "--ic3-ctg", "--ic3-abs-cst", "--rseed", "55"]);
-        new_engine(&["--ic3", "--ic3-ctg", "--ic3-ctp"]);
-        new_engine(&["--ic3", "--ic3-ctg", "--ic3-inn"]);
-        new_engine(&["--ic3", "--ic3-ctg", "--ic3-ctp", "--ic3-inn"]);
-        // new_engine(&["--ic3", "--ic3-bwd", "--ic3-ctg"]);
+        new_engine(&["-e", "ic3"]);
+        new_engine(&["-e", "ic3", "--rseed", "55"]);
+        new_engine(&["-e", "ic3", "--ic3-ctg"]);
+        new_engine(&["-e", "ic3", "--ic3-ctg", "--ic3-abs-cst", "--rseed", "55"]);
+        new_engine(&["-e", "ic3", "--ic3-ctg", "--ic3-ctp"]);
+        new_engine(&["-e", "ic3", "--ic3-ctg", "--ic3-inn"]);
+        new_engine(&["-e", "ic3", "--ic3-ctg", "--ic3-ctp", "--ic3-inn"]);
+        // new_engine(&["-e", "ic3", "--ic3-bwd", "--ic3-ctg"]);
 
-        new_engine(&["--bmc", "--step", "10"]);
-        new_engine(&["--bmc", "--bmc-kissat", "--step", "70"]);
-        new_engine(&["--bmc", "--bmc-kissat", "--step", "135"]);
+        new_engine(&["-e", "bmc", "--step", "10"]);
+        new_engine(&["-e", "bmc", "--bmc-kissat", "--step", "70"]);
+        new_engine(&["-e", "bmc", "--bmc-kissat", "--step", "135"]);
         new_engine(&[
-            "--bmc",
+            "-e",
+            "bmc",
             "--bmc-kissat",
             "--bmc-time-limit",
             "100",
             "--step",
             "100",
         ]);
-        new_engine(&["--kind", "--step", "1"]);
+        new_engine(&["-e", "kind", "--step", "1"]);
         Self {
             option,
             engines,

@@ -5,11 +5,12 @@ mod solver;
 use crate::{
     activity::Activity,
     frame::{Frame, Frames},
+    options::Options,
     proofoblig::{ProofObligation, ProofObligationQueue},
     statistic::Statistic,
     transys::Transys,
     verify::witness_encode,
-    Engine, Options,
+    Engine,
 };
 use aig::{Aig, AigEdge};
 use logic_form::{Cube, Lemma};
