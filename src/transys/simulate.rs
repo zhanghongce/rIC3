@@ -54,7 +54,7 @@ impl Transys {
             for l in s.iter() {
                 let bv = bv.get_mut(&l.var()).unwrap();
                 if l.polarity() {
-                    *bv = *bv | (1 << i);
+                    *bv |= 1 << i;
                 }
             }
         }

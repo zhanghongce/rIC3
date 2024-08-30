@@ -7,10 +7,7 @@ pub mod unroll;
 use aig::Aig;
 use logic_form::{Clause, Cube, Lit, LitMap, Var, VarMap};
 use satif::Satif;
-use std::{
-    collections::{HashMap, HashSet},
-    usize,
-};
+use std::collections::{HashMap, HashSet};
 
 #[derive(Clone, Default, Debug)]
 pub struct Transys {

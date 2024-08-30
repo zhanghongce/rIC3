@@ -159,7 +159,7 @@ impl Frames {
                 }
             }
         }
-        let mut res = Vec::from_iter(res.into_iter());
+        let mut res = Vec::from_iter(res);
         res.sort_by_key(|x| x.len());
         res.reverse();
         if res.len() > 3 {

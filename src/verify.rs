@@ -140,7 +140,7 @@ pub fn check_certifaiger(engine: &mut Box<dyn Engine>, aig: &mut Aig, option: &O
     if option.certify_path.is_none() && !option.certify {
         return;
     }
-    let mut certifaiger = engine.certifaiger(&aig);
+    let mut certifaiger = engine.certifaiger(aig);
     certifaiger = certifaiger.reencode();
     certifaiger.symbols.clear();
     for i in 0..aig.inputs.len() {

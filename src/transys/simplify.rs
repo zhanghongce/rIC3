@@ -105,8 +105,8 @@ impl Transys {
             domain_map.insert(*d, Var::new(i));
         }
         let map_lit = |l: &Lit| Lit::new(domain_map[&l.var()], l.polarity());
-        let inputs = self.inputs.iter().map(|v| domain_map[&v]).collect();
-        let latchs: Vec<Var> = self.latchs.iter().map(|v| domain_map[&v]).collect();
+        let inputs = self.inputs.iter().map(|v| domain_map[v]).collect();
+        let latchs: Vec<Var> = self.latchs.iter().map(|v| domain_map[v]).collect();
         let init = self.init.iter().map(map_lit).collect();
         let bad = self.bad.iter().map(map_lit).collect();
         let max_latch = domain_map[&self.max_latch];
@@ -120,7 +120,7 @@ impl Transys {
             self.constraints.iter().map(map_lit).collect()
         };
         for c in trans.iter_mut() {
-            *c = c.iter().map(|l| map_lit(l)).collect();
+            *c = c.iter().map(map_lit).collect();
         }
         let max_var = domain_map[&max_var];
         let mut next_map = LitMap::new_with(max_var);

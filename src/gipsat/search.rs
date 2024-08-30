@@ -48,10 +48,8 @@ impl Solver {
 
     #[inline]
     pub fn assign_full(&mut self, lit: Lit, reason: CRef) -> bool {
-        if self.highest_level() == 0 {
-            if lit.var() == self.constrain_act {
-                return false;
-            }
+        if self.highest_level() == 0 && lit.var() == self.constrain_act {
+            return false;
         }
         self.assign(lit, reason);
         true

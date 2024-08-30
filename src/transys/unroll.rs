@@ -46,7 +46,7 @@ impl TransysUnroll {
 
     #[inline]
     #[allow(unused)]
-    pub fn lits_next<'a, R: FromIterator<Lit> + AsRef<[Lit]>>(&'a self, lits: &R, num: usize) -> R {
+    pub fn lits_next<R: FromIterator<Lit> + AsRef<[Lit]>>(&self, lits: &R, num: usize) -> R {
         lits.as_ref()
             .iter()
             .map(|l| self.lit_next(*l, num))
@@ -197,7 +197,7 @@ impl TransysUnroll {
     pub fn interal_signals(&self) -> Transys {
         let mut trans = self.ts.trans.clone();
         for c in self.ts.trans.iter() {
-            trans.push(self.lits_next(&c, 1));
+            trans.push(self.lits_next(c, 1));
         }
         let mut dependence = self.ts.dependence.clone();
         dependence.reserve(self.max_var);
@@ -255,7 +255,7 @@ impl TransysUnroll {
         for c in self.ts.constraints.iter() {
             solver.add_clause(&[*c]);
         }
-        let implies: HashSet<Lit> = HashSet::from_iter(solver.implies(&init).into_iter());
+        let implies: HashSet<Lit> = HashSet::from_iter(solver.implies(&init));
         for l in latchs.iter() {
             let l = l.lit();
             if implies.contains(&l) {
