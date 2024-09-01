@@ -6,17 +6,40 @@ use std::{
     fs::{self, File},
     io::Read,
     mem::take,
-    process::{Command, Stdio},
+    process::{exit, Command, Stdio},
     sync::{Arc, Condvar, Mutex},
     thread::spawn,
 };
 use tempfile::{NamedTempFile, TempDir};
 
+#[derive(Default)]
+enum PortfolioState {
+    #[default]
+    Checking,
+    Finished(bool, String, Option<NamedTempFile>),
+    Terminate,
+}
+
+impl PortfolioState {
+    fn is_checking(&self) -> bool {
+        matches!(self, Self::Checking)
+    }
+
+    fn result(&mut self) -> (bool, String, Option<NamedTempFile>) {
+        let Self::Finished(res, config, certificate) = take(self) else {
+            panic!()
+        };
+        (res, config, certificate)
+    }
+}
+
 pub struct Portfolio {
     option: Options,
     engines: Vec<Command>,
     temp_dir: TempDir,
-    certify_file: Option<NamedTempFile>,
+    engine_pids: Vec<i32>,
+    certificate: Option<NamedTempFile>,
+    result: Arc<(Mutex<PortfolioState>, Condvar)>,
 }
 
 impl Portfolio {
@@ -57,29 +80,45 @@ impl Portfolio {
             option,
             engines,
             temp_dir,
-            certify_file: None,
+            certificate: None,
+            engine_pids: Default::default(),
+            result: Arc::new((Mutex::new(PortfolioState::default()), Condvar::new())),
         }
     }
-}
 
-impl Engine for Portfolio {
-    fn check(&mut self) -> Option<bool> {
-        let mut engines = Vec::new();
-        let result = Arc::new((Mutex::new(None), Condvar::new()));
-        let lock = result.0.lock().unwrap();
+    pub fn terminate(&mut self) {
+        let mut lock = self.result.0.lock().unwrap();
+        if lock.is_checking() {
+            *lock = PortfolioState::Terminate;
+            for pid in self.engine_pids.iter() {
+                Command::new("pkill")
+                    .args(["-9", "-P", &format!("{}", *pid)])
+                    .output()
+                    .unwrap();
+                Command::new("kill")
+                    .args(["-9", &format!("{}", *pid)])
+                    .output()
+                    .unwrap();
+            }
+            let _ = fs::remove_dir_all(self.temp_dir.path());
+        }
+    }
+
+    fn check_inner(&mut self) -> Option<bool> {
+        let lock = self.result.0.lock().unwrap();
         for mut engine in take(&mut self.engines) {
-            let certify_file = if self.option.certify_path.is_some() || self.option.certify {
-                let certify_file = tempfile::NamedTempFile::new_in(self.temp_dir.path()).unwrap();
-                let certify_path = certify_file.path().as_os_str().to_str().unwrap();
+            let certificate = if self.option.certify_path.is_some() || self.option.certify {
+                let certificate = tempfile::NamedTempFile::new_in(self.temp_dir.path()).unwrap();
+                let certify_path = certificate.path().as_os_str().to_str().unwrap();
                 engine.arg(certify_path);
-                Some(certify_file)
+                Some(certificate)
             } else {
                 None
             };
             let mut child = engine.stderr(Stdio::piped()).spawn().unwrap();
-            engines.push(child.id() as i32);
+            self.engine_pids.push(child.id() as i32);
             let option = self.option.clone();
-            let result = result.clone();
+            let result = self.result.clone();
             spawn(move || {
                 let config = engine
                     .get_args()
@@ -100,45 +139,58 @@ impl Engine for Portfolio {
                     Some(10) => false,
                     Some(20) => true,
                     e => {
-                        if option.verbose > 0 && result.0.lock().unwrap().is_none() {
+                        if option.verbose > 0 && result.0.lock().unwrap().is_checking() {
                             println!("{config} unsuccessfully exited, exit code: {:?}", e);
                         }
                         return;
                     }
                 };
                 let mut lock = result.0.lock().unwrap();
-                if lock.is_none() {
-                    *lock = Some((res, config, certify_file));
+                if lock.is_checking() {
+                    *lock = PortfolioState::Finished(res, config, certificate);
                     result.1.notify_one();
                 }
             });
         }
-        let mut result = result.1.wait(lock).unwrap();
-        self.certify_file = take(&mut result.as_mut().unwrap().2);
-        let (res, config, _) = result.as_ref().unwrap();
+        let mut result = self.result.1.wait(lock).unwrap();
+        let (res, config, certificate) = result.result();
+        self.certificate = certificate;
         println!("best configuration: {}", config);
-        for pid in engines {
+        for pid in self.engine_pids.iter() {
             Command::new("pkill")
-                .args(["-9", "-P", &format!("{pid}")])
+                .args(["-9", "-P", &format!("{}", *pid)])
                 .output()
                 .unwrap();
             Command::new("kill")
-                .args(["-9", &format!("{pid}")])
+                .args(["-9", &format!("{}", *pid)])
                 .output()
                 .unwrap();
         }
-        Some(*res)
+        Some(res)
+    }
+}
+
+impl Engine for Portfolio {
+    fn check(&mut self) -> Option<bool> {
+        let ric3 = self as *mut Self as usize;
+        ctrlc::set_handler(move || {
+            let ric3 = unsafe { &mut *(ric3 as *mut Portfolio) };
+            ric3.terminate();
+            exit(124);
+        })
+        .unwrap();
+        self.check_inner()
     }
 
     fn certifaiger(&mut self, _aig: &aig::Aig) -> Aig {
-        let certify_file = take(&mut self.certify_file);
-        Aig::from_file(certify_file.unwrap().path().as_os_str().to_str().unwrap())
+        let certificate = take(&mut self.certificate);
+        Aig::from_file(certificate.unwrap().path().as_os_str().to_str().unwrap())
     }
 
     fn witness(&mut self, _aig: &Aig) -> String {
         let mut res = String::new();
-        let certify_file = take(&mut self.certify_file);
-        File::open(certify_file.unwrap().path().as_os_str().to_str().unwrap())
+        let certificate = take(&mut self.certificate);
+        File::open(certificate.unwrap().path().as_os_str().to_str().unwrap())
             .unwrap()
             .read_to_string(&mut res)
             .unwrap();

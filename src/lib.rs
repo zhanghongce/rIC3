@@ -338,20 +338,6 @@ impl IC3 {
         res.extend();
         res
     }
-
-    // pub fn check_with_int_hanlder(&mut self) -> bool {
-    //     let ic3 = self as *mut IC3 as usize;
-    //     ctrlc::set_handler(move || {
-    //         let ic3 = unsafe { &mut *(ic3 as *mut IC3) };
-    //         ic3.statistic();
-    //         exit(130);
-    //     })
-    //     .unwrap();
-    //     panic::catch_unwind(AssertUnwindSafe(|| self.check())).unwrap_or_else(|_| {
-    //         self.statistic();
-    //         panic!();
-    //     })
-    // }
 }
 
 impl Engine for IC3 {
