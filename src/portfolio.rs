@@ -3,27 +3,32 @@ use aig::Aig;
 use process_control::{ChildExt, Control};
 use std::{
     env::current_exe,
-    fs::File,
+    fs::{self, File},
     io::Read,
     mem::take,
     process::{Command, Stdio},
     sync::{Arc, Condvar, Mutex},
     thread::spawn,
 };
-use tempfile::NamedTempFile;
+use tempfile::{NamedTempFile, TempDir};
 
 pub struct Portfolio {
     option: Options,
     engines: Vec<Command>,
+    temp_dir: TempDir,
     certify_file: Option<NamedTempFile>,
 }
 
 impl Portfolio {
     pub fn new(option: Options) -> Self {
+        fs::create_dir_all("/tmp/rIC3").unwrap();
+        let temp_dir = tempfile::TempDir::new_in("/tmp/rIC3/").unwrap();
+        let temp_dir_path = temp_dir.path();
         let mut engines = Vec::new();
         let mut new_engine = |args: &str| {
             let args = args.split(" ");
             let mut engine = Command::new(current_exe().unwrap());
+            engine.env("RIC3_TMP_DIR", temp_dir_path);
             engine.arg(&option.model);
             engine.arg("-v");
             engine.arg("0");
@@ -51,6 +56,7 @@ impl Portfolio {
         Self {
             option,
             engines,
+            temp_dir,
             certify_file: None,
         }
     }
@@ -63,7 +69,7 @@ impl Engine for Portfolio {
         let lock = result.0.lock().unwrap();
         for mut engine in take(&mut self.engines) {
             let certify_file = if self.option.certify_path.is_some() || self.option.certify {
-                let certify_file = tempfile::NamedTempFile::new_in("/tmp/rIC3/").unwrap();
+                let certify_file = tempfile::NamedTempFile::new_in(self.temp_dir.path()).unwrap();
                 let certify_path = certify_file.path().as_os_str().to_str().unwrap();
                 engine.arg(certify_path);
                 Some(certify_file)

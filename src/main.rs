@@ -12,11 +12,10 @@ use rIC3::{
     verify::{check_certifaiger, check_witness, verify_certifaiger},
     Engine, IC3,
 };
-use std::{fs, mem, process::exit};
+use std::{mem, process::exit};
 
 fn main() {
     procspawn::init();
-    fs::create_dir_all("/tmp/rIC3").unwrap();
     let mut options = Options::parse();
     let verbose = options.verbose;
     if verbose > 0 {
@@ -59,7 +58,11 @@ fn main() {
         Some(false) => check_witness(&mut engine, &aig, &options),
         _ => (),
     }
-    mem::forget(engine);
+    if let options::Engine::Portfolio = options.engine {
+        drop(engine);
+    } else {
+        mem::forget(engine);
+    }
     if let Some(res) = res {
         if verbose > 0 {
             println!("result: {res}");

@@ -1,6 +1,6 @@
 use abc::Abc;
 use aig::Aig;
-use std::{mem::take, time::Duration};
+use std::{env, mem::take, time::Duration};
 
 fn preprocess(f: String) {
     let mut aig = Aig::from_file(&f);
@@ -49,7 +49,11 @@ fn preprocess(f: String) {
 
 #[allow(unused)]
 pub fn abc_preprocess(mut aig: Aig) -> Aig {
-    let tmpfile = tempfile::NamedTempFile::new_in("/tmp/rIC3").unwrap();
+    let dir = match env::var("RIC3_TMP_DIR") {
+        Ok(d) => d,
+        Err(_) => "/tmp/rIC3".to_string(),
+    };
+    let tmpfile = tempfile::NamedTempFile::new_in(dir).unwrap();
     let path = tmpfile.path().as_os_str().to_str().unwrap();
     aig.to_file(path, false);
     let mut join = procspawn::spawn(path.to_string(), preprocess);
