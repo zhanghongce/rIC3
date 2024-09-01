@@ -63,7 +63,7 @@ impl Engine for Portfolio {
         let lock = result.0.lock().unwrap();
         for mut engine in take(&mut self.engines) {
             let certify_file = if self.option.certify_path.is_some() || self.option.certify {
-                let certify_file = tempfile::NamedTempFile::new().unwrap();
+                let certify_file = tempfile::NamedTempFile::new_in("/tmp/rIC3/").unwrap();
                 let certify_path = certify_file.path().as_os_str().to_str().unwrap();
                 engine.arg(certify_path);
                 Some(certify_file)
@@ -125,31 +125,17 @@ impl Engine for Portfolio {
     }
 
     fn certifaiger(&mut self, _aig: &aig::Aig) -> Aig {
-        Aig::from_file(
-            self.certify_file
-                .as_ref()
-                .unwrap()
-                .path()
-                .as_os_str()
-                .to_str()
-                .unwrap(),
-        )
+        let certify_file = take(&mut self.certify_file);
+        Aig::from_file(certify_file.unwrap().path().as_os_str().to_str().unwrap())
     }
 
     fn witness(&mut self, _aig: &Aig) -> String {
         let mut res = String::new();
-        File::open(
-            self.certify_file
-                .as_ref()
-                .unwrap()
-                .path()
-                .as_os_str()
-                .to_str()
-                .unwrap(),
-        )
-        .unwrap()
-        .read_to_string(&mut res)
-        .unwrap();
+        let certify_file = take(&mut self.certify_file);
+        File::open(certify_file.unwrap().path().as_os_str().to_str().unwrap())
+            .unwrap()
+            .read_to_string(&mut res)
+            .unwrap();
         res
     }
 }
