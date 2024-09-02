@@ -82,6 +82,7 @@ impl IC3 {
         cube: &Cube,
         keep: &HashSet<Lit>,
         full: &Cube,
+        level: usize,
     ) -> Option<Cube> {
         let mut cube = cube.clone();
         self.statistic.num_down += 1;
@@ -120,6 +121,7 @@ impl IC3 {
                     Lemma::new(model.clone()),
                     &[!full.clone()],
                     &mut limit,
+                    level - 1,
                 ) {
                     ctg += 1;
                     continue;
@@ -191,7 +193,7 @@ impl IC3 {
             let mut removed_cube = cube.clone();
             removed_cube.remove(i);
             let mic = if level > 0 {
-                self.ctg_down(frame, &removed_cube, &keep, &cube)
+                self.ctg_down(frame, &removed_cube, &keep, &cube, level)
             } else {
                 self.down(frame, &removed_cube, &keep, &cube, constrain, &mut cex)
             };
@@ -230,7 +232,7 @@ impl IC3 {
         let keep = HashSet::new();
         for similar in self.frame.similar(&cube, frame) {
             let mic = if level > 0 {
-                self.ctg_down(frame, &similar, &keep, &cube)
+                self.ctg_down(frame, &similar, &keep, &cube, level)
             } else {
                 self.down(frame, &similar, &keep, &cube, &[], &mut cex)
             };
@@ -406,6 +408,7 @@ impl IC3 {
                         Lemma::new(try_gen.clone()),
                         &[!lemma.clone()],
                         &mut limit,
+                        1,
                     );
                     self.statistic.xor_gen.statistic(res);
                     if res {

@@ -212,7 +212,9 @@ impl IC3 {
         lemma: Lemma,
         constrain: &[Clause],
         limit: &mut usize,
+        level: usize,
     ) -> bool {
+        assert!(level == 0);
         if frame == 0 {
             return false;
         }
@@ -236,13 +238,13 @@ impl IC3 {
                 .unwrap()
             {
                 let mut mic = self.solvers[frame - 1].inductive_core();
-                mic = self.mic(frame, mic, 0, constrain);
+                mic = self.mic(frame, mic, level, constrain);
                 let (frame, mic) = self.push_lemma(frame, mic);
                 self.add_lemma(frame - 1, mic, false, None);
                 return true;
             } else {
                 let model = Lemma::new(self.get_predecessor(frame, true).0);
-                if !self.trivial_block(frame - 1, model, constrain, limit) {
+                if !self.trivial_block(frame - 1, model, constrain, limit, level) {
                     return false;
                 }
             }
