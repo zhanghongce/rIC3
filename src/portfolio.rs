@@ -87,7 +87,9 @@ impl Portfolio {
     }
 
     pub fn terminate(&mut self) {
-        let mut lock = self.result.0.lock().unwrap();
+        let Ok(mut lock) = self.result.0.try_lock() else {
+            return;
+        };
         if lock.is_checking() {
             *lock = PortfolioState::Terminate;
             let pids: Vec<String> = self.engine_pids.iter().map(|p| format!("{}", *p)).collect();
