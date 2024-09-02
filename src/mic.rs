@@ -387,10 +387,10 @@ impl IC3 {
                         continue;
                     }
                     let mut try_gen = lemma.clone();
-                    let c = self.xor_var.get(&(a, b));
+                    let c = self.xor_var.get(&(a, b)).cloned();
                     if let Some(c) = c {
                         assert!(i < j);
-                        try_gen[i] = *c;
+                        try_gen[i] = c;
                         try_gen.remove(j);
                     } else {
                         try_gen[i] = !try_gen[i];
@@ -400,11 +400,18 @@ impl IC3 {
                         j += 1;
                         continue;
                     }
-                    let res = self.solvers[frame - 1]
-                        .inductive_with_constrain(&try_gen, true, vec![!lemma.clone()], false)
-                        .unwrap();
+                    let mut limit = self.options.ic3_options.ctg_limit;
+                    let res = self.trivial_block(
+                        frame,
+                        Lemma::new(try_gen.clone()),
+                        &[!lemma.clone()],
+                        &mut limit,
+                    );
                     self.statistic.xor_gen.statistic(res);
                     if res {
+                        assert!(self.solvers[frame - 1]
+                            .inductive_with_constrain(&try_gen, true, vec![!lemma.clone()], false)
+                            .unwrap());
                         let core = self.solvers[frame - 1].inductive_core();
                         if c.is_some() {
                             // if core.len() < try_gen.len() {
