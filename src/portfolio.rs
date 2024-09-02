@@ -90,16 +90,17 @@ impl Portfolio {
         let mut lock = self.result.0.lock().unwrap();
         if lock.is_checking() {
             *lock = PortfolioState::Terminate;
-            for pid in self.engine_pids.iter() {
-                Command::new("pkill")
-                    .args(["-9", "-P", &format!("{}", *pid)])
-                    .output()
-                    .unwrap();
-                Command::new("kill")
-                    .args(["-9", &format!("{}", *pid)])
-                    .output()
-                    .unwrap();
+            let pids: Vec<String> = self.engine_pids.iter().map(|p| format!("{}", *p)).collect();
+            let pid = pids.join(",");
+            let _ = Command::new("pkill")
+                .args(["-9", "--parent", &pid])
+                .output();
+            let mut kill = Command::new("kill");
+            kill.arg("-9");
+            for p in pids {
+                kill.arg(p);
             }
+            let _ = kill.output().unwrap();
             let _ = fs::remove_dir_all(self.temp_dir.path());
         }
     }
@@ -156,16 +157,17 @@ impl Portfolio {
         let (res, config, certificate) = result.result();
         self.certificate = certificate;
         println!("best configuration: {}", config);
-        for pid in self.engine_pids.iter() {
-            Command::new("pkill")
-                .args(["-9", "-P", &format!("{}", *pid)])
-                .output()
-                .unwrap();
-            Command::new("kill")
-                .args(["-9", &format!("{}", *pid)])
-                .output()
-                .unwrap();
+        let pids: Vec<String> = self.engine_pids.iter().map(|p| format!("{}", *p)).collect();
+        let pid = pids.join(",");
+        let _ = Command::new("pkill")
+            .args(["-9", "--parent", &pid])
+            .output();
+        let mut kill = Command::new("kill");
+        kill.arg("-9");
+        for p in pids {
+            kill.arg(p);
         }
+        let _ = kill.output().unwrap();
         Some(res)
     }
 }
