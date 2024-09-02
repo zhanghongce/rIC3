@@ -103,8 +103,10 @@ impl Portfolio {
                 kill.arg(p);
             }
             let _ = kill.output().unwrap();
+            self.engine_pids.clear();
             let _ = fs::remove_dir_all(self.temp_dir.path());
         }
+        drop(lock);
     }
 
     fn check_inner(&mut self) -> Option<bool> {
@@ -171,6 +173,12 @@ impl Portfolio {
         }
         let _ = kill.output().unwrap();
         Some(res)
+    }
+}
+
+impl Drop for Portfolio {
+    fn drop(&mut self) {
+        let _ = fs::remove_dir_all(self.temp_dir.path());
     }
 }
 
