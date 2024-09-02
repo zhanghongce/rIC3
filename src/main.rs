@@ -1,3 +1,5 @@
+#![feature(ptr_metadata)]
+
 use aig::Aig;
 use btor::btor_to_aiger;
 use clap::Parser;
@@ -12,7 +14,11 @@ use rIC3::{
     verify::{check_certifaiger, check_witness, verify_certifaiger},
     Engine, IC3,
 };
-use std::{mem, process::exit};
+use std::{
+    mem::{self, transmute},
+    process::exit,
+    ptr, usize,
+};
 
 fn main() {
     procspawn::init();
@@ -44,13 +50,26 @@ fn main() {
         }
         let ic3 = matches!(options.engine, options::Engine::IC3);
         ts = ts.simplify(&[], ic3, !ic3);
-        match options.engine {
+        let mut engine: Box<dyn Engine> = match options.engine {
             options::Engine::IC3 => Box::new(IC3::new(options.clone(), ts, pre_lemmas)),
             options::Engine::GIC3 => Box::new(general::IC3::new(options.clone(), ts)),
             options::Engine::Kind => Box::new(Kind::new(options.clone(), ts)),
             options::Engine::BMC => Box::new(BMC::new(options.clone(), ts)),
             _ => unreachable!(),
+        };
+        if options.interrupt_statistic {
+            let e: (usize, usize) =
+                unsafe { transmute((engine.as_mut() as *mut dyn Engine).to_raw_parts()) };
+            let _ = ctrlc::set_handler(move || {
+                let e: *mut dyn Engine = unsafe {
+                    ptr::from_raw_parts_mut(transmute::<usize, *mut ()>(e.0), transmute(e.1))
+                };
+                let e = unsafe { &mut *e };
+                e.statistic();
+                exit(124);
+            });
         }
+        engine
     };
     let res = engine.check();
     match res {

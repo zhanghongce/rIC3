@@ -23,6 +23,7 @@ use crate::statistic::Statistic;
 use activity::Activity;
 use aig::{Aig, AigEdge};
 use frame::{Frame, Frames};
+use gipsat::statistic::SolverStatistic;
 use gipsat::Solver;
 use logic_form::{Clause, Cube, Lemma, Lit, Var};
 use options::Options;
@@ -43,6 +44,8 @@ pub trait Engine {
     fn witness(&mut self, _aig: &Aig) -> String {
         panic!("unsupport witness");
     }
+
+    fn statistic(&mut self) {}
 }
 
 pub struct IC3 {
@@ -437,5 +440,22 @@ impl Engine for IC3 {
             b = bad.next.clone();
         }
         witness_encode(aig, &res)
+    }
+
+    fn statistic(&mut self) {
+        if self.options.verbose > 0 {
+            self.statistic.num_auxiliary_var = self.auxiliary_var.len();
+            self.obligations.statistic();
+            for f in self.frame.iter() {
+                print!("{} ", f.len());
+            }
+            println!();
+            let mut statistic = SolverStatistic::default();
+            for s in self.solvers.iter() {
+                statistic += s.statistic;
+            }
+            println!("{:#?}", statistic);
+            println!("{:#?}", self.statistic);
+        }
     }
 }
