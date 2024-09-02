@@ -104,7 +104,10 @@ impl Portfolio {
             }
             let _ = kill.output().unwrap();
             self.engine_pids.clear();
-            let _ = fs::remove_dir_all(self.temp_dir.path());
+            let _ = Command::new("rm")
+                .arg("-rf")
+                .arg(self.temp_dir.path())
+                .output();
         }
         drop(lock);
     }
@@ -178,7 +181,10 @@ impl Portfolio {
 
 impl Drop for Portfolio {
     fn drop(&mut self) {
-        let _ = fs::remove_dir_all(self.temp_dir.path());
+        let _ = Command::new("rm")
+            .arg("-rf")
+            .arg(self.temp_dir.path())
+            .output();
     }
 }
 
