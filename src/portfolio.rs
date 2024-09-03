@@ -70,7 +70,7 @@ impl Portfolio {
         new_engine("-e ic3 --ic3-ctg --ic3-ctp");
         new_engine("-e ic3 --ic3-inn");
         new_engine("-e ic3 --ic3-ctg --ic3-inn");
-        new_engine("-e ic3 --ic3-ctg --ic3-ctp --ic3-inn");
+        new_engine("-e ic3 --ic3-ctg --ic3-ctg-limit 1 --ic3-inn");
         new_engine("-e bmc --step 10");
         new_engine("-e bmc --bmc-kissat --step 70");
         new_engine("-e bmc --bmc-kissat --step 135");
