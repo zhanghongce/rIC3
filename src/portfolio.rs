@@ -26,10 +26,10 @@ impl PortfolioState {
     }
 
     fn result(&mut self) -> (bool, String, Option<NamedTempFile>) {
-        let Self::Finished(res, config, certificate) = take(self) else {
+        let Self::Finished(res, config, certificate) = self else {
             panic!()
         };
-        (res, config, certificate)
+        (*res, config.clone(), take(certificate))
     }
 }
 
@@ -162,6 +162,7 @@ impl Portfolio {
         }
         let mut result = self.result.1.wait(lock).unwrap();
         let (res, config, certificate) = result.result();
+        drop(result);
         self.certificate = certificate;
         println!("best configuration: {}", config);
         let pids: Vec<String> = self.engine_pids.iter().map(|p| format!("{}", *p)).collect();
@@ -175,6 +176,7 @@ impl Portfolio {
             kill.arg(p);
         }
         let _ = kill.output().unwrap();
+        self.engine_pids.clear();
         Some(res)
     }
 }
