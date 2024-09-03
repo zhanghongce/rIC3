@@ -210,6 +210,9 @@ impl IC3 {
         po: Option<ProofObligation>,
     ) -> bool {
         let lemma = Lemma::new(lemma);
+        if self.options.verbose > 5 {
+            println!("add lemma: frame:{frame}, {}", lemma);
+        }
         if frame == 0 {
             assert!(self.frame.len() == 1);
             self.solvers[0].add_lemma(&!lemma.cube());
