@@ -17,7 +17,7 @@ pub struct Kind {
 impl Kind {
     pub fn new(options: Options, ts: Transys) -> Self {
         let uts = TransysUnroll::new(&ts);
-        let solver: Box<dyn Satif> = if options.kind_options.kind_kissat {
+        let solver: Box<dyn Satif> = if options.kind.kind_kissat {
             Box::new(kissat::Solver::new())
         } else {
             Box::new(cadical::Solver::new())
@@ -53,7 +53,7 @@ impl Kind {
     // }
 
     pub fn reset_solver(&mut self) {
-        self.solver = if self.options.kind_options.kind_kissat {
+        self.solver = if self.options.kind.kind_kissat {
             Box::new(kissat::Solver::new())
         } else {
             Box::new(cadical::Solver::new())
@@ -68,7 +68,7 @@ impl Engine for Kind {
         for k in (step..).step_by(step) {
             let bmc_k = k - 1;
             let start = k + 1 - step;
-            if self.options.kind_options.kind_kissat {
+            if self.options.kind.kind_kissat {
                 self.reset_solver();
                 for i in 0..start {
                     self.uts.load_trans(self.solver.as_mut(), i, true);
@@ -84,7 +84,7 @@ impl Engine for Kind {
             for i in start..=bmc_k {
                 self.uts.load_trans(self.solver.as_mut(), i, true);
             }
-            if !self.options.kind_options.no_bmc {
+            if !self.options.kind.no_bmc {
                 let mut assump = self.uts.ts.init.clone();
                 assump.extend_from_slice(&self.uts.lits_next(&self.uts.ts.bad, bmc_k));
                 if self.options.verbose > 0 {
@@ -106,7 +106,7 @@ impl Engine for Kind {
             if self.options.verbose > 0 {
                 println!("kind depth: {k}");
             }
-            let res = if self.options.kind_options.kind_kissat {
+            let res = if self.options.kind.kind_kissat {
                 for l in self.uts.lits_next(&self.uts.ts.bad, k) {
                     self.solver.add_clause(&[l]);
                 }

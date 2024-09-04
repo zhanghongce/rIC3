@@ -58,11 +58,7 @@ impl IC3 {
 
     fn generalize(&mut self, mut po: ProofObligation, blocked: BlockResultYes) -> bool {
         let mut mic = self.inductive_core(blocked);
-        mic = self.mic(
-            po.frame,
-            mic,
-            if self.options.ic3_options.ctg { 1 } else { 0 },
-        );
+        mic = self.mic(po.frame, mic, if self.options.ic3.ctg { 1 } else { 0 });
         let (frame, mic) = self.push_lemma(po.frame, mic);
         self.statistic.avg_po_cube_len += po.lemma.len();
         po.frame = frame;
@@ -171,7 +167,7 @@ impl IC3 {
 
 impl IC3 {
     pub fn new(options: Options, mut ts: Transys) -> Self {
-        if options.ic3_options.bwd {
+        if options.ic3.bwd {
             ts = ts.reverse();
         }
         let ts = Rc::new(ts);

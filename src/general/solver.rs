@@ -246,7 +246,7 @@ impl IC3 {
                 None => (),
             }
         }
-        if self.options.ic3_options.bwd {
+        if self.options.ic3.bwd {
             return (latchs, inputs);
         }
         self.activity.sort_by_activity(&mut latchs, false);

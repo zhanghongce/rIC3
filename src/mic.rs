@@ -111,11 +111,8 @@ impl IC3 {
                     return None;
                 }
             }
-            if ctg < self.options.ic3_options.ctg_max
-                && frame > 1
-                && !self.ts.cube_subsume_init(&model)
-            {
-                let mut limit = self.options.ic3_options.ctg_limit;
+            if ctg < self.options.ic3.ctg_max && frame > 1 && !self.ts.cube_subsume_init(&model) {
+                let mut limit = self.options.ic3.ctg_limit;
                 if self.trivial_block(
                     frame - 1,
                     Lemma::new(model.clone()),
@@ -402,7 +399,7 @@ impl IC3 {
                         j += 1;
                         continue;
                     }
-                    let mut limit = self.options.ic3_options.ctg_limit;
+                    let mut limit = self.options.ic3.ctg_limit;
                     let res = self.trivial_block(
                         frame,
                         Lemma::new(try_gen.clone()),

@@ -118,13 +118,13 @@ impl IC3 {
     }
 
     fn generalize(&mut self, mut po: ProofObligation) -> bool {
-        if self.options.ic3_options.inn && self.ts.cube_subsume_init(&po.lemma) {
+        if self.options.ic3.inn && self.ts.cube_subsume_init(&po.lemma) {
             po.frame += 1;
             self.add_obligation(po.clone());
             return self.add_lemma(po.frame - 1, po.lemma.cube().clone(), false, Some(po));
         }
         let mut mic = self.solvers[po.frame - 1].inductive_core();
-        let level = if self.options.ic3_options.ctg { 1 } else { 0 };
+        let level = if self.options.ic3.ctg { 1 } else { 0 };
         mic = self.mic(po.frame, mic, level, &[]);
         let (frame, mic) = self.push_lemma(po.frame, mic);
         self.statistic.avg_po_cube_len += po.lemma.len();
@@ -133,7 +133,7 @@ impl IC3 {
         if self.add_lemma(frame - 1, mic.clone(), false, Some(po)) {
             return true;
         }
-        if self.options.ic3_options.xor {
+        if self.options.ic3.xor {
             self.xor_generalize2(frame - 1, mic);
         }
         false
@@ -145,7 +145,7 @@ impl IC3 {
                 continue;
             }
             if self.ts.cube_subsume_init(&po.lemma) {
-                if self.options.ic3_options.abs_cst {
+                if self.options.ic3.abs_cst {
                     self.add_obligation(po.clone());
                     if let Some(c) = self.check_witness_by_bmc(po.clone()) {
                         for c in c {
@@ -165,7 +165,7 @@ impl IC3 {
                     } else {
                         return Some(false);
                     }
-                } else if self.options.ic3_options.inn && po.frame > 0 {
+                } else if self.options.ic3.inn && po.frame > 0 {
                     assert!(!self.solvers[0]
                         .solve_with_domain(&po.lemma, vec![], true, false)
                         .unwrap());
@@ -264,12 +264,11 @@ impl IC3 {
                         .blocked_with_ordered(frame_idx + 1, &lemma, false, false, false)
                         .unwrap()
                     {
-                        let core =
-                            if self.options.ic3_options.inn && self.ts.cube_subsume_init(&lemma) {
-                                lemma.cube().clone()
-                            } else {
-                                self.solvers[frame_idx].inductive_core()
-                            };
+                        let core = if self.options.ic3.inn && self.ts.cube_subsume_init(&lemma) {
+                            lemma.cube().clone()
+                        } else {
+                            self.solvers[frame_idx].inductive_core()
+                        };
                         if let Some(po) = &mut lemma.po {
                             if po.frame < frame_idx + 2 && self.obligations.remove(po) {
                                 po.frame = frame_idx + 2;
@@ -280,7 +279,7 @@ impl IC3 {
                         self.statistic.ctp.statistic(ctp > 0);
                         break;
                     }
-                    if !self.options.ic3_options.ctp {
+                    if !self.options.ic3.ctp {
                         break;
                     }
                     let (ctp, _) = self.get_predecessor(frame_idx + 1, false);
@@ -310,7 +309,7 @@ impl IC3 {
 
 impl IC3 {
     pub fn new(options: Options, mut ts: Transys, pre_lemmas: Vec<Clause>) -> Self {
-        if options.ic3_options.inn {
+        if options.ic3.inn {
             let mut uts = TransysUnroll::new(&ts);
             uts.unroll();
             ts = uts.interal_signals();
@@ -321,7 +320,7 @@ impl IC3 {
         let activity = Activity::new(&ts);
         let frame = Frames::new(&ts);
         let lift = Solver::new(options.clone(), None, &ts, &frame);
-        let abs_cst = if options.ic3_options.abs_cst {
+        let abs_cst = if options.ic3.abs_cst {
             Cube::new()
         } else {
             ts.constraints.clone()

@@ -21,13 +21,13 @@ pub struct Options {
     pub certify_path: Option<String>,
 
     #[command(flatten)]
-    pub ic3_options: IC3Options,
+    pub ic3: IC3Options,
 
     #[command(flatten)]
-    pub bmc_options: BMCOptions,
+    pub bmc: BMCOptions,
 
     #[command(flatten)]
-    pub kind_options: KindOptions,
+    pub kind: KindOptions,
 
     #[command(flatten)]
     pub preprocess: PreprocessOptions,

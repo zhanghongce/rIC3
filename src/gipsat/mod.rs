@@ -522,7 +522,7 @@ impl IC3 {
         let rev: Box<dyn FnMut(&mut Cube)> = Box::new(|cube: &mut Cube| {
             cube.reverse();
         });
-        let mut order = if self.options.ic3_options.inn {
+        let mut order = if self.options.ic3.inn {
             vec![inn, act, rev]
         } else {
             vec![act, rev]

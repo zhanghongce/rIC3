@@ -223,7 +223,7 @@ impl IC3 {
             return false;
         }
         if self.ts.cube_subsume_init(lemma.cube()) {
-            assert!(self.options.ic3_options.inn);
+            assert!(self.options.ic3.inn);
         }
         let mut begin = None;
         let mut inv_found = false;
