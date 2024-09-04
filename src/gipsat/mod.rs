@@ -38,7 +38,7 @@ pub struct Solver {
     analyze: Analyze,
     simplify: Simplify,
     unsat_core: LitSet,
-    pub domain: Domain,
+    domain: Domain,
     temporary_domain: bool,
     prepared_vsids: bool,
     constrain_act: Var,
