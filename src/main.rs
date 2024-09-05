@@ -15,6 +15,7 @@ use rIC3::{
     Engine, IC3,
 };
 use std::{
+    fs,
     mem::{self, transmute},
     process::exit,
     ptr,
@@ -22,6 +23,7 @@ use std::{
 
 fn main() {
     procspawn::init();
+    fs::create_dir_all("/tmp/rIC3").unwrap();
     let mut options = Options::parse();
     let verbose = options.verbose;
     if verbose > 0 {

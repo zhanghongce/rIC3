@@ -3,7 +3,7 @@ use aig::Aig;
 use process_control::{ChildExt, Control};
 use std::{
     env::current_exe,
-    fs::{self, File},
+    fs::File,
     io::Read,
     mem::take,
     process::{exit, Command, Stdio},
@@ -44,7 +44,6 @@ pub struct Portfolio {
 
 impl Portfolio {
     pub fn new(option: Options) -> Self {
-        fs::create_dir_all("/tmp/rIC3").unwrap();
         let temp_dir = tempfile::TempDir::new_in("/tmp/rIC3/").unwrap();
         let temp_dir_path = temp_dir.path();
         let mut engines = Vec::new();
