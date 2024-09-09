@@ -129,7 +129,7 @@ impl IC3 {
             }
         }
         self.activity.bump_cube_activity(&cube);
-        self.statistic.overall_mic_time += start.elapsed();
+        self.statistic.block_mic_time += start.elapsed();
         cube
     }
 }

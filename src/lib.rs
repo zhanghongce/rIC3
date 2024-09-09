@@ -107,6 +107,7 @@ impl IC3 {
     }
 
     fn push_lemma(&mut self, frame: usize, mut cube: Cube) -> (usize, Cube) {
+        let start = Instant::now();
         for i in frame + 1..=self.level() {
             if let Some(true) = self.solvers[i - 1].inductive(&cube, true, false) {
                 cube = self.solvers[i - 1].inductive_core();
@@ -114,6 +115,7 @@ impl IC3 {
                 return (i, cube);
             }
         }
+        self.statistic.block_push_time += start.elapsed();
         (self.level() + 1, cube)
     }
 
@@ -183,10 +185,12 @@ impl IC3 {
             if self.options.verbose > 2 {
                 self.frame.statistic();
             }
-            if self
+            let blocked_start = Instant::now();
+            let blocked = self
                 .blocked_with_ordered(po.frame, &po.lemma, false, false, false)
-                .unwrap()
-            {
+                .unwrap();
+            self.statistic.block_blocked_time += blocked_start.elapsed();
+            if blocked {
                 if self.generalize(po) {
                     return None;
                 }
@@ -364,7 +368,10 @@ impl Engine for IC3 {
                     _ => (),
                 }
                 self.statistic.num_get_bad += 1;
-                if let Some((bad, inputs)) = self.get_bad() {
+                let get_bad_start = Instant::now();
+                let bad = self.get_bad();
+                self.statistic.overall_get_bad_time += get_bad_start.elapsed();
+                if let Some((bad, inputs)) = bad {
                     let bad = Lemma::new(bad);
                     self.add_obligation(ProofObligation::new(self.level(), bad, inputs, 0, None))
                 } else {

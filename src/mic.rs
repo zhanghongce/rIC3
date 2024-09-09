@@ -217,7 +217,7 @@ impl IC3 {
             self.solvers[frame - 1].unset_domain();
         }
         self.activity.bump_cube_activity(&cube);
-        self.statistic.overall_mic_time += start.elapsed();
+        self.statistic.block_mic_time += start.elapsed();
         cube
     }
 
@@ -239,7 +239,7 @@ impl IC3 {
             }
         }
         self.activity.bump_cube_activity(&cube);
-        self.statistic.overall_mic_time += start.elapsed();
+        self.statistic.block_mic_time += start.elapsed();
         cube
     }
 

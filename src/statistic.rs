@@ -18,8 +18,11 @@ pub struct Statistic {
 
     pub num_get_bad: usize,
 
-    pub overall_mic_time: Duration,
+    pub overall_get_bad_time: Duration,
     pub overall_block_time: Duration,
+    pub block_blocked_time: Duration,
+    pub block_mic_time: Duration,
+    pub block_push_time: Duration,
     pub overall_propagate_time: Duration,
 
     pub test: SuccessRate,
