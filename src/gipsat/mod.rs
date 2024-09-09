@@ -19,7 +19,7 @@ use rand::{prelude::SliceRandom, rngs::StdRng, SeedableRng};
 use search::Value;
 use simplify::Simplify;
 use statistic::SolverStatistic;
-use std::{collections::HashSet, rc::Rc};
+use std::{collections::HashSet, rc::Rc, time::Instant};
 use utils::Lbool;
 use vsids::Vsids;
 
@@ -485,6 +485,7 @@ impl IC3 {
     }
 
     pub fn get_predecessor(&mut self, frame: usize, strengthen: bool) -> (Cube, Cube) {
+        let start = Instant::now();
         let solver = &mut self.solvers[frame - 1];
         let mut cls: Cube = solver.assump.clone();
         cls.extend_from_slice(&self.abs_cst);
@@ -557,6 +558,7 @@ impl IC3 {
             }
         }
         self.lift.unset_domain();
+        self.statistic.block_get_predecessor_time += start.elapsed();
         (latchs, inputs)
     }
 
