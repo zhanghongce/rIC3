@@ -429,12 +429,15 @@ impl Solver {
 
 impl IC3 {
     pub fn get_bad(&mut self) -> Option<(Cube, Cube)> {
+        self.statistic.num_get_bad += 1;
+        let start = Instant::now();
         let solver = self.solvers.last_mut().unwrap();
         solver.assump = self.ts.bad.clone();
         solver.constrain = Default::default();
         let res = solver
             .solve_with_domain(&self.ts.bad, vec![], false, false)
             .unwrap();
+        self.statistic.block_get_bad_time += start.elapsed();
         if res {
             let frame = self.solvers.len();
             Some(self.get_predecessor(frame, true))
