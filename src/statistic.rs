@@ -17,8 +17,8 @@ pub struct Statistic {
     pub ctp: SuccessRate,
     pub num_get_bad: usize,
 
-    pub overall_get_bad_time: Duration,
     pub overall_block_time: Duration,
+    pub block_get_bad_time: Duration,
     pub block_blocked_time: Duration,
     pub block_mic_time: Duration,
     pub block_push_time: Duration,

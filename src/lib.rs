@@ -370,7 +370,7 @@ impl Engine for IC3 {
                 self.statistic.num_get_bad += 1;
                 let get_bad_start = Instant::now();
                 let bad = self.get_bad();
-                self.statistic.overall_get_bad_time += get_bad_start.elapsed();
+                self.statistic.block_get_bad_time += get_bad_start.elapsed();
                 if let Some((bad, inputs)) = bad {
                     let bad = Lemma::new(bad);
                     self.add_obligation(ProofObligation::new(self.level(), bad, inputs, 0, None))
