@@ -15,7 +15,6 @@ pub struct Statistic {
     pub num_down_sat: usize,
 
     pub ctp: SuccessRate,
-
     pub num_get_bad: usize,
 
     pub overall_get_bad_time: Duration,
@@ -25,13 +24,10 @@ pub struct Statistic {
     pub block_push_time: Duration,
     pub overall_propagate_time: Duration,
 
-    pub test: SuccessRate,
-    pub sbva: Duration,
-    pub symmetry: SuccessRate,
-    pub sbvb: usize,
-
     pub xor_gen: SuccessRate,
     pub num_auxiliary_var: usize,
+
+    pub test: SuccessRate,
 }
 
 impl Statistic {
