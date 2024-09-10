@@ -1,9 +1,8 @@
-use clap::{ArgGroup, Args, Parser, ValueEnum};
+use clap::{Args, Parser, ValueEnum};
 
 /// rIC3 model checker
 #[derive(Parser, Debug, Clone)]
 #[command(version, about)]
-#[command(group = ArgGroup::new("engine").required(false).multiple(false))]
 pub struct Options {
     /// model checking engine
     #[arg(short, long, value_enum, default_value_t = Engine::Portfolio)]
