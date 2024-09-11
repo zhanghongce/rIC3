@@ -86,9 +86,9 @@ impl IC3 {
         None
     }
 
-    fn check_witness_with_constrain(
+    fn check_witness_with_constrain<S: Satif + ?Sized>(
         &mut self,
-        solver: &mut cadical::Solver,
+        solver: &mut S,
         uts: &TransysUnroll,
         constrain: &Cube,
     ) -> bool {
@@ -103,16 +103,17 @@ impl IC3 {
     pub fn check_witness_by_bmc(&mut self, b: ProofObligation) -> Option<Cube> {
         let mut uts = TransysUnroll::new(&self.ts);
         uts.unroll_to(b.depth);
-        let mut solver = cadical::Solver::new();
+        let mut solver: Box<dyn satif::Satif> = Box::new(cadical::Solver::new());
         for k in 0..=b.depth {
-            uts.load_trans(&mut solver, k, false);
+            uts.load_trans(solver.as_mut(), k, false);
         }
-        uts.ts.load_init(&mut solver);
+        uts.ts.load_init(solver.as_mut());
         let mut cst = uts.ts.constraints.clone();
-        if self.check_witness_with_constrain(&mut solver, &uts, &cst) {
+        if self.check_witness_with_constrain(solver.as_mut(), &uts, &cst) {
             if self.options.verbose > 0 {
                 println!("witness checking passed");
             }
+            self.bmc_solver = Some((solver, uts));
             None
         } else {
             let mut i = 0;
@@ -123,7 +124,7 @@ impl IC3 {
                 }
                 let mut drop = cst.clone();
                 drop.remove(i);
-                if self.check_witness_with_constrain(&mut solver, &uts, &drop) {
+                if self.check_witness_with_constrain(solver.as_mut(), &uts, &drop) {
                     i += 1;
                 } else {
                     cst = drop;

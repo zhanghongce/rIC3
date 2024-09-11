@@ -59,6 +59,7 @@ pub struct IC3 {
     statistic: Statistic,
     pre_lemmas: Vec<Clause>,
     abs_cst: Cube,
+    bmc_solver: Option<(Box<dyn satif::Satif>, TransysUnroll)>,
 
     auxiliary_var: Vec<Var>,
     xor_var: HashMap<(Lit, Lit), Lit>,
@@ -342,6 +343,7 @@ impl IC3 {
             pre_lemmas,
             auxiliary_var: Vec::new(),
             xor_var: HashMap::new(),
+            bmc_solver: None,
         };
         res.extend();
         res
@@ -421,6 +423,27 @@ impl Engine for IC3 {
 
     fn witness(&mut self, aig: &Aig) -> String {
         let mut res: Vec<Cube> = vec![Cube::new()];
+        if let Some((bmc_solver, uts)) = self.bmc_solver.as_mut() {
+            let mut wit = vec![Cube::new()];
+            for l in uts.ts.latchs.iter() {
+                let l = l.lit();
+                if let Some(v) = bmc_solver.sat_value(l) {
+                    wit[0].push(uts.ts.restore(l.not_if(!v)));
+                }
+            }
+            for k in 0..=uts.num_unroll {
+                let mut w = Cube::new();
+                for l in uts.ts.inputs.iter() {
+                    let l = l.lit();
+                    let kl = uts.lit_next(l, k);
+                    if let Some(v) = bmc_solver.sat_value(kl) {
+                        w.push(uts.ts.restore(l.not_if(!v)));
+                    }
+                }
+                wit.push(w);
+            }
+            return witness_encode(aig, &wit);
+        }
         let b = self.obligations.peak().unwrap();
         assert!(b.frame == 0);
         let mut assump = if let Some(next) = b.next.clone() {
