@@ -487,6 +487,29 @@ impl IC3 {
         )
     }
 
+    #[inline]
+    fn minimal_predecessor(
+        lift: &mut Solver,
+        inputs: &[Lit],
+        latchs: &[Lit],
+        target_constrain: &Clause,
+    ) -> Option<Cube> {
+        let assump = Cube::from_iter(inputs.iter().chain(latchs.iter()).copied());
+        if lift
+            .solve_with_domain(&assump, vec![target_constrain.clone()], true, false)
+            .unwrap()
+        {
+            return None;
+        }
+        Some(
+            latchs
+                .iter()
+                .filter(|l| lift.unsat_has(**l))
+                .copied()
+                .collect(),
+        )
+    }
+
     pub fn get_predecessor(&mut self, frame: usize, strengthen: bool) -> (Cube, Cube) {
         let start = Instant::now();
         let solver = &mut self.solvers[frame - 1];
@@ -540,22 +563,8 @@ impl IC3 {
             } else {
                 latchs.shuffle(&mut self.lift.rng);
             }
-            let mut lift_assump = inputs.clone();
-            lift_assump.extend_from_slice(&latchs);
-            let constrain = vec![cls.clone()];
-            if self
-                .lift
-                .solve_with_domain(&lift_assump, constrain, true, false)
-                .unwrap()
-            {
-                panic!();
-            }
             let olen = latchs.len();
-            latchs = latchs
-                .iter()
-                .filter(|l| self.lift.unsat_has(**l))
-                .copied()
-                .collect();
+            latchs = Self::minimal_predecessor(&mut self.lift, &inputs, &latchs, &cls).unwrap();
             if latchs.len() == olen || !strengthen {
                 break;
             }
