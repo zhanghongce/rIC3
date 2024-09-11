@@ -23,6 +23,10 @@ process_control = "4.1.0"
 nix = { version = "0.27.1", features = ["signal"] }
 procspawn = "1.0.0"
 btor = { path = "../btor-rs" }
+shadow-rs = "0.34.0"
+
+[build-dependencies]
+shadow-rs = "0.34.0"
 
 [features]
 default = ["no_bound_check"]

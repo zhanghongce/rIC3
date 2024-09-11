@@ -1,8 +1,13 @@
+use build::CLAP_LONG_VERSION;
 use clap::{Args, Parser, ValueEnum};
+use shadow_rs::shadow;
+
+shadow!(build);
 
 /// rIC3 model checker
 #[derive(Parser, Debug, Clone)]
 #[command(version, about)]
+#[clap(long_version = CLAP_LONG_VERSION)]
 pub struct Options {
     /// model checking engine
     #[arg(short, long, value_enum, default_value_t = Engine::Portfolio)]
