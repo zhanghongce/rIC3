@@ -120,14 +120,13 @@ impl IC3 {
         (self.level() + 1, cube)
     }
 
-    fn generalize(&mut self, mut po: ProofObligation) -> bool {
+    fn generalize(&mut self, mut po: ProofObligation, level: usize) -> bool {
         if self.options.ic3.inn && self.ts.cube_subsume_init(&po.lemma) {
             po.frame += 1;
             self.add_obligation(po.clone());
             return self.add_lemma(po.frame - 1, po.lemma.cube().clone(), false, Some(po));
         }
         let mut mic = self.solvers[po.frame - 1].inductive_core();
-        let level = if self.options.ic3.ctg { 1 } else { 0 };
         mic = self.mic(po.frame, mic, level, &[]);
         let (frame, mic) = self.push_lemma(po.frame, mic);
         self.statistic.avg_po_cube_len += po.lemma.len();
@@ -186,13 +185,30 @@ impl IC3 {
             if self.options.verbose > 2 {
                 self.frame.statistic();
             }
+            po.num_block += 1;
             let blocked_start = Instant::now();
             let blocked = self
                 .blocked_with_ordered(po.frame, &po.lemma, false, false, false)
                 .unwrap();
             self.statistic.block_blocked_time += blocked_start.elapsed();
             if blocked {
-                if self.generalize(po) {
+                let level = if self.options.ic3.no_dynamic {
+                    self.options.ic3.ctg
+                } else {
+                    if let Some(n) = po.next.as_ref() {
+                        self.options.ic3.ctg_limit = if n.num_block > 15 {
+                            5
+                        } else if n.num_block > 10 {
+                            3
+                        } else {
+                            1
+                        };
+                        n.num_block > 5
+                    } else {
+                        false
+                    }
+                } as usize;
+                if self.generalize(po, level) {
                     return None;
                 }
             } else {
