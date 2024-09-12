@@ -6,23 +6,23 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-aig = { path = "../aig-rs" }
-minisat = { path = "../minisat-rs" }
-cadical = { path = "../cadical-rs" }
-kissat = { path = "../kissat-rs" }
-logic-form = { path = "../logic-form" }
+aig = { path = "./deps/aig-rs" }
+minisat = { path = "./deps/minisat-rs" }
+cadical = { path = "./deps/cadical-rs" }
+kissat = { path = "./deps/kissat-rs" }
+logic-form = { path = "./deps/logic-form" }
 clap = { version = "4.5.16", features = ["derive"] }
 rand = "0.8.5"
 ctrlc = { version = "3.4.1", features = ["termination"] }
-giputils = { path = "../giputils" }
-satif = { path = "../satif" }
+giputils = { path = "./deps/giputils" }
+satif = { path = "./deps/satif" }
 bitfield-struct = "0.8.0"
-abc = { path = "../abc-rs" }
+abc = { path = "./deps/abc-rs" }
 tempfile = "3.10.1"
 process_control = "4.1.0"
 nix = { version = "0.27.1", features = ["signal"] }
 procspawn = "1.0.0"
-btor = { path = "../btor-rs" }
+btor = { path = "./deps/btor-rs" }
 shadow-rs = "0.34.0"
 
 [build-dependencies]
