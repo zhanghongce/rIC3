@@ -18,6 +18,17 @@ pub fn aig_preprocess(aig: &Aig, options: &options::Options) -> (Aig, HashMap<us
         }
         remap.retain(|x, _| remap_retain.contains(x));
         aig = abc_preprocess(aig);
+        let remap2;
+        (aig, remap2) = aig.coi_refine();
+        remap = {
+            let mut remap_final = HashMap::new();
+            for (x, y) in remap2 {
+                if let Some(z) = remap.get(&y) {
+                    remap_final.insert(x, *z);
+                }
+            }
+            remap_final
+        }
     }
     aig.constraints.retain(|e| !e.is_constant(true));
     (aig, remap)
