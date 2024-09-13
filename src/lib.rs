@@ -198,11 +198,11 @@ impl IC3 {
                     self.options.ic3.ctg as usize
                 } else {
                     if let Some(n) = po.next.as_ref() {
-                        dbg!(n.num_block);
+                        // dbg!(n.num_block);
                         let level;
                         (self.options.ic3.ctg_limit, self.options.ic3.ctg_max, level) =
                             if n.num_block > 40 {
-                                self.options.ic3.xor = true;
+                                // self.options.ic3.xor = true;
                                 (10, 5, 1)
                             } else if n.num_block > 30 {
                                 (10, 5, 1)
