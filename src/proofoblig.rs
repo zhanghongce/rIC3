@@ -1,7 +1,7 @@
 use crate::IC3;
 use logic_form::{Cube, Lemma};
 use std::cmp::Ordering;
-use std::collections::BTreeSet;
+use std::collections::{btree_set, BTreeSet};
 use std::fmt::{self, Debug};
 use std::ops::{Deref, DerefMut};
 use std::rc::Rc;
@@ -180,6 +180,10 @@ impl ProofObligationQueue {
         for n in self.num.iter_mut() {
             *n = 0;
         }
+    }
+
+    pub fn iter(&self) -> btree_set::Iter<'_, ProofObligation> {
+        self.obligations.iter()
     }
 
     pub fn statistic(&self) {
