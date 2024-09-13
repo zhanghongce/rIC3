@@ -201,18 +201,22 @@ impl IC3 {
                         // dbg!(n.num_block);
                         let level;
                         (self.options.ic3.ctg_limit, self.options.ic3.ctg_max, level) =
-                            if n.num_block > 40 {
+                            if n.num_block > 100 {
                                 // self.options.ic3.xor = true;
+                                (15, 5, 1)
+                            } else if n.num_block > 45 {
                                 (10, 5, 1)
+                            } else if n.num_block > 35 {
+                                (5, 5, 1)
                             } else if n.num_block > 30 {
-                                (10, 5, 1)
-                            } else if n.num_block > 20 {
-                                (10, 3, 1)
-                            } else if n.num_block > 15 {
+                                (3, 5, 1)
+                            } else if n.num_block > 25 {
                                 (5, 3, 1)
-                            } else if n.num_block > 10 {
+                            } else if n.num_block > 20 {
                                 (3, 3, 1)
-                            } else if n.num_block > 5 {
+                            } else if n.num_block > 15 {
+                                (2, 3, 1)
+                            } else if n.num_block > 10 {
                                 (1, 3, 1)
                             } else {
                                 (1, 3, 0)
@@ -431,12 +435,10 @@ impl Engine for IC3 {
                 self.verify();
                 return Some(true);
             }
-            // for po in self.obligations.iter() {
-            //     let mut po = po.clone();
-            //     dbg!(po.num_block);
-            //     // po.num_block = po.num_block * 29 / 30;
-            //     dbg!(po.num_block);
-            // }
+            for po in self.obligations.iter() {
+                let mut po = po.clone();
+                po.num_block = po.num_block * 9 / 10;
+            }
         }
     }
 
