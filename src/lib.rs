@@ -136,6 +136,7 @@ impl IC3 {
             return true;
         }
         if self.options.ic3.xor {
+            dbg!("aaa");
             self.xor_generalize2(frame - 1, mic);
         }
         false
@@ -192,24 +193,40 @@ impl IC3 {
                 .unwrap();
             self.statistic.block_blocked_time += blocked_start.elapsed();
             if blocked {
+                let options = self.options.clone();
                 let level = if self.options.ic3.no_dynamic {
-                    self.options.ic3.ctg
+                    self.options.ic3.ctg as usize
                 } else {
                     if let Some(n) = po.next.as_ref() {
-                        self.options.ic3.ctg_limit = if n.num_block > 15 {
-                            5
-                        } else if n.num_block > 10 {
-                            3
-                        } else {
-                            1
-                        };
-                        n.num_block > 5
+                        dbg!(n.num_block);
+                        let level;
+                        (self.options.ic3.ctg_limit, self.options.ic3.ctg_max, level) =
+                            if n.num_block > 40 {
+                                self.options.ic3.xor = true;
+                                (10, 5, 1)
+                            } else if n.num_block > 30 {
+                                (10, 5, 1)
+                            } else if n.num_block > 20 {
+                                (10, 3, 1)
+                            } else if n.num_block > 15 {
+                                (5, 3, 1)
+                            } else if n.num_block > 10 {
+                                (3, 3, 1)
+                            } else if n.num_block > 5 {
+                                (1, 3, 1)
+                            } else {
+                                (1, 3, 0)
+                            };
+                        level
                     } else {
-                        false
+                        0
                     }
-                } as usize;
+                };
                 if self.generalize(po, level) {
                     return None;
+                }
+                if !self.options.ic3.no_dynamic {
+                    self.options = options;
                 }
             } else {
                 let (model, inputs) = self.get_predecessor(po.frame, true);
@@ -235,7 +252,7 @@ impl IC3 {
         limit: &mut usize,
         level: usize,
     ) -> bool {
-        assert!(level == 0);
+        // assert!(level == 0);
         if frame == 0 {
             return false;
         }
@@ -272,8 +289,9 @@ impl IC3 {
         }
     }
 
-    fn propagate(&mut self) -> bool {
-        for frame_idx in self.frame.early..self.level() {
+    fn propagate(&mut self, from: Option<usize>) -> bool {
+        let from = from.unwrap_or(self.frame.early).max(1);
+        for frame_idx in from..self.level() {
             self.frame[frame_idx].sort_by_key(|x| x.len());
             let frame = self.frame[frame_idx].clone();
             for mut lemma in frame {
@@ -406,13 +424,19 @@ impl Engine for IC3 {
             self.statistic.overall_block_time += blocked_time;
             self.extend();
             let start = Instant::now();
-            let propagate = self.propagate();
+            let propagate = self.propagate(None);
             self.statistic.overall_propagate_time += start.elapsed();
             if propagate {
                 self.statistic();
                 self.verify();
                 return Some(true);
             }
+            // for po in self.obligations.iter() {
+            //     let mut po = po.clone();
+            //     dbg!(po.num_block);
+            //     // po.num_block = po.num_block * 29 / 30;
+            //     dbg!(po.num_block);
+            // }
         }
     }
 
