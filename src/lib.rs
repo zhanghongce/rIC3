@@ -207,25 +207,17 @@ impl IC3 {
                         if n.act < 1.0 {
                             MicType::NoMic
                         } else {
-                            let (limit, max, level) = if n.act > 100.0 {
-                                // self.options.ic3.xor = true;
-                                (15, 5, 1)
-                            } else if n.act > 45.0 {
-                                (10, 5, 1)
-                            } else if n.act > 35.0 {
-                                (5, 5, 1)
-                            } else if n.act > 30.0 {
-                                (3, 5, 1)
-                            } else if n.act > 25.0 {
-                                (5, 3, 1)
-                            } else if n.act > 20.0 {
-                                (3, 3, 1)
-                            } else if n.act > 15.0 {
-                                (2, 3, 1)
-                            } else if n.act > 10.0 {
-                                (1, 3, 1)
-                            } else {
-                                (0, 0, 0)
+                            let (limit, max, level) = match n.act {
+                                100.0.. => (15, 5, 1),
+                                45.0..100.0 => (10, 5, 1),
+                                35.0..45.0 => (5, 5, 1),
+                                30.0..35.0 => (3, 5, 1),
+                                25.0..30.0 => (5, 3, 1),
+                                20.0..25.0 => (3, 3, 1),
+                                15.0..20.0 => (2, 3, 1),
+                                10.0..15.0 => (1, 3, 1),
+                                ..10.0 => (0, 0, 0),
+                                _ => panic!(),
                             };
                             MicType::DropVar(DropVarParameter::new(limit, max, level))
                         }
