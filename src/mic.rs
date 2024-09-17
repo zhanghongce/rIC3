@@ -6,12 +6,17 @@ use std::{collections::HashSet, mem::swap, time::Instant};
 
 #[derive(Clone, Copy, Debug)]
 pub struct DropVarParameter {
-    pub limit: usize,
-    pub max: usize,
-    pub level: usize,
+    limit: usize,
+    max: usize,
+    level: usize,
 }
 
 impl DropVarParameter {
+    #[inline]
+    pub fn new(limit: usize, max: usize, level: usize) -> Self {
+        Self { limit, max, level }
+    }
+
     fn sub_level(self) -> Self {
         Self {
             limit: self.limit,

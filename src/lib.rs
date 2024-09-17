@@ -200,45 +200,41 @@ impl IC3 {
                 .unwrap();
             self.statistic.block_blocked_time += blocked_start.elapsed();
             if blocked {
-                let options = self.options.clone();
                 let mic_type = if self.options.ic3.no_dynamic {
                     MicType::from_options(&self.options)
                 } else {
-                    // if let Some(n) = po.next.as_ref() {
-                    //     // dbg!(n.num_block);
-                    //     let level;
-                    //     (self.options.ic3.ctg_limit, self.options.ic3.ctg_max, level) =
-                    //         if n.act > 100.0 {
-                    //             // self.options.ic3.xor = true;
-                    //             (15, 5, 1)
-                    //         } else if n.act > 45.0 {
-                    //             (10, 5, 1)
-                    //         } else if n.act > 35.0 {
-                    //             (5, 5, 1)
-                    //         } else if n.act > 30.0 {
-                    //             (3, 5, 1)
-                    //         } else if n.act > 25.0 {
-                    //             (5, 3, 1)
-                    //         } else if n.act > 20.0 {
-                    //             (3, 3, 1)
-                    //         } else if n.act > 15.0 {
-                    //             (2, 3, 1)
-                    //         } else if n.act > 10.0 {
-                    //             (1, 3, 1)
-                    //         } else {
-                    //             (1, 3, 0)
-                    //         };
-                    //     level
-                    // } else {
-                    //     0
-                    // }
-                    todo!()
+                    if let Some(n) = po.next.as_ref() {
+                        if n.act < 1.0 {
+                            MicType::NoMic
+                        } else {
+                            let (limit, max, level) = if n.act > 100.0 {
+                                // self.options.ic3.xor = true;
+                                (15, 5, 1)
+                            } else if n.act > 45.0 {
+                                (10, 5, 1)
+                            } else if n.act > 35.0 {
+                                (5, 5, 1)
+                            } else if n.act > 30.0 {
+                                (3, 5, 1)
+                            } else if n.act > 25.0 {
+                                (5, 3, 1)
+                            } else if n.act > 20.0 {
+                                (3, 3, 1)
+                            } else if n.act > 15.0 {
+                                (2, 3, 1)
+                            } else if n.act > 10.0 {
+                                (1, 3, 1)
+                            } else {
+                                (0, 0, 0)
+                            };
+                            MicType::DropVar(DropVarParameter::new(limit, max, level))
+                        }
+                    } else {
+                        MicType::DropVar(Default::default())
+                    }
                 };
                 if self.generalize(po, mic_type) {
                     return None;
-                }
-                if !self.options.ic3.no_dynamic {
-                    self.options = options;
                 }
             } else {
                 let (model, inputs) = self.get_predecessor(po.frame, true);
