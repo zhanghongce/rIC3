@@ -131,9 +131,9 @@ impl IC3 {
         mic = self.mic(po.frame, mic, &[], mic_type);
         let (frame, mic) = self.push_lemma(po.frame, mic);
         self.statistic.avg_po_cube_len += po.lemma.len();
-        // for _ in po.frame..frame {
-        //     po.act *= 0.9;
-        // }
+        for _ in po.frame..frame {
+            po.act *= 0.5;
+        }
         po.frame = frame;
         self.add_obligation(po.clone());
         if self.add_lemma(frame - 1, mic.clone(), false, Some(po)) {
@@ -183,9 +183,9 @@ impl IC3 {
                 }
             }
             if let Some((bf, _)) = self.frame.trivial_contained(po.frame, &po.lemma) {
-                // for _ in po.frame..bf + 1 {
-                //     po.act *= 0.9;
-                // }
+                for _ in po.frame..bf + 1 {
+                    po.act *= 0.5;
+                }
                 po.frame = bf + 1;
                 self.add_obligation(po);
                 continue;
@@ -204,18 +204,17 @@ impl IC3 {
                     MicType::from_options(&self.options)
                 } else {
                     if let Some(n) = po.next.as_ref() {
-                        if n.act < 1.0 {
+                        // dbg!(n.act);
+                        if n.act < 0.2 {
                             MicType::NoMic
                         } else {
                             let (limit, max, level) = match n.act {
-                                100.0.. => (15, 5, 1),
-                                45.0..100.0 => (10, 5, 1),
-                                35.0..45.0 => (5, 5, 1),
-                                30.0..35.0 => (3, 5, 1),
-                                25.0..30.0 => (5, 3, 1),
-                                20.0..25.0 => (3, 3, 1),
-                                15.0..20.0 => (2, 3, 1),
-                                10.0..15.0 => (1, 3, 1),
+                                100.0.. => (30, 5, 1),
+                                80.0..100.0 => (15, 5, 1),
+                                60.0..80.0 => (10, 5, 1),
+                                40.0..60.0 => (5, 5, 1),
+                                20.0..40.0 => (5, 3, 1),
+                                10.0..20.0 => (1, 3, 1),
                                 ..10.0 => (0, 0, 0),
                                 _ => panic!(),
                             };
@@ -311,7 +310,7 @@ impl IC3 {
                         if let Some(po) = &mut lemma.po {
                             if po.frame < frame_idx + 2 && self.obligations.remove(po) {
                                 po.frame = frame_idx + 2;
-                                // po.act *= 0.9;
+                                po.act *= 0.5;
                                 self.obligations.add(po.clone());
                             }
                         }
@@ -435,7 +434,7 @@ impl Engine for IC3 {
             }
             for po in self.obligations.iter() {
                 let mut po = po.clone();
-                po.act = po.act * 0.9;
+                po.act *= 0.5;
             }
         }
     }
