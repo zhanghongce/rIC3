@@ -130,6 +130,9 @@ impl IC3 {
         mic = self.mic(po.frame, mic, level, &[]);
         let (frame, mic) = self.push_lemma(po.frame, mic);
         self.statistic.avg_po_cube_len += po.lemma.len();
+        // for _ in po.frame..frame {
+        //     po.act *= 0.9;
+        // }
         po.frame = frame;
         self.add_obligation(po.clone());
         if self.add_lemma(frame - 1, mic.clone(), false, Some(po)) {
@@ -179,6 +182,9 @@ impl IC3 {
                 }
             }
             if let Some((bf, _)) = self.frame.trivial_contained(po.frame, &po.lemma) {
+                // for _ in po.frame..bf + 1 {
+                //     po.act *= 0.9;
+                // }
                 po.frame = bf + 1;
                 self.add_obligation(po);
                 continue;
@@ -186,7 +192,7 @@ impl IC3 {
             if self.options.verbose > 2 {
                 self.frame.statistic();
             }
-            po.num_block += 1;
+            po.act += 1.0;
             let blocked_start = Instant::now();
             let blocked = self
                 .blocked_with_ordered(po.frame, &po.lemma, false, false, false)
@@ -201,22 +207,22 @@ impl IC3 {
                         // dbg!(n.num_block);
                         let level;
                         (self.options.ic3.ctg_limit, self.options.ic3.ctg_max, level) =
-                            if n.num_block > 100 {
+                            if n.act > 100.0 {
                                 // self.options.ic3.xor = true;
                                 (15, 5, 1)
-                            } else if n.num_block > 45 {
+                            } else if n.act > 45.0 {
                                 (10, 5, 1)
-                            } else if n.num_block > 35 {
+                            } else if n.act > 35.0 {
                                 (5, 5, 1)
-                            } else if n.num_block > 30 {
+                            } else if n.act > 30.0 {
                                 (3, 5, 1)
-                            } else if n.num_block > 25 {
+                            } else if n.act > 25.0 {
                                 (5, 3, 1)
-                            } else if n.num_block > 20 {
+                            } else if n.act > 20.0 {
                                 (3, 3, 1)
-                            } else if n.num_block > 15 {
+                            } else if n.act > 15.0 {
                                 (2, 3, 1)
-                            } else if n.num_block > 10 {
+                            } else if n.act > 10.0 {
                                 (1, 3, 1)
                             } else {
                                 (1, 3, 0)
@@ -315,6 +321,7 @@ impl IC3 {
                         if let Some(po) = &mut lemma.po {
                             if po.frame < frame_idx + 2 && self.obligations.remove(po) {
                                 po.frame = frame_idx + 2;
+                                // po.act *= 0.9;
                                 self.obligations.add(po.clone());
                             }
                         }
@@ -437,7 +444,7 @@ impl Engine for IC3 {
             }
             for po in self.obligations.iter() {
                 let mut po = po.clone();
-                po.num_block = po.num_block * 9 / 10;
+                po.act = po.act * 0.9;
             }
         }
     }

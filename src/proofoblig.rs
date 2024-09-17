@@ -14,7 +14,7 @@ pub struct ProofObligationInner {
     pub depth: usize,
     pub next: Option<ProofObligation>,
     pub removed: bool,
-    pub num_block: usize,
+    pub act: f64,
 }
 
 impl PartialEq for ProofObligationInner {
@@ -78,7 +78,7 @@ impl ProofObligation {
                 depth,
                 next,
                 removed: false,
-                num_block: 0,
+                act: 0.0,
             }),
         }
     }
