@@ -1,6 +1,56 @@
+use crate::options::Options;
+
 use super::IC3;
 use logic_form::{Clause, Cube, Lemma, Lit, Var};
 use std::{collections::HashSet, mem::swap, time::Instant};
+
+#[derive(Clone, Copy, Debug)]
+pub struct DropVarParameter {
+    pub limit: usize,
+    pub max: usize,
+    pub level: usize,
+}
+
+impl DropVarParameter {
+    fn sub_level(self) -> Self {
+        Self {
+            limit: self.limit,
+            max: self.max,
+            level: self.level - 1,
+        }
+    }
+}
+
+impl Default for DropVarParameter {
+    fn default() -> Self {
+        Self {
+            limit: 0,
+            max: 0,
+            level: 0,
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug)]
+pub enum MicType {
+    NoMic,
+    DropVar(DropVarParameter),
+    Xor,
+}
+
+impl MicType {
+    pub fn from_options(options: &Options) -> Self {
+        MicType::DropVar(if options.ic3.ctg {
+            DropVarParameter {
+                limit: options.ic3.ctg_limit,
+                max: options.ic3.ctg_max,
+                level: 1,
+            }
+        } else {
+            DropVarParameter::default()
+        })
+    }
+}
 
 impl IC3 {
     fn down(
@@ -82,7 +132,7 @@ impl IC3 {
         cube: &Cube,
         keep: &HashSet<Lit>,
         full: &Cube,
-        level: usize,
+        parameter: DropVarParameter,
     ) -> Option<Cube> {
         let mut cube = cube.clone();
         self.statistic.num_down += 1;
@@ -111,14 +161,14 @@ impl IC3 {
                     return None;
                 }
             }
-            if ctg < self.options.ic3.ctg_max && frame > 1 && !self.ts.cube_subsume_init(&model) {
-                let mut limit = self.options.ic3.ctg_limit;
+            if ctg < parameter.max && frame > 1 && !self.ts.cube_subsume_init(&model) {
+                let mut limit = parameter.limit;
                 if self.trivial_block(
                     frame - 1,
                     Lemma::new(model.clone()),
                     &[!full.clone()],
                     &mut limit,
-                    level - 1,
+                    parameter.sub_level(),
                 ) {
                     ctg += 1;
                     continue;
@@ -159,15 +209,15 @@ impl IC3 {
         (new_cube, new_i)
     }
 
-    pub fn mic(
+    pub fn mic_by_drop_var(
         &mut self,
         frame: usize,
         mut cube: Cube,
-        level: usize,
         constrain: &[Clause],
+        parameter: DropVarParameter,
     ) -> Cube {
         let start = Instant::now();
-        if level == 0 {
+        if parameter.level == 0 {
             self.solvers[frame - 1].set_domain(
                 self.ts
                     .cube_next(&cube)
@@ -189,15 +239,15 @@ impl IC3 {
             }
             let mut removed_cube = cube.clone();
             removed_cube.remove(i);
-            let mic = if level > 0 {
-                self.ctg_down(frame, &removed_cube, &keep, &cube, level)
-            } else {
+            let mic = if parameter.level == 0 {
                 self.down(frame, &removed_cube, &keep, &cube, constrain, &mut cex)
+            } else {
+                self.ctg_down(frame, &removed_cube, &keep, &cube, parameter)
             };
             if let Some(new_cube) = mic {
                 self.statistic.mic_drop.success();
                 (cube, i) = self.handle_down_success(frame, cube, i, new_cube);
-                if level == 0 {
+                if parameter.level == 0 {
                     self.solvers[frame - 1].unset_domain();
                     self.solvers[frame - 1].set_domain(
                         self.ts
@@ -213,7 +263,7 @@ impl IC3 {
                 i += 1;
             }
         }
-        if level == 0 {
+        if parameter.level == 0 {
             self.solvers[frame - 1].unset_domain();
         }
         self.activity.bump_cube_activity(&cube);
@@ -221,27 +271,41 @@ impl IC3 {
         cube
     }
 
-    pub fn lazy_mic(&mut self, frame: usize, mut cube: Cube, level: usize) -> Cube {
-        let start = Instant::now();
-        self.statistic.avg_mic_cube_len += cube.len();
-        self.statistic.num_mic += 1;
-        let mut cex = Vec::new();
-        let keep = HashSet::new();
-        for similar in self.frame.similar(&cube, frame) {
-            let mic = if level > 0 {
-                self.ctg_down(frame, &similar, &keep, &cube, level)
-            } else {
-                self.down(frame, &similar, &keep, &cube, &[], &mut cex)
-            };
-            if let Some(new_cube) = mic {
-                cube = new_cube;
-                break;
-            }
+    pub fn mic(
+        &mut self,
+        frame: usize,
+        cube: Cube,
+        constrain: &[Clause],
+        mic_type: MicType,
+    ) -> Cube {
+        match mic_type {
+            MicType::NoMic => cube,
+            MicType::DropVar(parameter) => self.mic_by_drop_var(frame, cube, constrain, parameter),
+            MicType::Xor => todo!(),
         }
-        self.activity.bump_cube_activity(&cube);
-        self.statistic.block_mic_time += start.elapsed();
-        cube
     }
+
+    // pub fn lazy_mic(&mut self, frame: usize, mut cube: Cube, level: usize) -> Cube {
+    //     let start = Instant::now();
+    //     self.statistic.avg_mic_cube_len += cube.len();
+    //     self.statistic.num_mic += 1;
+    //     let mut cex = Vec::new();
+    //     let keep = HashSet::new();
+    //     for similar in self.frame.similar(&cube, frame) {
+    //         let mic = if level > 0 {
+    //             self.ctg_down(frame, &similar, &keep, &cube, level)
+    //         } else {
+    //             self.down(frame, &similar, &keep, &cube, &[], &mut cex)
+    //         };
+    //         if let Some(new_cube) = mic {
+    //             cube = new_cube;
+    //             break;
+    //         }
+    //     }
+    //     self.activity.bump_cube_activity(&cube);
+    //     self.statistic.block_mic_time += start.elapsed();
+    //     cube
+    // }
 
     pub fn xor_generalize(&mut self, frame: usize, mut lemma: Cube) {
         let o = lemma.len();
@@ -309,7 +373,12 @@ impl IC3 {
                             new_lemma[i] = c;
                             new_lemma.remove(j);
                             if core.len() < lemma.len() {
-                                let mic = self.mic(frame, core, 0, &[]);
+                                let mic = self.mic(
+                                    frame,
+                                    core,
+                                    &[],
+                                    MicType::DropVar(Default::default()),
+                                );
                                 self.add_lemma(frame, mic, true, None);
                             }
                             new_lemma
@@ -405,7 +474,7 @@ impl IC3 {
                         Lemma::new(try_gen.clone()),
                         &[!lemma.clone()],
                         &mut limit,
-                        1,
+                        DropVarParameter::default(),
                     );
                     self.statistic.xor_gen.statistic(res);
                     if res {
@@ -439,7 +508,12 @@ impl IC3 {
                             new_lemma[i] = c;
                             new_lemma.remove(j);
                             if core.len() < lemma.len() {
-                                let mic = self.mic(frame, core, 0, &[]);
+                                let mic = self.mic(
+                                    frame,
+                                    core,
+                                    &[],
+                                    MicType::DropVar(Default::default()),
+                                );
                                 self.add_lemma(frame, mic, true, None);
                             }
                             new_lemma

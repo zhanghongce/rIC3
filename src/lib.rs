@@ -26,6 +26,7 @@ use frame::{Frame, Frames};
 use gipsat::statistic::SolverStatistic;
 use gipsat::Solver;
 use logic_form::{Clause, Cube, Lemma, Lit, Var};
+use mic::{DropVarParameter, MicType};
 use options::Options;
 use std::collections::HashMap;
 use std::rc::Rc;
@@ -120,14 +121,14 @@ impl IC3 {
         (self.level() + 1, cube)
     }
 
-    fn generalize(&mut self, mut po: ProofObligation, level: usize) -> bool {
+    fn generalize(&mut self, mut po: ProofObligation, mic_type: MicType) -> bool {
         if self.options.ic3.inn && self.ts.cube_subsume_init(&po.lemma) {
             po.frame += 1;
             self.add_obligation(po.clone());
             return self.add_lemma(po.frame - 1, po.lemma.cube().clone(), false, Some(po));
         }
         let mut mic = self.solvers[po.frame - 1].inductive_core();
-        mic = self.mic(po.frame, mic, level, &[]);
+        mic = self.mic(po.frame, mic, &[], mic_type);
         let (frame, mic) = self.push_lemma(po.frame, mic);
         self.statistic.avg_po_cube_len += po.lemma.len();
         // for _ in po.frame..frame {
@@ -200,39 +201,40 @@ impl IC3 {
             self.statistic.block_blocked_time += blocked_start.elapsed();
             if blocked {
                 let options = self.options.clone();
-                let level = if self.options.ic3.no_dynamic {
-                    self.options.ic3.ctg as usize
+                let mic_type = if self.options.ic3.no_dynamic {
+                    MicType::from_options(&self.options)
                 } else {
-                    if let Some(n) = po.next.as_ref() {
-                        // dbg!(n.num_block);
-                        let level;
-                        (self.options.ic3.ctg_limit, self.options.ic3.ctg_max, level) =
-                            if n.act > 100.0 {
-                                // self.options.ic3.xor = true;
-                                (15, 5, 1)
-                            } else if n.act > 45.0 {
-                                (10, 5, 1)
-                            } else if n.act > 35.0 {
-                                (5, 5, 1)
-                            } else if n.act > 30.0 {
-                                (3, 5, 1)
-                            } else if n.act > 25.0 {
-                                (5, 3, 1)
-                            } else if n.act > 20.0 {
-                                (3, 3, 1)
-                            } else if n.act > 15.0 {
-                                (2, 3, 1)
-                            } else if n.act > 10.0 {
-                                (1, 3, 1)
-                            } else {
-                                (1, 3, 0)
-                            };
-                        level
-                    } else {
-                        0
-                    }
+                    // if let Some(n) = po.next.as_ref() {
+                    //     // dbg!(n.num_block);
+                    //     let level;
+                    //     (self.options.ic3.ctg_limit, self.options.ic3.ctg_max, level) =
+                    //         if n.act > 100.0 {
+                    //             // self.options.ic3.xor = true;
+                    //             (15, 5, 1)
+                    //         } else if n.act > 45.0 {
+                    //             (10, 5, 1)
+                    //         } else if n.act > 35.0 {
+                    //             (5, 5, 1)
+                    //         } else if n.act > 30.0 {
+                    //             (3, 5, 1)
+                    //         } else if n.act > 25.0 {
+                    //             (5, 3, 1)
+                    //         } else if n.act > 20.0 {
+                    //             (3, 3, 1)
+                    //         } else if n.act > 15.0 {
+                    //             (2, 3, 1)
+                    //         } else if n.act > 10.0 {
+                    //             (1, 3, 1)
+                    //         } else {
+                    //             (1, 3, 0)
+                    //         };
+                    //     level
+                    // } else {
+                    //     0
+                    // }
+                    todo!()
                 };
-                if self.generalize(po, level) {
+                if self.generalize(po, mic_type) {
                     return None;
                 }
                 if !self.options.ic3.no_dynamic {
@@ -260,7 +262,7 @@ impl IC3 {
         lemma: Lemma,
         constrain: &[Clause],
         limit: &mut usize,
-        level: usize,
+        parameter: DropVarParameter,
     ) -> bool {
         // assert!(level == 0);
         if frame == 0 {
@@ -286,13 +288,13 @@ impl IC3 {
                 .unwrap()
             {
                 let mut mic = self.solvers[frame - 1].inductive_core();
-                mic = self.mic(frame, mic, level, constrain);
+                mic = self.mic(frame, mic, constrain, MicType::DropVar(parameter));
                 let (frame, mic) = self.push_lemma(frame, mic);
                 self.add_lemma(frame - 1, mic, false, None);
                 return true;
             } else {
                 let model = Lemma::new(self.get_predecessor(frame, true).0);
-                if !self.trivial_block(frame - 1, model, constrain, limit, level) {
+                if !self.trivial_block(frame - 1, model, constrain, limit, parameter) {
                     return false;
                 }
             }
@@ -339,7 +341,8 @@ impl IC3 {
                             .unwrap()
                     {
                         let core = self.solvers[frame_idx - 1].inductive_core();
-                        let mic = self.mic(frame_idx, core, 0, &[]);
+                        let mic =
+                            self.mic(frame_idx, core, &[], MicType::DropVar(Default::default()));
                         if self.add_lemma(frame_idx, mic, false, None) {
                             return true;
                         }
