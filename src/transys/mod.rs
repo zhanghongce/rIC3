@@ -85,15 +85,7 @@ impl Transys {
             prev_map[*p] = l;
             prev_map[!*p] = !l;
         }
-        let mut logic = Vec::new();
-        for l in aig.latchs.iter() {
-            logic.push(l.next);
-        }
-        for c in aig.constraints.iter() {
-            logic.push(*c);
-        }
-        logic.push(aig_bad);
-        let mut trans = aig.get_cnf(&logic);
+        let mut trans = aig.get_cnf();
         for i in 0..aig.latchs.len() {
             trans.push(Clause::from([!primes[i], aig.latchs[i].next.to_lit()]));
             trans.push(Clause::from([primes[i], !aig.latchs[i].next.to_lit()]));

@@ -36,10 +36,13 @@ fn main() {
     } else {
         Aig::from_file(&options.model)
     };
-    if aig.bads.len() + aig.outputs.len() == 0 {
+    let num_bads = aig.bads.len() + aig.outputs.len();
+    if num_bads == 0 {
         println!("warning: no property to be checked");
         verify_certifaiger(&aig, &options);
         exit(20);
+    } else if num_bads > 1 {
+        panic!("error: multi property detected, rIC3 only support model with one property.");
     }
     let mut engine: Box<dyn Engine> = if let options::Engine::Portfolio = options.engine {
         Box::new(Portfolio::new(options.clone()))

@@ -7,7 +7,6 @@ mod frame;
 pub mod frontend;
 pub mod general;
 mod gipsat;
-pub mod imc;
 pub mod kind;
 mod mic;
 pub mod options;

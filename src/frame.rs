@@ -144,6 +144,7 @@ impl Frames {
         res
     }
 
+    #[allow(unused)]
     pub fn similar(&self, cube: &[Lit], frame: usize) -> Vec<Cube> {
         let cube_set: HashSet<Lit> = HashSet::from_iter(cube.iter().copied());
         let mut res = HashSet::new();
