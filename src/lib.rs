@@ -251,7 +251,6 @@ impl IC3 {
         limit: &mut usize,
         parameter: DropVarParameter,
     ) -> bool {
-        // assert!(level == 0);
         if frame == 0 {
             return false;
         }
@@ -280,6 +279,9 @@ impl IC3 {
                 self.add_lemma(frame - 1, mic, false, None);
                 return true;
             } else {
+                if *limit == 0 {
+                    return false;
+                }
                 let model = Lemma::new(self.get_predecessor(frame, true).0);
                 if !self.trivial_block(frame - 1, model, constrain, limit, parameter) {
                     return false;
