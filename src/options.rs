@@ -82,7 +82,7 @@ pub struct IC3Options {
     pub ctg_max: usize,
 
     /// ctg limit
-    #[arg(long = "ic3-ctg-limit", default_value_t = 5)]
+    #[arg(long = "ic3-ctg-limit", default_value_t = 1)]
     pub ctg_limit: usize,
 
     /// ic3 xor generalization
