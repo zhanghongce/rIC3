@@ -202,23 +202,27 @@ impl IC3 {
                 let mic_type = if self.options.ic3.no_dynamic {
                     MicType::from_options(&self.options)
                 } else {
-                    if let Some(n) = po.next.as_ref() {
-                        // dbg!(n.act);
-                        if n.act < 0.2 {
-                            MicType::NoMic
-                        } else {
-                            let (limit, max, level) = match n.act {
-                                100.0.. => (30, 5, 1),
-                                80.0..100.0 => (15, 5, 1),
-                                60.0..80.0 => (10, 5, 1),
-                                40.0..60.0 => (5, 5, 1),
-                                20.0..40.0 => (5, 3, 1),
-                                10.0..20.0 => (1, 3, 1),
-                                ..10.0 => (0, 0, 0),
-                                _ => panic!(),
-                            };
-                            MicType::DropVar(DropVarParameter::new(limit, max, level))
+                    if let Some(mut n) = po.next.as_ref() {
+                        let mut act = n.act;
+                        for _ in 0..3 {
+                            if let Some(nn) = n.next.as_ref() {
+                                n = nn;
+                                act = act.max(n.act);
+                            } else {
+                                break;
+                            }
                         }
+                        // dbg!(n.act);
+                        let (limit, max, level) = match act {
+                            100.0.. => (15, 5, 1),
+                            80.0..100.0 => (5, 5, 1),
+                            60.0..80.0 => (5, 3, 1),
+                            40.0..60.0 => (3, 3, 1),
+                            20.0..40.0 => (1, 3, 1),
+                            ..20.0 => (0, 0, 0),
+                            _ => panic!(),
+                        };
+                        MicType::DropVar(DropVarParameter::new(limit, max, level))
                     } else {
                         MicType::DropVar(Default::default())
                     }
