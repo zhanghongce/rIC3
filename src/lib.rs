@@ -281,7 +281,7 @@ impl IC3 {
                 if *limit == 0 {
                     return false;
                 }
-                let model = Lemma::new(self.get_predecessor(frame, true).0);
+                let model = Lemma::new(self.get_predecessor(frame, false).0);
                 if !self.trivial_block(frame - 1, model, constrain, limit, parameter) {
                     return false;
                 }

@@ -1,6 +1,5 @@
-use crate::options::Options;
-
 use super::IC3;
+use crate::options::Options;
 use logic_form::{Clause, Cube, Lemma, Lit, Var};
 use std::{collections::HashSet, mem::swap, time::Instant};
 
@@ -159,7 +158,7 @@ impl IC3 {
                     return None;
                 }
             }
-            let (model, _) = self.get_predecessor(frame, true);
+            let (model, _) = self.get_predecessor(frame, false);
             let cex_set: HashSet<Lit> = HashSet::from_iter(model.iter().cloned());
             for lit in cube.iter() {
                 if keep.contains(lit) && !cex_set.contains(lit) {
