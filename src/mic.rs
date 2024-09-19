@@ -414,12 +414,12 @@ impl IC3 {
         }
     }
 
-    pub fn xor_mic(&mut self, frame: usize, mut lemma: Cube, parameter: DropVarParameter) -> Cube {
+    pub fn xor_mic(&mut self, frame: usize, mut cube: Cube, parameter: DropVarParameter) -> Cube {
         // dbg!("begin xor mic");
         let mut cand_lits: HashSet<Lit> = HashSet::new();
         let mut lemma_var_set: HashSet<Var> = HashSet::new();
         let mut lemma_lit_set: HashSet<Lit> = HashSet::new();
-        for l in lemma.iter() {
+        for l in cube.iter() {
             lemma_var_set.insert(l.var());
             lemma_lit_set.insert(*l);
         }
@@ -436,19 +436,19 @@ impl IC3 {
         }
         for xor_round in 0..=1 {
             let mut i = 0;
-            while i < lemma.len() {
-                if !cand_lits.contains(&lemma[i]) {
+            while i < cube.len() {
+                if !cand_lits.contains(&cube[i]) {
                     i += 1;
                     continue;
                 }
                 let mut j = i + 1;
-                while j < lemma.len() {
-                    if xor_round == 1 && !cand_lits.contains(&lemma[j]) {
+                while j < cube.len() {
+                    if xor_round == 1 && !cand_lits.contains(&cube[j]) {
                         j += 1;
                         continue;
                     }
-                    let mut a = lemma[i];
-                    let mut b = lemma[j];
+                    let mut a = cube[i];
+                    let mut b = cube[j];
                     if a.var() > b.var() {
                         swap(&mut a, &mut b);
                     }
@@ -460,10 +460,9 @@ impl IC3 {
                         j += 1;
                         continue;
                     }
-                    let mut try_gen = lemma.clone();
+                    let mut try_gen = cube.clone();
                     let c = self.xor_var.get(&(a, b)).cloned();
                     if let Some(c) = c {
-                        assert!(i < j);
                         try_gen[i] = c;
                         try_gen.remove(j);
                     } else {
@@ -477,12 +476,12 @@ impl IC3 {
                     let res = self.trivial_block(
                         frame,
                         Lemma::new(try_gen.clone()),
-                        &[!lemma.clone()],
+                        &[!cube.clone()],
                         parameter,
                     );
                     self.statistic.xor_gen.statistic(res);
                     if res {
-                        lemma = if c.is_some() {
+                        cube = if c.is_some() {
                             try_gen
                         } else {
                             let xor_var = self.new_var();
@@ -497,13 +496,9 @@ impl IC3 {
                             ];
                             let dep = vec![a.var(), b.var()];
                             self.add_latch(xor_var, xor_var_next.lit(), None, trans, dep);
-                            let mut new_lemma = lemma.clone();
+                            let mut new_lemma = cube.clone();
                             new_lemma[i] = c;
                             new_lemma.remove(j);
-                            // if core.len() < lemma.len() {
-                            //     let mic = self.mic(frame, core, &[], MicType::DropVar(parameter));
-                            //     self.add_lemma(frame, mic, true, None);
-                            // }
                             new_lemma
                         };
                         continue;
@@ -513,6 +508,6 @@ impl IC3 {
                 i += 1;
             }
         }
-        lemma
+        cube
     }
 }
