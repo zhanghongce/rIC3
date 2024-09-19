@@ -83,6 +83,13 @@ impl ProofObligation {
         }
     }
 
+    pub fn push(&mut self, frame: usize) {
+        for _ in self.frame..frame {
+            self.act *= 0.7;
+        }
+        self.frame = frame;
+    }
+
     #[inline]
     pub fn set(&mut self, other: &ProofObligation) {
         self.inner = other.inner.clone();
