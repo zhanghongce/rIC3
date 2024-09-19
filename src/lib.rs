@@ -131,7 +131,7 @@ impl IC3 {
         let (frame, mic) = self.push_lemma(po.frame, mic);
         self.statistic.avg_po_cube_len += po.lemma.len();
         for _ in po.frame..frame {
-            po.act *= 0.5;
+            po.act *= 0.7;
         }
         po.frame = frame;
         self.add_obligation(po.clone());
@@ -183,7 +183,7 @@ impl IC3 {
             }
             if let Some((bf, _)) = self.frame.trivial_contained(po.frame, &po.lemma) {
                 for _ in po.frame..bf + 1 {
-                    po.act *= 0.5;
+                    po.act *= 0.7;
                 }
                 po.frame = bf + 1;
                 self.add_obligation(po);
@@ -204,7 +204,7 @@ impl IC3 {
                 } else {
                     if let Some(mut n) = po.next.as_ref() {
                         let mut act = n.act;
-                        for _ in 0..3 {
+                        for _ in 0..5 {
                             if let Some(nn) = n.next.as_ref() {
                                 n = nn;
                                 act = act.max(n.act);
@@ -315,7 +315,7 @@ impl IC3 {
                         if let Some(po) = &mut lemma.po {
                             if po.frame < frame_idx + 2 && self.obligations.remove(po) {
                                 po.frame = frame_idx + 2;
-                                po.act *= 0.5;
+                                po.act *= 0.7;
                                 self.obligations.add(po.clone());
                             }
                         }
@@ -439,7 +439,7 @@ impl Engine for IC3 {
             }
             for po in self.obligations.iter() {
                 let mut po = po.clone();
-                po.act *= 0.5;
+                po.act *= 0.7;
             }
         }
     }
