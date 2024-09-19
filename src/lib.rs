@@ -451,10 +451,6 @@ impl Engine for IC3 {
                 self.verify();
                 return Some(true);
             }
-            for po in self.obligations.iter() {
-                let mut po = po.clone();
-                po.global_act *= 0.7;
-            }
         }
     }
 
