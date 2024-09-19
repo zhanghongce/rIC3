@@ -200,7 +200,7 @@ impl IC3 {
                 } else {
                     if let Some(mut n) = po.next.as_ref() {
                         let mut act = n.act;
-                        for _ in 0..5 {
+                        for _ in 0..2 {
                             if let Some(nn) = n.next.as_ref() {
                                 n = nn;
                                 act = act.max(n.act);
