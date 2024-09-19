@@ -138,10 +138,6 @@ impl IC3 {
         if self.add_lemma(frame - 1, mic.clone(), false, Some(po)) {
             return true;
         }
-        if self.options.ic3.xor {
-            dbg!("aaa");
-            self.xor_generalize2(frame - 1, mic);
-        }
         false
     }
 
@@ -212,7 +208,7 @@ impl IC3 {
                                 break;
                             }
                         }
-                        // dbg!(n.act);
+                        // dbg!(act);
                         let (limit, max, level) = match act {
                             100.0.. => (15, 5, 1),
                             80.0..100.0 => (5, 5, 1),
@@ -222,7 +218,12 @@ impl IC3 {
                             ..20.0 => (0, 0, 0),
                             _ => panic!(),
                         };
-                        MicType::DropVar(DropVarParameter::new(limit, max, level))
+                        let p = DropVarParameter::new(limit, max, level);
+                        if act >= 100.0 {
+                            MicType::Xor(p)
+                        } else {
+                            MicType::DropVar(p)
+                        }
                     } else {
                         MicType::DropVar(Default::default())
                     }
@@ -246,7 +247,7 @@ impl IC3 {
     }
 
     #[allow(unused)]
-    fn trivial_block(
+    fn trivial_block_rec(
         &mut self,
         frame: usize,
         lemma: Lemma,
@@ -286,11 +287,22 @@ impl IC3 {
                     return false;
                 }
                 let model = Lemma::new(self.get_predecessor(frame, false).0);
-                if !self.trivial_block(frame - 1, model, constrain, limit, parameter) {
+                if !self.trivial_block_rec(frame - 1, model, constrain, limit, parameter) {
                     return false;
                 }
             }
         }
+    }
+
+    fn trivial_block(
+        &mut self,
+        frame: usize,
+        lemma: Lemma,
+        constrain: &[Clause],
+        parameter: DropVarParameter,
+    ) -> bool {
+        let mut limit = parameter.limit;
+        self.trivial_block_rec(frame, lemma, constrain, &mut limit, parameter)
     }
 
     fn propagate(&mut self, from: Option<usize>) -> bool {

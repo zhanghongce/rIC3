@@ -5,7 +5,7 @@ use std::{collections::HashSet, mem::swap, time::Instant};
 
 #[derive(Clone, Copy, Debug)]
 pub struct DropVarParameter {
-    limit: usize,
+    pub limit: usize,
     max: usize,
     level: usize,
 }
@@ -39,12 +39,12 @@ impl Default for DropVarParameter {
 pub enum MicType {
     NoMic,
     DropVar(DropVarParameter),
-    Xor,
+    Xor(DropVarParameter),
 }
 
 impl MicType {
     pub fn from_options(options: &Options) -> Self {
-        MicType::DropVar(if options.ic3.ctg {
+        let p = if options.ic3.ctg {
             DropVarParameter {
                 limit: options.ic3.ctg_limit,
                 max: options.ic3.ctg_max,
@@ -52,7 +52,12 @@ impl MicType {
             }
         } else {
             DropVarParameter::default()
-        })
+        };
+        if options.ic3.xor {
+            MicType::Xor(p)
+        } else {
+            MicType::DropVar(p)
+        }
     }
 }
 
@@ -165,12 +170,10 @@ impl IC3 {
             //     }
             // }
             if ctg < parameter.max && frame > 1 && !self.ts.cube_subsume_init(&model) {
-                let mut limit = parameter.limit;
                 if self.trivial_block(
                     frame - 1,
                     Lemma::new(model.clone()),
                     &[!full.clone()],
-                    &mut limit,
                     parameter.sub_level(),
                 ) {
                     ctg += 1;
@@ -285,7 +288,13 @@ impl IC3 {
         match mic_type {
             MicType::NoMic => cube,
             MicType::DropVar(parameter) => self.mic_by_drop_var(frame, cube, constrain, parameter),
-            MicType::Xor => todo!(),
+            MicType::Xor(mut parameter) => {
+                assert!(constrain.is_empty());
+                let cube = self.mic_by_drop_var(frame, cube, constrain, parameter);
+                // println!("{}", cube);
+                parameter = DropVarParameter::new(5, 3, 0);
+                self.xor_mic(frame, cube, parameter)
+            }
         }
     }
 
@@ -405,7 +414,8 @@ impl IC3 {
         }
     }
 
-    pub fn xor_generalize2(&mut self, frame: usize, mut lemma: Cube) {
+    pub fn xor_mic(&mut self, frame: usize, mut lemma: Cube, parameter: DropVarParameter) -> Cube {
+        // dbg!("begin xor mic");
         let mut cand_lits: HashSet<Lit> = HashSet::new();
         let mut lemma_var_set: HashSet<Var> = HashSet::new();
         let mut lemma_lit_set: HashSet<Lit> = HashSet::new();
@@ -413,35 +423,27 @@ impl IC3 {
             lemma_var_set.insert(l.var());
             lemma_lit_set.insert(*l);
         }
-        for fl in self.frame[frame].iter() {
-            if fl.iter().all(|l| lemma_var_set.contains(&l.var())) {
-                for l in fl.iter() {
-                    if lemma_lit_set.contains(&!*l) {
-                        cand_lits.insert(!*l);
+        for fm in &self.frame[frame..] {
+            for fl in fm.iter() {
+                if fl.iter().all(|l| lemma_var_set.contains(&l.var())) {
+                    for l in fl.iter() {
+                        if lemma_lit_set.contains(&!*l) {
+                            cand_lits.insert(!*l);
+                        }
                     }
                 }
             }
         }
-        let mut not_cand_lits: HashSet<Lit> = HashSet::new();
-        for l in lemma.iter() {
-            if !cand_lits.contains(l) {
-                not_cand_lits.insert(*l);
-            }
-        }
-
-        assert!(cand_lits.len() + not_cand_lits.len() == lemma.len());
-
-        let o = lemma.len();
         for xor_round in 0..=1 {
             let mut i = 0;
             while i < lemma.len() {
-                if not_cand_lits.contains(&lemma[i]) {
+                if !cand_lits.contains(&lemma[i]) {
                     i += 1;
                     continue;
                 }
                 let mut j = i + 1;
                 while j < lemma.len() {
-                    if not_cand_lits.contains(&lemma[j]) {
+                    if !cand_lits.contains(&lemma[j]) {
                         j += 1;
                         continue;
                     }
@@ -472,20 +474,18 @@ impl IC3 {
                         j += 1;
                         continue;
                     }
-                    let mut limit = self.options.ic3.ctg_limit;
                     let res = self.trivial_block(
                         frame,
                         Lemma::new(try_gen.clone()),
                         &[!lemma.clone()],
-                        &mut limit,
-                        DropVarParameter::default(),
+                        parameter,
                     );
                     self.statistic.xor_gen.statistic(res);
                     if res {
                         assert!(self.solvers[frame - 1]
                             .inductive_with_constrain(&try_gen, true, vec![!lemma.clone()], false)
                             .unwrap());
-                        let core = self.solvers[frame - 1].inductive_core();
+                        // let core = self.solvers[frame - 1].inductive_core();
                         if c.is_some() {
                             // if core.len() < try_gen.len() {
                             //     println!("{:?} {:?}", &try_gen[i], &try_gen[j]);
@@ -511,15 +511,10 @@ impl IC3 {
                             let mut new_lemma = lemma.clone();
                             new_lemma[i] = c;
                             new_lemma.remove(j);
-                            if core.len() < lemma.len() {
-                                let mic = self.mic(
-                                    frame,
-                                    core,
-                                    &[],
-                                    MicType::DropVar(Default::default()),
-                                );
-                                self.add_lemma(frame, mic, true, None);
-                            }
+                            // if core.len() < lemma.len() {
+                            //     let mic = self.mic(frame, core, &[], MicType::DropVar(parameter));
+                            //     self.add_lemma(frame, mic, true, None);
+                            // }
                             new_lemma
                         };
                         // assert!(self.solvers[frame - 1]
@@ -532,11 +527,9 @@ impl IC3 {
                 i += 1;
             }
         }
-        if lemma.len() < o {
-            assert!(self.solvers[frame - 1]
-                .inductive(&lemma, true, false)
-                .unwrap());
-            self.add_lemma(frame, lemma.clone(), false, None);
-        }
+        assert!(self.solvers[frame - 1]
+            .inductive(&lemma, true, false)
+            .unwrap());
+        lemma
     }
 }
