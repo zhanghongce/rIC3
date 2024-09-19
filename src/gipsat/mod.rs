@@ -635,9 +635,7 @@ impl IC3 {
             ts.init.push(state.lit());
             ts.init_map[state] = Some(true);
         }
-
         self.activity.reserve(state);
-        // self.activity.set_max_act(state);
         self.auxiliary_var.push(state);
     }
 }

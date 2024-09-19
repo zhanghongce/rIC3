@@ -443,7 +443,7 @@ impl IC3 {
                 }
                 let mut j = i + 1;
                 while j < lemma.len() {
-                    if !cand_lits.contains(&lemma[j]) {
+                    if xor_round == 1 && !cand_lits.contains(&lemma[j]) {
                         j += 1;
                         continue;
                     }
@@ -482,17 +482,6 @@ impl IC3 {
                     );
                     self.statistic.xor_gen.statistic(res);
                     if res {
-                        assert!(self.solvers[frame - 1]
-                            .inductive_with_constrain(&try_gen, true, vec![!lemma.clone()], false)
-                            .unwrap());
-                        // let core = self.solvers[frame - 1].inductive_core();
-                        if c.is_some() {
-                            // if core.len() < try_gen.len() {
-                            //     println!("{:?} {:?}", &try_gen[i], &try_gen[j]);
-                            //     println!("c {:?}", core);
-                            //     println!("t {:?}", try_gen);
-                            // }
-                        }
                         lemma = if c.is_some() {
                             try_gen
                         } else {
@@ -517,9 +506,6 @@ impl IC3 {
                             // }
                             new_lemma
                         };
-                        // assert!(self.solvers[frame - 1]
-                        //     .inductive(&lemma, true, false)
-                        //     .unwrap());
                         continue;
                     }
                     j += 1;
@@ -527,9 +513,6 @@ impl IC3 {
                 i += 1;
             }
         }
-        assert!(self.solvers[frame - 1]
-            .inductive(&lemma, true, false)
-            .unwrap());
         lemma
     }
 }
