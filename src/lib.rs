@@ -183,13 +183,13 @@ impl IC3 {
                 self.frame.statistic();
             }
             po.bump_act();
-            if po.local_act == 100 && po.frame > 1 {
-                po.bump_act();
-                let from = Some(po.frame - 2);
-                self.add_obligation(po);
-                self.propagate(from);
-                continue;
-            }
+            // if po.local_act == 100 && po.frame > 1 {
+            //     po.bump_act();
+            //     let from = Some(po.frame - 2);
+            //     self.add_obligation(po);
+            //     self.propagate(from);
+            //     continue;
+            // }
             let blocked_start = Instant::now();
             let blocked = self
                 .blocked_with_ordered(po.frame, &po.lemma, false, false, false)
@@ -214,10 +214,11 @@ impl IC3 {
                         let (limit, max, level) = match gact {
                             100.0.. => (15, 5, 1),
                             80.0..100.0 => (5, 5, 1),
-                            60.0..80.0 => (5, 3, 1),
-                            40.0..60.0 => (3, 3, 1),
-                            20.0..40.0 => (1, 3, 1),
-                            ..20.0 => (0, 0, 0),
+                            60.0..80.0 => (5, 4, 1),
+                            45.0..60.0 => (5, 3, 1),
+                            30.0..45.0 => (1, 5, 1),
+                            15.0..30.0 => (1, 3, 1),
+                            ..15.0 => (0, 0, 0),
                             _ => panic!(),
                         };
                         let p = DropVarParameter::new(limit, max, level);
