@@ -130,7 +130,7 @@ impl IC3 {
         mic = self.mic(po.frame, mic, &[], mic_type);
         let (frame, mic) = self.push_lemma(po.frame, mic);
         self.statistic.avg_po_cube_len += po.lemma.len();
-        po.push(frame);
+        po.push_to(frame);
         self.add_obligation(po.clone());
         if self.add_lemma(frame - 1, mic.clone(), false, Some(po)) {
             return true;
@@ -175,14 +175,21 @@ impl IC3 {
                 }
             }
             if let Some((bf, _)) = self.frame.trivial_contained(po.frame, &po.lemma) {
-                po.push(bf + 1);
+                po.push_to(bf + 1);
                 self.add_obligation(po);
                 continue;
             }
             if self.options.verbose > 2 {
                 self.frame.statistic();
             }
-            po.act += 1.0;
+            po.bump_act();
+            if po.local_act == 100 && po.frame > 1 {
+                po.bump_act();
+                let from = Some(po.frame - 2);
+                self.add_obligation(po);
+                self.propagate(from);
+                continue;
+            }
             let blocked_start = Instant::now();
             let blocked = self
                 .blocked_with_ordered(po.frame, &po.lemma, false, false, false)
@@ -192,18 +199,19 @@ impl IC3 {
                 let mic_type = if self.options.ic3.no_dynamic {
                     MicType::from_options(&self.options)
                 } else {
-                    if let Some(mut n) = po.next.as_ref() {
-                        let mut act = n.act;
+                    if let Some(mut n) = po.next.as_mut() {
+                        let mut gact = n.global_act;
+                        let lact = n.local_act;
                         for _ in 0..2 {
-                            if let Some(nn) = n.next.as_ref() {
+                            if let Some(nn) = n.next.as_mut() {
                                 n = nn;
-                                act = act.max(n.act);
+                                gact = gact.max(n.global_act);
                             } else {
                                 break;
                             }
                         }
-                        // dbg!(act);
-                        let (limit, max, level) = match act {
+                        // dbg!(gact, lact);
+                        let (limit, max, level) = match gact {
                             100.0.. => (15, 5, 1),
                             80.0..100.0 => (5, 5, 1),
                             60.0..80.0 => (5, 3, 1),
@@ -213,7 +221,7 @@ impl IC3 {
                             _ => panic!(),
                         };
                         let p = DropVarParameter::new(limit, max, level);
-                        if act >= 100.0 {
+                        if gact >= 100.0 && lact % 10 == 0 {
                             MicType::Xor(p)
                         } else {
                             MicType::DropVar(p)
@@ -320,7 +328,7 @@ impl IC3 {
                         };
                         if let Some(po) = &mut lemma.po {
                             if po.frame < frame_idx + 2 && self.obligations.remove(po) {
-                                po.push(frame_idx + 2);
+                                po.push_to(frame_idx + 2);
                                 self.obligations.add(po.clone());
                             }
                         }
@@ -444,7 +452,7 @@ impl Engine for IC3 {
             }
             for po in self.obligations.iter() {
                 let mut po = po.clone();
-                po.act *= 0.7;
+                po.global_act *= 0.7;
             }
         }
     }

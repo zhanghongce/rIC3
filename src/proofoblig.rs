@@ -14,7 +14,8 @@ pub struct ProofObligationInner {
     pub depth: usize,
     pub next: Option<ProofObligation>,
     pub removed: bool,
-    pub act: f64,
+    pub global_act: f64,
+    pub local_act: usize,
 }
 
 impl PartialEq for ProofObligationInner {
@@ -78,16 +79,23 @@ impl ProofObligation {
                 depth,
                 next,
                 removed: false,
-                act: 0.0,
+                global_act: 0.0,
+                local_act: 0,
             }),
         }
     }
 
-    pub fn push(&mut self, frame: usize) {
+    pub fn bump_act(&mut self) {
+        self.global_act += 1.0;
+        self.local_act += 1;
+    }
+
+    pub fn push_to(&mut self, frame: usize) {
         for _ in self.frame..frame {
-            self.act *= 0.7;
+            self.global_act *= 0.7;
         }
         self.frame = frame;
+        self.local_act = 0;
     }
 
     #[inline]
