@@ -202,14 +202,19 @@ impl IC3 {
                                 break;
                             }
                         }
+                        const CTG_THRESHOLD: f64 = 10.0;
+                        const EXCTG_THRESHOLD: f64 = 40.0;
                         let (limit, max, level) = match act {
-                            100.0.. => (15, 5, 1),
-                            80.0..100.0 => (5, 5, 1),
-                            60.0..80.0 => (5, 4, 1),
-                            45.0..60.0 => (5, 3, 1),
-                            30.0..45.0 => (1, 5, 1),
-                            15.0..30.0 => (1, 3, 1),
-                            ..15.0 => (0, 0, 0),
+                            EXCTG_THRESHOLD.. => {
+                                let limit = ((act - EXCTG_THRESHOLD).powf(0.3) * 2.0 + 5.0).round()
+                                    as usize;
+                                (limit, 5, 1)
+                            }
+                            CTG_THRESHOLD..EXCTG_THRESHOLD => {
+                                let max = (act - CTG_THRESHOLD) as usize / 10 + 2;
+                                (1, max, 1)
+                            }
+                            ..CTG_THRESHOLD => (0, 0, 0),
                             _ => panic!(),
                         };
                         let p = DropVarParameter::new(limit, max, level);
