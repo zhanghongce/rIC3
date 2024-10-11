@@ -291,7 +291,6 @@ impl IC3 {
             MicType::Xor(mut parameter) => {
                 assert!(constrain.is_empty());
                 let cube = self.mic_by_drop_var(frame, cube, constrain, parameter);
-                // println!("{}", cube);
                 parameter = DropVarParameter::new(5, 3, 0);
                 self.xor_mic(frame, cube, parameter)
             }

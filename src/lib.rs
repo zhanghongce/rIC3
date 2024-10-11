@@ -183,13 +183,6 @@ impl IC3 {
                 self.frame.statistic();
             }
             po.bump_act();
-            // if po.local_act == 100 && po.frame > 1 {
-            //     po.bump_act();
-            //     let from = Some(po.frame - 2);
-            //     self.add_obligation(po);
-            //     self.propagate(from);
-            //     continue;
-            // }
             let blocked_start = Instant::now();
             let blocked = self
                 .blocked_with_ordered(po.frame, &po.lemma, false, false, false)
@@ -200,18 +193,16 @@ impl IC3 {
                     MicType::from_options(&self.options)
                 } else {
                     if let Some(mut n) = po.next.as_mut() {
-                        let mut gact = n.global_act;
-                        let lact = n.local_act;
+                        let mut act = n.act;
                         for _ in 0..2 {
                             if let Some(nn) = n.next.as_mut() {
                                 n = nn;
-                                gact = gact.max(n.global_act);
+                                act = act.max(n.act);
                             } else {
                                 break;
                             }
                         }
-                        // dbg!(gact, lact);
-                        let (limit, max, level) = match gact {
+                        let (limit, max, level) = match act {
                             100.0.. => (15, 5, 1),
                             80.0..100.0 => (5, 5, 1),
                             60.0..80.0 => (5, 4, 1),
@@ -222,11 +213,7 @@ impl IC3 {
                             _ => panic!(),
                         };
                         let p = DropVarParameter::new(limit, max, level);
-                        if gact >= 100.0 && lact % 10 == 0 {
-                            MicType::Xor(p)
-                        } else {
-                            MicType::DropVar(p)
-                        }
+                        MicType::DropVar(p)
                     } else {
                         MicType::DropVar(Default::default())
                     }
