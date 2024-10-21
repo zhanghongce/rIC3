@@ -6,11 +6,8 @@ rIC3 model checker.
 
 [[HWMCC'24](https://hwmcc.github.io/2024/)] rIC3 won *1<sup>st</sup>* place in BV track at the prestigious *Hardware Model Checking Competition* (HWMCC) 2024
 <p align="center">
-	<img align="center" width="400" height="auto" src="./images/hwmcc24_aiger.png"></img>
-</p>
-
-<p align="center">
-	<img align="center" width="400" height="auto" src="./images/hwmcc24_btor2_bv.png"></img>
+	<img width="250" height="auto" src="./images/hwmcc24_aiger.png" style="display:inline-block;">
+	<img width="250" height="auto" src="./images/hwmcc24_btor2_bv.png" style="display:inline-block;">
 </p>
 
 To view the submission for HWMCC'24, please checkout the `HWMCC24` branch or download the binary release at https://github.com/gipsyh/rIC3-HWMCC24.
