@@ -8,18 +8,18 @@ repository = "https://github.com/gipsyh/rIC3"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-aig = { path = "./deps/aig-rs", version = "*" }
+aig = { path = "./deps/aig-rs", version = "0.2.0" }
 minisat = { path = "./deps/minisat-rs", version = "*" }
 cadical = { path = "./deps/cadical-rs", version = "*" }
 kissat = { path = "./deps/kissat-rs", version = "*" }
-logic-form = { path = "./deps/logic-form", version = "*" }
+logic-form = { path = "./deps/logic-form", version = "0.2.0" }
 clap = { version = "4.5.16", features = ["derive"] }
 rand = "0.8.5"
 ctrlc = { version = "3.4.1", features = ["termination"] }
-giputils = { path = "./deps/giputils", version = "*" }
-satif = { path = "./deps/satif", version = "*" }
+giputils = { path = "./deps/giputils", version = "0.1.0" }
+satif = { path = "./deps/satif", version = "0.1.0" }
 bitfield-struct = "0.8.0"
-abc = { path = "./deps/abc-rs", version = "*" }
+abc-rs = { path = "./deps/abc-rs", version = "0.2.0" }
 tempfile = "3.10.1"
 process_control = "4.1.0"
 nix = { version = "0.27.1", features = ["signal"] }

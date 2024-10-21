@@ -1,4 +1,4 @@
-use abc::Abc;
+use abc_rs::Abc;
 use aig::Aig;
 use std::{env, mem::take, time::Duration};
 
