@@ -4,7 +4,7 @@ use logic_form::{Clause, Cube, Lit};
 use satif::Satif;
 use std::{ops::Deref, rc::Rc};
 
-pub type SatSolver = minisat::Solver;
+pub type SatSolver = satif_minisat::Solver;
 
 pub struct Ic3Solver {
     solver: Box<SatSolver>,

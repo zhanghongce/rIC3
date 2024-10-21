@@ -9,9 +9,9 @@ repository = "https://github.com/gipsyh/rIC3"
 
 [dependencies]
 aig = { path = "./deps/aig-rs", version = "0.2.0" }
-minisat = { path = "./deps/minisat-rs", version = "*" }
+satif-minisat = { path = "./deps/minisat-rs", version = "0.2.0" }
 cadical = { path = "./deps/cadical-rs", version = "*" }
-kissat = { path = "./deps/kissat-rs", version = "*" }
+satif-kissat = { path = "./deps/kissat-rs", version = "0.2.0" }
 logic-form = { path = "./deps/logic-form", version = "0.2.0" }
 clap = { version = "4.5.16", features = ["derive"] }
 rand = "0.8.5"

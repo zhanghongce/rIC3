@@ -1,7 +1,7 @@
 use super::Transys;
 use logic_form::{Clause, Lit, LitMap, Var, VarMap};
-use minisat::SimpSolver;
 use satif::Satif;
+use satif_minisat::SimpSolver;
 use std::collections::{HashMap, HashSet};
 
 impl Transys {

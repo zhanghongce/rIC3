@@ -5,8 +5,8 @@ use crate::{
 };
 use aig::Aig;
 use logic_form::{Clause, Cube, Lemma, Lit, Var};
-use minisat::Solver;
 use satif::Satif;
+use satif_minisat::Solver;
 use std::{
     collections::HashMap,
     fs::File,
