@@ -15,7 +15,7 @@ rIC3 model checker.
 
 To view the submission for HWMCC'24, please checkout the `HWMCC24` branch or download the binary release at https://github.com/gipsyh/rIC3-HWMCC24.
 
-## Usage
-```
-cargo r --release -- <aig model>
-```
+## Build and Run
+- Install the Rust compiler https://www.rust-lang.org/
+- ````git clone --recurse-submodules https://github.com/gipsyh/rIC3````
+- ````cargo r --release -- <aig model>````
