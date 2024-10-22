@@ -53,11 +53,7 @@ impl MicType {
         } else {
             DropVarParameter::default()
         };
-        if options.ic3.xor {
-            MicType::Xor(p)
-        } else {
-            MicType::DropVar(p)
-        }
+        MicType::DropVar(p)
     }
 }
 

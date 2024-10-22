@@ -85,10 +85,6 @@ pub struct IC3Options {
     #[arg(long = "ic3-ctg-limit", default_value_t = 1)]
     pub ctg_limit: usize,
 
-    /// ic3 xor generalization
-    #[arg(long = "ic3-xor", default_value_t = false)]
-    pub xor: bool,
-
     /// ic3 counterexample to propagation
     #[arg(long = "ic3-ctp", default_value_t = false)]
     pub ctp: bool,
