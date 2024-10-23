@@ -8,7 +8,7 @@ repository = "https://github.com/gipsyh/rIC3"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-aig = { path = "./deps/aig-rs", version = "0.2.0" }
+aig = { path = "./deps/aig-rs", version = "0.2.1" }
 satif-minisat = { path = "./deps/minisat-rs", version = "0.2.0" }
 cadical = { path = "./deps/cadical-rs", version = "*" }
 satif-kissat = { path = "./deps/kissat-rs", version = "0.2.0" }

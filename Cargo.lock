@@ -4,7 +4,7 @@ version = 3
 
 [[package]]
 name = "abc-rs"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "aig",
  "tempfile",
@@ -40,7 +40,7 @@ dependencies = [
 
 [[package]]
 name = "aig"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "cc",
  "libc",
@@ -920,7 +920,7 @@ dependencies = [
 
 [[package]]
 name = "satif-minisat"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "cmake",
  "logic-form",
