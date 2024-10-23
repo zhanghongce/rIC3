@@ -9,7 +9,7 @@ repository = "https://github.com/gipsyh/rIC3"
 
 [dependencies]
 aig = { path = "./deps/aig-rs", version = "0.2.1" }
-satif-minisat = { path = "./deps/minisat-rs", version = "0.2.0" }
+satif-minisat = { path = "./deps/minisat-rs", version = "0.2.1" }
 cadical = { path = "./deps/cadical-rs", version = "*" }
 satif-kissat = { path = "./deps/kissat-rs", version = "0.2.0" }
 logic-form = { path = "./deps/logic-form", version = "0.2.0" }
@@ -19,7 +19,7 @@ ctrlc = { version = "3.4.1", features = ["termination"] }
 giputils = { path = "./deps/giputils", version = "0.1.0" }
 satif = { path = "./deps/satif", version = "0.1.0" }
 bitfield-struct = "0.8.0"
-abc-rs = { path = "./deps/abc-rs", version = "0.2.0" }
+abc-rs = { path = "./deps/abc-rs", version = "0.2.1" }
 tempfile = "3.10.1"
 process_control = "4.1.0"
 nix = { version = "0.27.1", features = ["signal"] }
