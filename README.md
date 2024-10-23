@@ -2,9 +2,7 @@
 
 rIC3 model checker.
 
-> Copyright (c) 2023 - Present by Yuheng Su [(gipsyh.icu@gmail.com)](gipsyh.icu@gmail.com), Qiusong Yang [(qiusong@iscas.ac.cn)](qiusong@iscas.ac.cn) and  Yiwei Ci [(yiwei@iscas.ac.cn)](yiwei@iscas.ac.cn)
-
-[[HWMCC'24](https://hwmcc.github.io/2024/)] rIC3 won *1<sup>st</sup>* place in BV track at the prestigious *Hardware Model Checking Competition* (HWMCC) 2024
+[[HWMCC'24](https://hwmcc.github.io/2024/)] rIC3 won *1<sup>st</sup>* place in BV track at the *Hardware Model Checking Competition* (HWMCC) 2024
 <p align="center">
 	<img width="250" height="auto" src="./images/hwmcc24_aiger.png" style="display:inline-block;">
 	<img width="250" height="auto" src="./images/hwmcc24_btor2_bv.png" style="display:inline-block;">
@@ -13,6 +11,9 @@ rIC3 model checker.
 To view the submission for HWMCC'24, please checkout the `HWMCC24` branch or download the binary release at https://github.com/gipsyh/rIC3-HWMCC24.
 
 ## Build and Run
+Currently, some dependency libraries are linked through pre-compiled static files in the repository, and they have a dependency on the glibc version. Ubuntu 20.04 or later works fine.
+
 - Install the Rust compiler https://www.rust-lang.org/
+- Switch to nightly ````rustup default nightly````
 - ````git clone --recurse-submodules https://github.com/gipsyh/rIC3````
 - ````cargo r --release -- <aig model>````
