@@ -189,9 +189,7 @@ impl IC3 {
                 .unwrap();
             self.statistic.block_blocked_time += blocked_start.elapsed();
             if blocked {
-                let mic_type = if self.options.ic3.no_dynamic {
-                    MicType::from_options(&self.options)
-                } else {
+                let mic_type = if self.options.ic3.dynamic {
                     if let Some(mut n) = po.next.as_mut() {
                         let mut act = n.act;
                         for _ in 0..2 {
@@ -222,6 +220,8 @@ impl IC3 {
                     } else {
                         MicType::DropVar(Default::default())
                     }
+                } else {
+                    MicType::from_options(&self.options)
                 };
                 if self.generalize(po, mic_type) {
                     return None;
