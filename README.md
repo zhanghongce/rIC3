@@ -18,6 +18,6 @@ Currently, some dependency libraries are linked through pre-compiled static file
 - ````git clone --recurse-submodules https://github.com/gipsyh/rIC3````
 - ````cargo r --release -- <aig model>````
 
-Copyright (C) 2023 - Present, Yuheng Su <gipsyh.icu@gmail.com>. All rights reserved.
+Copyright (C) 2023 - Present, Yuheng Su (gipsyh.icu@gmail.com). All rights reserved.
 
 Without obtaining authorization, rIC3 is not allowed to be used for any commercial purposes.
