@@ -2,7 +2,7 @@
 
 rIC3 model checker.
 
-[[HWMCC'24](https://hwmcc.github.io/2024/)] rIC3 won *1<sup>st</sup>* place in BV track at the *Hardware Model Checking Competition* (HWMCC) 2024
+[[HWMCC'24](https://hwmcc.github.io/2024/)] rIC3 won *1<sup>st</sup>* place in the bit-level track and the word-level without array track at the *Hardware Model Checking Competition* (HWMCC) 2024
 <p align="center">
 	<img width="250" height="auto" src="./images/hwmcc24_aiger.png" style="display:inline-block;">
 	<img width="250" height="auto" src="./images/hwmcc24_btor2_bv.png" style="display:inline-block;">
