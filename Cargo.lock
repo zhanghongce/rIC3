@@ -420,7 +420,10 @@ checksum = "40ecd4077b5ae9fd2e9e169b102c6c330d0605168eb0e8bf79952b256dbefffd"
 
 [[package]]
 name = "giputils"
-version = "0.1.0"
+version = "0.2.0"
+dependencies = [
+ "tempfile",
+]
 
 [[package]]
 name = "git2"
@@ -598,7 +601,7 @@ checksum = "a7a70ba024b9dc04c27ea2f0c0548feb474ec5c54bba33a7f72f873a39d07b24"
 
 [[package]]
 name = "logic-form"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "ahash",
  "giputils",
@@ -912,8 +915,9 @@ dependencies = [
 
 [[package]]
 name = "satif-kissat"
-version = "0.3.0"
+version = "0.4.1"
 dependencies = [
+ "giputils",
  "logic-form",
  "satif",
 ]
