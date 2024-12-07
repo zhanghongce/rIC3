@@ -217,13 +217,16 @@ pub fn witness_encode(aig: &Aig, witness: &[Cube]) -> String {
 }
 
 pub fn check_witness(engine: &mut Box<dyn Engine>, aig: &Aig, option: &Options) {
-    if option.certify_path.is_none() && !option.certify {
+    if option.certify_path.is_none() && !option.certify && !option.sby {
         return;
     }
     let witness = engine.witness(aig);
     if let Some(witness_file) = &option.certify_path {
         let mut file: File = File::create(witness_file).unwrap();
         file.write_all(witness.as_bytes()).unwrap();
+    }
+    if option.sby {
+        println!("{}", witness);
     }
     if !option.certify {
         return;

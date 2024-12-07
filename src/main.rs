@@ -25,8 +25,7 @@ fn main() {
     procspawn::init();
     fs::create_dir_all("/tmp/rIC3").unwrap();
     let mut options = Options::parse();
-    let verbose = options.verbose;
-    if verbose > 0 {
+    if options.verbose > 0 {
         println!("the model to be checked: {}", options.model);
     }
     let mut aig = if options.model.ends_with(".btor") || options.model.ends_with(".btor2") {
@@ -87,13 +86,19 @@ fn main() {
         mem::forget(engine);
     }
     if let Some(res) = res {
-        if verbose > 0 {
-            println!("result: {res}");
+        if options.verbose > 0 {
+            println!("result: {}", if res { "safe" } else { "unsafe" });
+        }
+        if options.sby && res {
+            println!("0");
         }
         exit(if res { 20 } else { 10 });
     } else {
-        if verbose > 0 {
+        if options.verbose > 0 {
             println!("result: unknown");
+        }
+        if options.sby {
+            println!("2");
         }
         exit(0)
     }
