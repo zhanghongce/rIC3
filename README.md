@@ -1,6 +1,7 @@
 # rIC3 Hardware Model Checker
 
 [![Crates.io](https://img.shields.io/crates/v/rIC3.svg)](https://crates.io/crates/rIC3)
+[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 
 [[HWMCC'24](https://hwmcc.github.io/2024/)] rIC3 won *1<sup>st</sup>* place in the bit-level track and the word-level without array track at the *Hardware Model Checking Competition* (HWMCC) 2024
 <p align="center">
