@@ -1,6 +1,6 @@
-# rIC3
+# rIC3 Hardware Model Checker
 
-rIC3 model checker.
+[![Crates.io](https://img.shields.io/crates/v/rIC3.svg)](https://crates.io/crates/rIC3)
 
 [[HWMCC'24](https://hwmcc.github.io/2024/)] rIC3 won *1<sup>st</sup>* place in the bit-level track and the word-level without array track at the *Hardware Model Checking Competition* (HWMCC) 2024
 <p align="center">
