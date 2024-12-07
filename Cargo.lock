@@ -4,9 +4,10 @@ version = 4
 
 [[package]]
 name = "abc-rs"
-version = "0.2.1"
+version = "0.2.2"
 dependencies = [
  "aig",
+ "cmake",
  "tempfile",
 ]
 
@@ -40,7 +41,7 @@ dependencies = [
 
 [[package]]
 name = "aig"
-version = "0.2.1"
+version = "0.2.2"
 dependencies = [
  "cc",
  "libc",
@@ -591,7 +592,7 @@ checksum = "a7a70ba024b9dc04c27ea2f0c0548feb474ec5c54bba33a7f72f873a39d07b24"
 
 [[package]]
 name = "logic-form"
-version = "0.2.1"
+version = "0.2.2"
 dependencies = [
  "ahash",
  "giputils",
@@ -898,14 +899,14 @@ checksum = "955d28af4278de8121b7ebeb796b6a45735dc01436d898801014aced2773a3d6"
 
 [[package]]
 name = "satif"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "logic-form",
 ]
 
 [[package]]
 name = "satif-cadical"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "aig",
  "cmake",
@@ -916,7 +917,7 @@ dependencies = [
 
 [[package]]
 name = "satif-kissat"
-version = "0.4.1"
+version = "0.4.2"
 dependencies = [
  "giputils",
  "logic-form",
@@ -925,7 +926,7 @@ dependencies = [
 
 [[package]]
 name = "satif-minisat"
-version = "0.2.1"
+version = "0.2.2"
 dependencies = [
  "cmake",
  "logic-form",

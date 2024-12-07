@@ -8,23 +8,23 @@ repository = "https://github.com/gipsyh/rIC3"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-aig = { path = "./deps/aig-rs", version = "0.2.1" }
-satif-minisat = { path = "./deps/minisat-rs", version = "0.2.1" }
-satif-cadical = { path = "./deps/cadical-rs", version = "0.1.0" }
-satif-kissat = { path = "./deps/kissat-rs", version = "0.4.0" }
-logic-form = { path = "./deps/logic-form", version = "0.2.0" }
+aig = { path = "./deps/aig-rs", version = "0.2" }
+satif-minisat = { path = "./deps/minisat-rs", version = "0.2" }
+satif-cadical = { path = "./deps/cadical-rs", version = "0.1" }
+satif-kissat = { path = "./deps/kissat-rs", version = "0.4" }
+logic-form = { path = "./deps/logic-form", version = "0.2" }
+giputils = { path = "./deps/giputils", version = "0.2" }
+satif = { path = "./deps/satif", version = "0.1" }
+abc-rs = { path = "./deps/abc-rs", version = "0.2" }
+btor = { path = "./deps/btor-rs", version = "*" }
 clap = { version = "4.5.16", features = ["derive"] }
 rand = "0.8.5"
 ctrlc = { version = "3.4.1", features = ["termination"] }
-giputils = { path = "./deps/giputils", version = "0.2.0" }
-satif = { path = "./deps/satif", version = "0.1.0" }
 bitfield-struct = "0.8.0"
-abc-rs = { path = "./deps/abc-rs", version = "0.2.1" }
 tempfile = "3.10.1"
 process_control = "4.1.0"
 nix = { version = "0.27.1", features = ["signal"] }
 procspawn = "1.0.0"
-btor = { path = "./deps/btor-rs", version = "*" }
 shadow-rs = "0.34.0"
 
 [build-dependencies]
