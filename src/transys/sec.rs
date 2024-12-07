@@ -11,7 +11,7 @@ impl Transys {
         avoid: &mut HashSet<Var>,
         eqs: &mut Vec<(Lit, Lit)>,
     ) {
-        let mut solver = cadical::Solver::new();
+        let mut solver = satif_cadical::Solver::new();
         for k in 0..=uts.num_unroll {
             uts.load_trans(&mut solver, k, true);
             for (x, y) in eqs.iter() {

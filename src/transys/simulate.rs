@@ -1,7 +1,7 @@
 use crate::{transys::unroll::TransysUnroll, Transys};
-use cadical::Solver;
 use logic_form::{Cube, Var};
 use satif::Satif;
+use satif_cadical::Solver;
 use std::collections::HashMap;
 
 impl Transys {

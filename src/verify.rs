@@ -103,7 +103,7 @@ impl IC3 {
     pub fn check_witness_by_bmc(&mut self, b: ProofObligation) -> Option<Cube> {
         let mut uts = TransysUnroll::new(&self.ts);
         uts.unroll_to(b.depth);
-        let mut solver: Box<dyn satif::Satif> = Box::new(cadical::Solver::new());
+        let mut solver: Box<dyn satif::Satif> = Box::new(satif_cadical::Solver::new());
         for k in 0..=b.depth {
             uts.load_trans(solver.as_mut(), k, false);
         }

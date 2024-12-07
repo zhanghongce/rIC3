@@ -21,7 +21,7 @@ impl BMC {
         let mut solver: Box<dyn Satif> = if options.bmc.bmc_kissat {
             Box::new(satif_kissat::Solver::new())
         } else {
-            Box::new(cadical::Solver::new())
+            Box::new(satif_cadical::Solver::new())
         };
         ts.load_init(solver.as_mut());
         Self {
@@ -35,7 +35,7 @@ impl BMC {
         self.solver = if self.options.bmc.bmc_kissat {
             Box::new(satif_kissat::Solver::new())
         } else {
-            Box::new(cadical::Solver::new())
+            Box::new(satif_cadical::Solver::new())
         };
         self.uts.ts.load_init(self.solver.as_mut());
     }

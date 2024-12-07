@@ -20,7 +20,7 @@ impl Kind {
         let solver: Box<dyn Satif> = if options.kind.kind_kissat {
             Box::new(satif_kissat::Solver::new())
         } else {
-            Box::new(cadical::Solver::new())
+            Box::new(satif_cadical::Solver::new())
         };
         Self {
             uts,
@@ -56,7 +56,7 @@ impl Kind {
         self.solver = if self.options.kind.kind_kissat {
             Box::new(satif_kissat::Solver::new())
         } else {
-            Box::new(cadical::Solver::new())
+            Box::new(satif_cadical::Solver::new())
         };
     }
 }

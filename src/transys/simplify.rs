@@ -51,7 +51,7 @@ impl Transys {
         let mut simp_solver: Box<dyn Satif> = if keep_dep {
             Box::new(SimpSolver::new())
         } else {
-            Box::new(cadical::Solver::new())
+            Box::new(satif_cadical::Solver::new())
         };
         let false_lit: Lit = simp_solver.new_var().into();
         simp_solver.add_clause(&[!false_lit]);

@@ -173,17 +173,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "79296716171880943b8470b5f8d03aa55eb2e645a4874bdbb28adb49162e012c"
 
 [[package]]
-name = "cadical"
-version = "0.1.0"
-dependencies = [
- "aig",
- "cmake",
- "giputils",
- "logic-form",
- "satif",
-]
-
-[[package]]
 name = "cc"
 version = "1.1.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -795,7 +784,6 @@ dependencies = [
  "aig",
  "bitfield-struct",
  "btor",
- "cadical",
  "clap",
  "ctrlc",
  "giputils",
@@ -805,6 +793,7 @@ dependencies = [
  "procspawn",
  "rand 0.8.5",
  "satif",
+ "satif-cadical",
  "satif-kissat",
  "satif-minisat",
  "shadow-rs",
@@ -912,6 +901,17 @@ name = "satif"
 version = "0.1.0"
 dependencies = [
  "logic-form",
+]
+
+[[package]]
+name = "satif-cadical"
+version = "0.1.0"
+dependencies = [
+ "aig",
+ "cmake",
+ "giputils",
+ "logic-form",
+ "satif",
 ]
 
 [[package]]
