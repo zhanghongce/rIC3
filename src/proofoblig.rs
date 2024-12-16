@@ -193,6 +193,7 @@ impl ProofObligationQueue {
         }
     }
 
+    #[allow(unused)]
     pub fn iter(&self) -> btree_set::Iter<'_, ProofObligation> {
         self.obligations.iter()
     }
