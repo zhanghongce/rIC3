@@ -29,7 +29,7 @@ fn main() {
         println!("the model to be checked: {}", options.model);
     }
     let mut aig = if options.model.ends_with(".btor") || options.model.ends_with(".btor2") {
-        options.certify_path = None;
+        options.certifaiger_path = None;
         options.certify = false;
         btor_to_aiger(&options.model)
     } else {
@@ -41,7 +41,13 @@ fn main() {
         verify_certifaiger(&aig, &options);
         exit(20);
     } else if num_bads > 1 {
-        panic!("error: multi property detected, rIC3 only support model with one property.");
+        if options.certify || options.certifaiger_path.is_some() {
+            panic!("Error: Multiple properties detected. Cannot compress properties when certification is enabled.");
+        }
+        println!("Warning: Multiple properties detected. rIC3 has compressed them into a single property.");
+        options.certifaiger_path = None;
+        options.certify = false;
+        aig.compress_property();
     }
     let mut engine: Box<dyn Engine> = if let options::Engine::Portfolio = options.engine {
         Box::new(Portfolio::new(options.clone()))
@@ -75,10 +81,30 @@ fn main() {
         engine
     };
     let res = engine.check();
+    if options.verbose > 0 {
+        print!("result: ");
+    }
     match res {
-        Some(true) => check_certifaiger(&mut engine, &mut aig, &options),
-        Some(false) => check_witness(&mut engine, &aig, &options),
-        _ => (),
+        Some(true) => {
+            if options.verbose > 0 {
+                println!("safe");
+            }
+            check_certifaiger(&mut engine, &mut aig, &options)
+        }
+        Some(false) => {
+            if options.verbose > 0 {
+                println!("unsafe");
+            }
+            check_witness(&mut engine, &aig, &options)
+        }
+        _ => {
+            if options.verbose > 0 {
+                println!("unknown");
+            }
+            if options.witness {
+                println!("2");
+            }
+        }
     }
     if let options::Engine::Portfolio = options.engine {
         drop(engine);
@@ -86,20 +112,8 @@ fn main() {
         mem::forget(engine);
     }
     if let Some(res) = res {
-        if options.verbose > 0 {
-            println!("result: {}", if res { "safe" } else { "unsafe" });
-        }
-        if options.sby && res {
-            println!("0");
-        }
-        exit(if res { 20 } else { 10 });
+        exit(if res { 20 } else { 10 })
     } else {
-        if options.verbose > 0 {
-            println!("result: unknown");
-        }
-        if options.sby {
-            println!("2");
-        }
         exit(0)
     }
 }

@@ -114,16 +114,17 @@ impl Portfolio {
     fn check_inner(&mut self) -> Option<bool> {
         let lock = self.result.0.lock().unwrap();
         for mut engine in take(&mut self.engines) {
-            let certificate =
-                if self.option.certify_path.is_some() || self.option.certify || self.option.sby {
-                    let certificate =
-                        tempfile::NamedTempFile::new_in(self.temp_dir.path()).unwrap();
-                    let certify_path = certificate.path().as_os_str().to_str().unwrap();
-                    engine.arg(certify_path);
-                    Some(certificate)
-                } else {
-                    None
-                };
+            let certificate = if self.option.certifaiger_path.is_some()
+                || self.option.certify
+                || self.option.witness
+            {
+                let certificate = tempfile::NamedTempFile::new_in(self.temp_dir.path()).unwrap();
+                let certify_path = certificate.path().as_os_str().to_str().unwrap();
+                engine.arg(certify_path);
+                Some(certificate)
+            } else {
+                None
+            };
             let mut child = engine.stderr(Stdio::piped()).spawn().unwrap();
             self.engine_pids.push(child.id() as i32);
             let option = self.option.clone();

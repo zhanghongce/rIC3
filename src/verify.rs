@@ -138,7 +138,10 @@ impl IC3 {
 }
 
 pub fn check_certifaiger(engine: &mut Box<dyn Engine>, aig: &mut Aig, option: &Options) {
-    if option.certify_path.is_none() && !option.certify {
+    if option.witness {
+        println!("0");
+    }
+    if option.certifaiger_path.is_none() && !option.certify {
         return;
     }
     let mut certifaiger = engine.certifaiger(aig);
@@ -157,7 +160,7 @@ pub fn check_certifaiger(engine: &mut Box<dyn Engine>, aig: &mut Aig, option: &O
 }
 
 pub fn verify_certifaiger(certifaiger: &Aig, option: &Options) {
-    if let Some(witness) = &option.certify_path {
+    if let Some(witness) = &option.certifaiger_path {
         certifaiger.to_file(witness, true);
     }
     if !option.certify {
@@ -217,15 +220,15 @@ pub fn witness_encode(aig: &Aig, witness: &[Cube]) -> String {
 }
 
 pub fn check_witness(engine: &mut Box<dyn Engine>, aig: &Aig, option: &Options) {
-    if option.certify_path.is_none() && !option.certify && !option.sby {
+    if option.certifaiger_path.is_none() && !option.certify && !option.witness {
         return;
     }
     let witness = engine.witness(aig);
-    if let Some(witness_file) = &option.certify_path {
+    if let Some(witness_file) = &option.certifaiger_path {
         let mut file: File = File::create(witness_file).unwrap();
         file.write_all(witness.as_bytes()).unwrap();
     }
-    if option.sby {
+    if option.witness {
         println!("{}", witness);
     }
     if !option.certify {

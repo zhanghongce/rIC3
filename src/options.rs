@@ -20,16 +20,16 @@ pub struct Options {
     /// for btor model, the file name should be suffixed with .btor or .btor2
     pub model: String,
 
-    /// certifaiger or witness output path
-    pub certify_path: Option<String>,
+    /// certifaiger output path
+    pub certifaiger_path: Option<String>,
 
-    /// certify
+    /// certify with certifaiger
     #[arg(long, default_value_t = false)]
     pub certify: bool,
 
-    /// sby
+    /// print witness when model is unsafe
     #[arg(long, default_value_t = false)]
-    pub sby: bool,
+    pub witness: bool,
 
     #[command(flatten)]
     pub ic3: IC3Options,
