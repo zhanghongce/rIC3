@@ -35,19 +35,23 @@ fn main() {
     } else {
         Aig::from_file(&options.model)
     };
-    let num_bads = aig.bads.len() + aig.outputs.len();
-    if num_bads == 0 {
+    if !aig.outputs.is_empty() {
+        println!("Warning: The outputs are ignored; the property should be in the 'bad' section of the AIGER.");
+        aig.outputs.clear();
+    }
+    let mut properties = Vec::new();
+    if aig.bads.is_empty() {
         println!("warning: no property to be checked");
         verify_certifaiger(&aig, &options);
         exit(20);
-    } else if num_bads > 1 {
+    } else if aig.bads.len() > 1 {
         if options.certify || options.certifaiger_path.is_some() {
             panic!("Error: Multiple properties detected. Cannot compress properties when certification is enabled.");
         }
         println!("Warning: Multiple properties detected. rIC3 has compressed them into a single property.");
         options.certifaiger_path = None;
         options.certify = false;
-        aig.compress_property();
+        properties = aig.compress_property();
     }
     let mut engine: Box<dyn Engine> = if let options::Engine::Portfolio = options.engine {
         Box::new(Portfolio::new(options.clone()))

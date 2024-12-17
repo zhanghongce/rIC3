@@ -69,11 +69,7 @@ impl Transys {
             init_map[l.var()] = Some(l.polarity());
         }
         let constraints: Cube = aig.constraints.iter().map(|c| c.to_lit()).collect();
-        let aig_bad = if aig.bads.is_empty() {
-            aig.outputs[0]
-        } else {
-            aig.bads[0]
-        };
+        let aig_bad = aig.bads[0];
         let mut next_map = LitMap::new();
         let mut prev_map = LitMap::new();
         for (l, p) in latchs.iter().zip(primes.iter()) {
