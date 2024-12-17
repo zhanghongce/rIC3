@@ -11,13 +11,22 @@
 
 To view the submission for HWMCC'24, please checkout the `HWMCC24` branch or download the binary release at https://github.com/gipsyh/rIC3-HWMCC24.
 
-## Build and Run
+
+## Install From Crates.io
+```cargo install rIC3```
+
+```rIC3 <aig model>```
+
+
+## Install From Source
 Currently, some dependency libraries are linked through pre-compiled static files in the repository, and they have a dependency on the glibc version. Ubuntu 20.04 or later works fine.
 
 - Install the Rust compiler https://www.rust-lang.org/
 - Switch to nightly ````rustup default nightly````
 - ````git clone --recurse-submodules https://github.com/gipsyh/rIC3````
-- ````cargo r --release -- <aig model>````
+- ```cd rIC3```
+- Build and Run ````cargo r --release -- <aig model>````
+- Install ```cargo install --path .```
 
 Copyright (C) 2023 - Present, Yuheng Su (gipsyh.icu@gmail.com). All rights reserved.
 
