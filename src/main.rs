@@ -45,16 +45,17 @@ fn main() {
         verify_certifaiger(&aig, &options);
         exit(20);
     } else if aig.bads.len() > 1 {
-        if options.certify || options.certifaiger_path.is_some() {
+        if options.certify {
             panic!("Error: Multiple properties detected. Cannot compress properties when certification is enabled.");
         }
-        println!("Warning: Multiple properties detected. rIC3 has compressed them into a single property.");
-        options.certifaiger_path = None;
+        if options.verbose > 0 {
+            println!("Warning: Multiple properties detected. rIC3 has compressed them into a single property.");
+        }
         options.certify = false;
         aig.compress_property();
     }
     let mut engine: Box<dyn Engine> = if let options::Engine::Portfolio = options.engine {
-        Box::new(Portfolio::new(options.clone(), &aig))
+        Box::new(Portfolio::new(options.clone(), &origin_aig))
     } else {
         let (aig, restore) = aig_preprocess(&aig, &options);
         let mut ts = Transys::from_aig(&aig, &restore);
