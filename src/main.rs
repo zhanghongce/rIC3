@@ -39,7 +39,7 @@ fn main() {
         println!("Warning: The outputs are ignored; the property should be in the 'bad' section of the AIGER.");
         aig.outputs.clear();
     }
-    let mut properties = Vec::new();
+    let origin_aig = aig.clone();
     if aig.bads.is_empty() {
         println!("warning: no property to be checked");
         verify_certifaiger(&aig, &options);
@@ -51,7 +51,7 @@ fn main() {
         println!("Warning: Multiple properties detected. rIC3 has compressed them into a single property.");
         options.certifaiger_path = None;
         options.certify = false;
-        properties = aig.compress_property();
+        aig.compress_property();
     }
     let mut engine: Box<dyn Engine> = if let options::Engine::Portfolio = options.engine {
         Box::new(Portfolio::new(options.clone()))
@@ -93,13 +93,13 @@ fn main() {
             if options.verbose > 0 {
                 println!("safe");
             }
-            check_certifaiger(&mut engine, &mut aig, &options)
+            check_certifaiger(&mut engine, &origin_aig, &options)
         }
         Some(false) => {
             if options.verbose > 0 {
                 println!("unsafe");
             }
-            check_witness(&mut engine, &aig, &options)
+            check_witness(&mut engine, &origin_aig, &options)
         }
         _ => {
             if options.verbose > 0 {
