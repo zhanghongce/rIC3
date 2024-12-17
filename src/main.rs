@@ -54,7 +54,7 @@ fn main() {
         aig.compress_property();
     }
     let mut engine: Box<dyn Engine> = if let options::Engine::Portfolio = options.engine {
-        Box::new(Portfolio::new(options.clone()))
+        Box::new(Portfolio::new(options.clone(), &aig))
     } else {
         let (aig, restore) = aig_preprocess(&aig, &options);
         let mut ts = Transys::from_aig(&aig, &restore);

@@ -35,6 +35,7 @@ impl PortfolioState {
 
 pub struct Portfolio {
     option: Options,
+    _model_file: NamedTempFile,
     engines: Vec<Command>,
     temp_dir: TempDir,
     engine_pids: Vec<i32>,
@@ -43,15 +44,18 @@ pub struct Portfolio {
 }
 
 impl Portfolio {
-    pub fn new(option: Options) -> Self {
+    pub fn new(option: Options, aig: &Aig) -> Self {
         let temp_dir = tempfile::TempDir::new_in("/tmp/rIC3/").unwrap();
         let temp_dir_path = temp_dir.path();
+        let model_file = tempfile::NamedTempFile::with_suffix_in(".aig", temp_dir_path).unwrap();
+        let model_path = model_file.path().as_os_str().to_str().unwrap();
+        aig.to_file(model_path, false);
         let mut engines = Vec::new();
         let mut new_engine = |args: &str| {
             let args = args.split(" ");
             let mut engine = Command::new(current_exe().unwrap());
             engine.env("RIC3_TMP_DIR", temp_dir_path);
-            engine.arg(&option.model);
+            engine.arg(model_path);
             engine.arg("-v");
             engine.arg("0");
             for a in args {
@@ -77,6 +81,7 @@ impl Portfolio {
         new_engine("-e kind --step 1");
         Self {
             option,
+            _model_file: model_file,
             engines,
             temp_dir,
             certificate: None,
