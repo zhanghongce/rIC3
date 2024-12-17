@@ -7,10 +7,8 @@ fn preprocess(f: String) {
     let num_input = aig.inputs.len();
     let num_latchs = aig.latchs.len();
     let num_constraints = aig.constraints.len();
-    if aig.outputs.is_empty() {
-        aig.outputs.push(aig.bads[0]);
-        aig.bads.clear();
-    }
+    aig.outputs.push(aig.bads[0]);
+    aig.bads.clear();
     let latchs = take(&mut aig.latchs);
     for l in latchs.iter() {
         aig.inputs.push(l.input);
@@ -38,8 +36,8 @@ fn preprocess(f: String) {
             .constraints
             .push(abc_aig.outputs[1 + num_latchs + i]);
     }
-    abc_aig.outputs.truncate(1);
-
+    abc_aig.bads.push(abc_aig.outputs[0]);
+    abc_aig.outputs.clear();
     assert!(abc_aig.inputs.len() == num_input);
     assert!(abc_aig.latchs.len() == num_latchs);
     assert!(abc_aig.constraints.len() == num_constraints);

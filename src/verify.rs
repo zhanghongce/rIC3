@@ -222,7 +222,9 @@ pub fn witness_encode(aig: &Aig, witness: &[Cube]) -> String {
     let p = aig
         .bads
         .iter()
-        .position(|b| simulate.value(*b) == TernaryValue::False)
+        .position(|b| {
+            simulate.value(*b) == TernaryValue::True
+        })
         .unwrap();
     wit[1] = format!("b{p}");
     wit.push(".\n".to_string());
