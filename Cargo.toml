@@ -12,7 +12,7 @@ rust-version = "1.85"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-aig = { path = "./deps/aig-rs", version = "0.2" }
+aig = { path = "./deps/aig-rs", version = "^0.2.3" }
 satif-minisat = { path = "./deps/minisat-rs", version = "0.2" }
 satif-cadical = { path = "./deps/cadical-rs", version = "0.1" }
 satif-kissat = { path = "./deps/kissat-rs", version = "0.4" }
