@@ -5,8 +5,8 @@ use std::collections::{HashMap, HashSet};
 
 pub fn aig_preprocess(aig: &Aig, options: &options::Options) -> (Aig, HashMap<usize, usize>) {
     let (mut aig, mut remap) = aig.coi_refine();
-    if !options.preprocess.no_abc
-        && !(matches!(options.engine, options::Engine::IC3) && options.ic3.inn)
+    if !(options.preprocess.no_abc
+        || matches!(options.engine, options::Engine::IC3) && options.ic3.inn)
     {
         let mut remap_retain = HashSet::new();
         remap_retain.insert(0);

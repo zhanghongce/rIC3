@@ -74,8 +74,12 @@ fn main() {
             let e: (usize, usize) =
                 unsafe { transmute((engine.as_mut() as *mut dyn Engine).to_raw_parts()) };
             let _ = ctrlc::set_handler(move || {
-                let e: *mut dyn Engine =
-                    unsafe { ptr::from_raw_parts_mut(e.0 as *mut (), transmute(e.1)) };
+                let e: *mut dyn Engine = unsafe {
+                    ptr::from_raw_parts_mut(
+                        e.0 as *mut (),
+                        transmute::<usize, std::ptr::DynMetadata<dyn rIC3::Engine>>(e.1),
+                    )
+                };
                 let e = unsafe { &mut *e };
                 e.statistic();
                 exit(124);

@@ -95,11 +95,11 @@ impl Frames {
         for l in lemma.iter() {
             tmp_lit_set.insert(*l);
         }
-        for i in frame..frames.len() {
-            for j in 0..frames[i].len() {
-                if frames[i][j].lemma.subsume_set(lemma, tmp_lit_set) {
+        for (i, fi) in frames.iter_mut().enumerate().skip(frame) {
+            for j in 0..fi.len() {
+                if fi[j].lemma.subsume_set(lemma, tmp_lit_set) {
                     tmp_lit_set.clear();
-                    return Some((i, &mut frames[i][j].po));
+                    return Some((i, &mut fi[j].po));
                 }
             }
         }

@@ -24,8 +24,8 @@ fn preprocess(f: String) {
     drop(aig);
     abc.execute_command("&get; &fraig -y; &put; orchestrate;");
     let mut abc_aig = abc.write_aig();
-    for i in 0..num_latchs {
-        let mut l = latchs[i];
+    for (i, li) in latchs.iter().enumerate() {
+        let mut l = *li;
         l.input = abc_aig.inputs[num_input + i];
         l.next = abc_aig.outputs[1 + i];
         abc_aig.latchs.push(l);

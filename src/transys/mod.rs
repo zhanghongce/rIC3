@@ -82,9 +82,9 @@ impl Transys {
             prev_map[!*p] = !l;
         }
         let mut trans = aig.get_cnf();
-        for i in 0..aig.latchs.len() {
-            trans.push(Clause::from([!primes[i], aig.latchs[i].next.to_lit()]));
-            trans.push(Clause::from([primes[i], !aig.latchs[i].next.to_lit()]));
+        for (i, pi) in primes.iter().enumerate() {
+            trans.push(Clause::from([!*pi, aig.latchs[i].next.to_lit()]));
+            trans.push(Clause::from([*pi, !aig.latchs[i].next.to_lit()]));
         }
         let bad = aig_bad.to_lit();
         let mut is_latch = VarMap::new_with(max_var);
@@ -95,11 +95,11 @@ impl Transys {
         for (d, v) in rst.iter() {
             restore.insert(Var::new(*d), Var::new(*v));
         }
-        for i in 0..aig.latchs.len() {
+        for (i, pi) in primes.iter().enumerate() {
             let n = aig.latchs[i].next.to_lit();
-            assert!(primes[i].polarity() == n.polarity());
+            assert!(pi.polarity() == n.polarity());
             if let Some(r) = restore.get(&n.var()) {
-                restore.insert(primes[i].var(), *r);
+                restore.insert(pi.var(), *r);
             }
         }
         Self {

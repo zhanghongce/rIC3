@@ -31,10 +31,10 @@ impl From<bool> for Lbool {
     }
 }
 
-impl Into<Option<bool>> for Lbool {
+impl From<Lbool> for Option<bool> {
     #[inline]
-    fn into(self) -> Option<bool> {
-        match self {
+    fn from(val: Lbool) -> Self {
+        match val {
             Lbool::TRUE => Some(true),
             Lbool::FALSE => Some(false),
             _ => None,
