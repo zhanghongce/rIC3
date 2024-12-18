@@ -6,7 +6,6 @@ use clap::Parser;
 use rIC3::{
     bmc::BMC,
     frontend::aig::aig_preprocess,
-    general,
     kind::Kind,
     options::{self, Options},
     portfolio::Portfolio,
@@ -67,7 +66,6 @@ fn main() {
         ts = ts.simplify(&[], ic3, !ic3);
         let mut engine: Box<dyn Engine> = match options.engine {
             options::Engine::IC3 => Box::new(IC3::new(options.clone(), ts, pre_lemmas)),
-            options::Engine::GIC3 => Box::new(general::IC3::new(options.clone(), ts)),
             options::Engine::Kind => Box::new(Kind::new(options.clone(), ts)),
             options::Engine::BMC => Box::new(BMC::new(options.clone(), ts)),
             _ => unreachable!(),

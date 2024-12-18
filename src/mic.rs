@@ -3,7 +3,7 @@ use crate::options::Options;
 use logic_form::{Clause, Cube, Lemma, Lit, Var};
 use std::{collections::HashSet, mem::swap, time::Instant};
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct DropVarParameter {
     pub limit: usize,
     max: usize,
@@ -21,16 +21,6 @@ impl DropVarParameter {
             limit: self.limit,
             max: self.max,
             level: self.level - 1,
-        }
-    }
-}
-
-impl Default for DropVarParameter {
-    fn default() -> Self {
-        Self {
-            limit: 0,
-            max: 0,
-            level: 0,
         }
     }
 }
@@ -165,16 +155,18 @@ impl IC3 {
             //         return None;
             //     }
             // }
-            if ctg < parameter.max && frame > 1 && !self.ts.cube_subsume_init(&model) {
-                if self.trivial_block(
+            if ctg < parameter.max
+                && frame > 1
+                && !self.ts.cube_subsume_init(&model)
+                && self.trivial_block(
                     frame - 1,
                     Lemma::new(model.clone()),
                     &[!full.clone()],
                     parameter.sub_level(),
-                ) {
-                    ctg += 1;
-                    continue;
-                }
+                )
+            {
+                ctg += 1;
+                continue;
             }
             ctg = 0;
             let cex_set: HashSet<Lit> = HashSet::from_iter(model.iter().cloned());

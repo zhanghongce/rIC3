@@ -64,8 +64,6 @@ pub struct Options {
 pub enum Engine {
     /// ic3
     IC3,
-    /// general ic3
-    GIC3,
     /// k-induction
     Kind,
     /// bmc
