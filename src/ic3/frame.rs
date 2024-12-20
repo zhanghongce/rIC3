@@ -1,4 +1,5 @@
-use crate::{proofoblig::ProofObligation, transys::Transys, IC3};
+use super::{proofoblig::ProofObligation, IC3};
+use crate::transys::Transys;
 use logic_form::{Cube, Lemma, Lit, LitSet};
 use std::{
     collections::HashSet,

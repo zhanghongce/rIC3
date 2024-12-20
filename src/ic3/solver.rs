@@ -1,4 +1,5 @@
-use crate::{gipsat::ClauseKind, IC3};
+use super::IC3;
+use crate::gipsat::ClauseKind;
 use logic_form::{Clause, Cube, Lemma, Lit, Var};
 use rand::seq::SliceRandom;
 use std::{collections::HashSet, rc::Rc, time::Instant};

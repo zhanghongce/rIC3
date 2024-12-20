@@ -1,4 +1,4 @@
-use crate::Transys;
+use super::Transys;
 use logic_form::{Clause, Cube, Lit, LitMap, Var};
 use satif::Satif;
 use std::collections::{HashMap, HashSet};

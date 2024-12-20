@@ -5,13 +5,14 @@ use btor::btor_to_aiger;
 use clap::Parser;
 use rIC3::{
     bmc::BMC,
+    check_certifaiger, check_witness,
     frontend::aig::aig_preprocess,
+    ic3::IC3,
     kind::Kind,
     options::{self, Options},
     portfolio::Portfolio,
     transys::Transys,
-    verify::{check_certifaiger, check_witness, verify_certifaiger},
-    Engine, IC3,
+    verify_certifaiger, Engine,
 };
 use std::{
     fs,

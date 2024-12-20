@@ -1,4 +1,4 @@
-use crate::IC3;
+use super::IC3;
 use logic_form::{Cube, Lemma};
 use std::cmp::Ordering;
 use std::collections::{btree_set, BTreeSet};
