@@ -105,7 +105,7 @@ impl IC3 {
     fn push_lemma(&mut self, frame: usize, mut cube: Cube) -> (usize, Cube) {
         let start = Instant::now();
         for i in frame + 1..=self.level() {
-            if let Some(true) = self.solvers[i - 1].inductive(&cube, true, false) {
+            if self.solvers[i - 1].inductive(&cube, true) {
                 cube = self.solvers[i - 1].inductive_core();
             } else {
                 return (i, cube);
@@ -160,9 +160,7 @@ impl IC3 {
                         return Some(false);
                     }
                 } else if self.options.ic3.inn && po.frame > 0 {
-                    assert!(!self.solvers[0]
-                        .solve_with_domain(&po.lemma, vec![], true, false)
-                        .unwrap());
+                    assert!(!self.solvers[0].solve_with_domain(&po.lemma, vec![], true));
                 } else {
                     self.add_obligation(po.clone());
                     assert!(po.frame == 0);
@@ -179,9 +177,7 @@ impl IC3 {
             }
             po.bump_act();
             let blocked_start = Instant::now();
-            let blocked = self
-                .blocked_with_ordered(po.frame, &po.lemma, false, false, false)
-                .unwrap();
+            let blocked = self.blocked_with_ordered(po.frame, &po.lemma, false, false);
             self.statistic.block_blocked_time += blocked_start.elapsed();
             if blocked {
                 let mic_type = if self.options.ic3.dynamic {
@@ -256,17 +252,13 @@ impl IC3 {
         }
         *limit -= 1;
         loop {
-            if self
-                .blocked_with_ordered_with_constrain(
-                    frame,
-                    &lemma,
-                    false,
-                    true,
-                    constrain.to_vec(),
-                    false,
-                )
-                .unwrap()
-            {
+            if self.blocked_with_ordered_with_constrain(
+                frame,
+                &lemma,
+                false,
+                true,
+                constrain.to_vec(),
+            ) {
                 let mut mic = self.solvers[frame - 1].inductive_core();
                 mic = self.mic(frame, mic, constrain, MicType::DropVar(parameter));
                 let (frame, mic) = self.push_lemma(frame, mic);
@@ -305,10 +297,7 @@ impl IC3 {
                     continue;
                 }
                 for ctp in 0..3 {
-                    if self
-                        .blocked_with_ordered(frame_idx + 1, &lemma, false, false, false)
-                        .unwrap()
-                    {
+                    if self.blocked_with_ordered(frame_idx + 1, &lemma, false, false) {
                         let core = if self.options.ic3.inn && self.ts.cube_subsume_init(&lemma) {
                             lemma.cube().clone()
                         } else {
@@ -329,9 +318,7 @@ impl IC3 {
                     }
                     let (ctp, _) = self.get_pred(frame_idx + 1, false);
                     if !self.ts.cube_subsume_init(&ctp)
-                        && self.solvers[frame_idx - 1]
-                            .inductive(&ctp, true, false)
-                            .unwrap()
+                        && self.solvers[frame_idx - 1].inductive(&ctp, true)
                     {
                         let core = self.solvers[frame_idx - 1].inductive_core();
                         let mic =
@@ -493,9 +480,7 @@ impl Engine for IC3 {
             self.ts.bad.clone()
         };
         assump.extend_from_slice(&b.input);
-        assert!(self.solvers[0]
-            .solve_with_domain(&assump, vec![], false, false)
-            .unwrap());
+        assert!(self.solvers[0].solve_with_domain(&assump, vec![], false));
         for l in self.ts.latchs.iter() {
             let l = l.lit();
             if let Some(v) = self.solvers[0].sat_value(l) {

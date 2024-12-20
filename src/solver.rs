@@ -10,9 +10,7 @@ impl IC3 {
         let solver = self.solvers.last_mut().unwrap();
         solver.assump = self.ts.bad.clone();
         solver.constrain = Default::default();
-        let res = solver
-            .solve_with_domain(&self.ts.bad, vec![], false, false)
-            .unwrap();
+        let res = solver.solve_with_domain(&self.ts.bad, vec![], false);
         self.statistic.block_get_bad_time += start.elapsed();
         if res {
             let frame = self.solvers.len();
@@ -26,9 +24,7 @@ impl IC3 {
 impl IC3 {
     #[inline]
     pub fn sat_contained(&mut self, frame: usize, lemma: &Lemma) -> bool {
-        !self.solvers[frame]
-            .solve_with_domain(lemma, vec![], true, false)
-            .unwrap()
+        !self.solvers[frame].solve_with_domain(lemma, vec![], true)
     }
 
     pub fn blocked_with_ordered(
@@ -37,11 +33,10 @@ impl IC3 {
         cube: &Cube,
         ascending: bool,
         strengthen: bool,
-        limit: bool,
-    ) -> Option<bool> {
+    ) -> bool {
         let mut ordered_cube = cube.clone();
         self.activity.sort_by_activity(&mut ordered_cube, ascending);
-        self.solvers[frame - 1].inductive(&ordered_cube, strengthen, limit)
+        self.solvers[frame - 1].inductive(&ordered_cube, strengthen)
     }
 
     pub fn blocked_with_ordered_with_constrain(
@@ -51,16 +46,10 @@ impl IC3 {
         ascending: bool,
         strengthen: bool,
         constrain: Vec<Clause>,
-        limit: bool,
-    ) -> Option<bool> {
+    ) -> bool {
         let mut ordered_cube = cube.clone();
         self.activity.sort_by_activity(&mut ordered_cube, ascending);
-        self.solvers[frame - 1].inductive_with_constrain(
-            &ordered_cube,
-            strengthen,
-            constrain,
-            limit,
-        )
+        self.solvers[frame - 1].inductive_with_constrain(&ordered_cube, strengthen, constrain)
     }
 
     pub fn get_pred(&mut self, frame: usize, strengthen: bool) -> (Cube, Cube) {
@@ -175,16 +164,10 @@ impl IC3 {
                 ts.init.push(!state.lit());
                 ts.init_map[state] = Some(false);
             }
-        } else if !self.solvers[0]
-            .solve_with_domain(&[state.lit()], vec![], true, false)
-            .unwrap()
-        {
+        } else if !self.solvers[0].solve_with_domain(&[state.lit()], vec![], true) {
             ts.init.push(!state.lit());
             ts.init_map[state] = Some(false);
-        } else if !self.solvers[0]
-            .solve_with_domain(&[!state.lit()], vec![], true, false)
-            .unwrap()
-        {
+        } else if !self.solvers[0].solve_with_domain(&[!state.lit()], vec![], true) {
             ts.init.push(state.lit());
             ts.init_map[state] = Some(true);
         }

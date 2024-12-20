@@ -77,12 +77,9 @@ impl Solver {
         self.pos_in_trail.truncate(level);
     }
 
-    pub fn search_with_restart(&mut self, assumption: &[Lit], limit: bool) -> Option<bool> {
+    pub fn search_with_restart(&mut self, assumption: &[Lit]) -> bool {
         let mut restarts = 0;
         loop {
-            if limit && restarts > 20 {
-                return None;
-            }
             if restarts > 10 && self.vsids.enable_bucket {
                 self.vsids.enable_bucket = false;
                 self.vsids.heap.clear();
@@ -97,7 +94,7 @@ impl Solver {
                 None => {
                     restarts += 1;
                 }
-                r => return r,
+                Some(r) => return r,
             }
         }
     }

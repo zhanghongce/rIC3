@@ -12,10 +12,7 @@ impl Solver {
         target_constrain: &Clause,
     ) -> Option<Cube> {
         let assump = Cube::from_iter(inputs.iter().chain(latchs.iter()).copied());
-        if self
-            .solve_with_domain(&assump, vec![target_constrain.clone()], true, false)
-            .unwrap()
-        {
+        if self.solve_with_domain(&assump, vec![target_constrain.clone()], true) {
             return None;
         }
         Some(

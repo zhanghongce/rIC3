@@ -71,17 +71,13 @@ impl IC3 {
                 return None;
             }
             self.statistic.num_down_sat += 1;
-            if self
-                .blocked_with_ordered_with_constrain(
-                    frame,
-                    &cube,
-                    false,
-                    true,
-                    constrain.to_vec(),
-                    false,
-                )
-                .unwrap()
-            {
+            if self.blocked_with_ordered_with_constrain(
+                frame,
+                &cube,
+                false,
+                true,
+                constrain.to_vec(),
+            ) {
                 return Some(self.solvers[frame - 1].inductive_core());
             }
             let mut ret = false;
@@ -137,10 +133,7 @@ impl IC3 {
                 return None;
             }
             self.statistic.num_down_sat += 1;
-            if self
-                .blocked_with_ordered(frame, &cube, false, true, false)
-                .unwrap()
-            {
+            if self.blocked_with_ordered(frame, &cube, false, true) {
                 return Some(self.solvers[frame - 1].inductive_core());
             }
             // for lit in cube.iter() {
@@ -341,9 +334,11 @@ impl IC3 {
                         j += 1;
                         continue;
                     }
-                    let res = self.solvers[frame - 1]
-                        .inductive_with_constrain(&try_gen, true, vec![!lemma.clone()], false)
-                        .unwrap();
+                    let res = self.solvers[frame - 1].inductive_with_constrain(
+                        &try_gen,
+                        true,
+                        vec![!lemma.clone()],
+                    );
                     self.statistic.xor_gen.statistic(res);
                     if res {
                         let core = self.solvers[frame - 1].inductive_core();
@@ -394,9 +389,7 @@ impl IC3 {
             }
         }
         if lemma.len() < o {
-            assert!(self.solvers[frame - 1]
-                .inductive(&lemma, true, false)
-                .unwrap());
+            assert!(self.solvers[frame - 1].inductive(&lemma, true));
             self.add_lemma(frame, lemma.clone(), false, None);
         }
     }

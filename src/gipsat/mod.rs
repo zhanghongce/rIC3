@@ -265,11 +265,10 @@ impl Solver {
         assump: &[Lit],
         constrain: Vec<Clause>,
         bucket: bool,
-        limit: bool,
-    ) -> Option<bool> {
+    ) -> bool {
         if self.trivial_unsat {
             self.unsat_core.clear();
-            return Some(false);
+            return false;
         }
         assert!(!assump.is_empty());
         self.statistic.num_solve += 1;
@@ -277,7 +276,7 @@ impl Solver {
         if self.propagate() != CREF_NONE {
             self.trivial_unsat = true;
             self.unsat_core.clear();
-            return Some(false);
+            return false;
         }
         let assump = if !constrain.is_empty() {
             assumption = Cube::new();
@@ -295,7 +294,7 @@ impl Solver {
                 bucket,
             ) {
                 self.unsat_core.clear();
-                return Some(false);
+                return false;
             };
             &assumption
         } else {
@@ -304,7 +303,7 @@ impl Solver {
         };
         self.clean_leanrt(true);
         self.simplify();
-        self.search_with_restart(assump, limit)
+        self.search_with_restart(assump)
     }
 
     pub fn inductive_with_constrain(
@@ -312,22 +311,19 @@ impl Solver {
         cube: &[Lit],
         strengthen: bool,
         mut constrain: Vec<Clause>,
-        limit: bool,
-    ) -> Option<bool> {
+    ) -> bool {
         let assump = self.ts.cube_next(cube);
         if strengthen {
             constrain.push(Clause::from_iter(cube.iter().map(|l| !*l)));
         }
-        let res = self
-            .solve_with_domain(&assump, constrain.clone(), true, limit)
-            .map(|l| !l);
+        let res = !self.solve_with_domain(&assump, constrain.clone(), true);
         self.assump = assump;
         self.constrain = constrain;
         res
     }
 
-    pub fn inductive(&mut self, cube: &[Lit], strengthen: bool, limit: bool) -> Option<bool> {
-        self.inductive_with_constrain(cube, strengthen, vec![], limit)
+    pub fn inductive(&mut self, cube: &[Lit], strengthen: bool) -> bool {
+        self.inductive_with_constrain(cube, strengthen, vec![])
     }
 
     pub fn inductive_core(&mut self) -> Cube {
