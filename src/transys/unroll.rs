@@ -1,7 +1,7 @@
 use crate::Transys;
-use logic_form::{Lit, LitMap, Var};
+use logic_form::{Clause, Cube, Lit, LitMap, Var};
 use satif::Satif;
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 
 #[derive(Debug)]
 pub struct TransysUnroll {
@@ -96,59 +96,64 @@ impl TransysUnroll {
         }
     }
 
-    // pub fn compile(&self) -> Transys {
-    //     let mut inputs = Vec::new();
-    //     let mut constraints = Vec::new();
-    //     let mut trans = Cnf::new();
-    //     for u in 0..=self.num_unroll {
-    //         for i in self.ts.inputs.iter() {
-    //             inputs.push(self.lit_next(i.lit(), u).var());
-    //         }
-    //         for c in self.ts.constraints.iter() {
-    //             let c = self.lit_next(*c, u);
-    //             constraints.push(c);
-    //         }
-    //         for c in self.ts.trans.iter() {
-    //             let c: Clause = c.iter().map(|l| self.lit_next(*l, u)).collect();
-    //             trans.push(c);
-    //         }
-    //     }
-    //     let mut next_map = self.ts.next_map.clone();
-    //     for l in self.ts.latchs.iter() {
-    //         let l = l.lit();
-    //         let n = self.lit_next(l, self.num_unroll);
-    //         next_map[l] = n;
-    //         next_map[!l] = !n;
-    //     }
-    //     let mut dependence = self.ts.dependence.clone();
-    //     dependence.reserve(Var::new(self.num_var));
-    //     for u in 1..=self.num_unroll {
-    //         for i in 0..self.ts.num_var {
-    //             let v = Var::new(i);
-    //             let n = self.lit_next(v.lit(), u).var();
-    //             if dependence[n].is_empty() {
-    //                 dependence[n] = dependence[v]
-    //                     .iter()
-    //                     .map(|l| self.lit_next(l.lit(), u).var())
-    //                     .collect()
-    //             }
-    //         }
-    //     }
-    //     Transys {
-    //         inputs,
-    //         latchs: self.ts.latchs.clone(),
-    //         init: self.ts.init.clone(),
-    //         bad: self.lit_next(self.ts.bad, 1),
-    //         init_map: self.ts.init_map.clone(),
-    //         constraints,
-    //         trans,
-    //         num_var: self.num_var,
-    //         next_map,
-    //         dependence,
-    //         max_latch: self.ts.max_latch,
-    //         latch_group: self.ts.latch_group.clone(),
-    //     }
-    // }
+    pub fn compile(&self) -> Transys {
+        let mut inputs = Vec::new();
+        let mut constraints = Cube::new();
+        let mut trans = Vec::new();
+        for u in 0..=self.num_unroll {
+            for i in self.ts.inputs.iter() {
+                inputs.push(self.lit_next(i.lit(), u).var());
+            }
+            for c in self.ts.constraints.iter() {
+                let c = self.lit_next(*c, u);
+                constraints.push(c);
+            }
+            for c in self.ts.trans.iter() {
+                let c: Clause = self.lits_next(c, u);
+                trans.push(c);
+            }
+        }
+        let mut next_map = self.ts.next_map.clone();
+        let mut prev_map = self.ts.prev_map.clone();
+        for l in self.ts.latchs.iter() {
+            let l = l.lit();
+            let n = self.lit_next(l, self.num_unroll);
+            next_map[l] = n;
+            prev_map[n] = l;
+            next_map[!l] = !n;
+            prev_map[!n] = !l;
+        }
+        let mut dependence = self.ts.dependence.clone();
+        dependence.reserve(self.max_var);
+        for u in 1..=self.num_unroll {
+            for i in 0..self.ts.num_var() {
+                let v = Var::new(i);
+                let n = self.lit_next(v.lit(), u).var();
+                if dependence[n].is_empty() {
+                    dependence[n] = dependence[v]
+                        .iter()
+                        .map(|l| self.lit_next(l.lit(), u).var())
+                        .collect()
+                }
+            }
+        }
+        Transys {
+            inputs,
+            latchs: self.ts.latchs.clone(),
+            init: self.ts.init.clone(),
+            bad: self.lits_next(&self.ts.bad, 1),
+            init_map: self.ts.init_map.clone(),
+            constraints,
+            trans,
+            max_var: self.max_var,
+            prev_map,
+            next_map,
+            dependence,
+            max_latch: self.ts.max_latch,
+            is_latch: self.ts.is_latch.clone(),
+            restore: HashMap::new(),
+        }
+    }
 
     // pub fn primed_constrains(&self) -> Transys {
     //     assert!(self.num_unroll == 1);

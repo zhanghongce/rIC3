@@ -11,6 +11,7 @@ mod mic;
 pub mod options;
 pub mod portfolio;
 mod proofoblig;
+mod solver;
 mod statistic;
 pub mod transys;
 pub mod verify;
@@ -71,12 +72,7 @@ impl IC3 {
     }
 
     fn extend(&mut self) {
-        let mut solver = Solver::new(
-            self.options.clone(),
-            Some(self.frame.len()),
-            &self.ts,
-            &self.frame,
-        );
+        let mut solver = Solver::new(self.options.clone(), Some(self.frame.len()), &self.ts);
         for v in self.auxiliary_var.iter() {
             solver.add_domain(*v, true);
         }
@@ -226,7 +222,7 @@ impl IC3 {
                     return None;
                 }
             } else {
-                let (model, inputs) = self.get_predecessor(po.frame, true);
+                let (model, inputs) = self.get_pred(po.frame, true);
                 self.add_obligation(ProofObligation::new(
                     po.frame - 1,
                     Lemma::new(model),
@@ -280,7 +276,7 @@ impl IC3 {
                 if *limit == 0 {
                     return false;
                 }
-                let model = Lemma::new(self.get_predecessor(frame, false).0);
+                let model = Lemma::new(self.get_pred(frame, false).0);
                 if !self.trivial_block_rec(frame - 1, model, constrain, limit, parameter) {
                     return false;
                 }
@@ -331,7 +327,7 @@ impl IC3 {
                     if !self.options.ic3.ctp {
                         break;
                     }
-                    let (ctp, _) = self.get_predecessor(frame_idx + 1, false);
+                    let (ctp, _) = self.get_pred(frame_idx + 1, false);
                     if !self.ts.cube_subsume_init(&ctp)
                         && self.solvers[frame_idx - 1]
                             .inductive(&ctp, true, false)
@@ -369,7 +365,7 @@ impl IC3 {
         let statistic = Statistic::new(&options.model);
         let activity = Activity::new(&ts);
         let frame = Frames::new(&ts);
-        let lift = Solver::new(options.clone(), None, &ts, &frame);
+        let lift = Solver::new(options.clone(), None, &ts);
         let abs_cst = if options.ic3.abs_cst {
             Cube::new()
         } else {

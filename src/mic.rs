@@ -149,7 +149,7 @@ impl IC3 {
             //         return None;
             //     }
             // }
-            let (model, _) = self.get_predecessor(frame, false);
+            let (model, _) = self.get_pred(frame, false);
             // for lit in cube.iter() {
             //     if keep.contains(lit) && !cex_set.contains(lit) {
             //         return None;
