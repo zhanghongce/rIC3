@@ -27,6 +27,7 @@ impl Solver {
         )
     }
 
+    #[allow(unused)]
     pub fn get_pred(&mut self, solver: &mut Solver, strengthen: bool) -> (Cube, Cube) {
         let mut cls: Cube = solver.assump.clone();
         cls.extend_from_slice(&self.ts.constraints);
