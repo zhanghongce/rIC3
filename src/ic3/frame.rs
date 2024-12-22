@@ -1,10 +1,10 @@
 use super::{proofoblig::ProofObligation, IC3};
 use crate::transys::Transys;
+use giputils::grc::Grc;
 use logic_form::{Cube, Lemma, Lit, LitSet};
 use std::{
     collections::HashSet,
     ops::{Deref, DerefMut},
-    rc::Rc,
 };
 
 #[derive(Clone)]
@@ -67,21 +67,20 @@ impl DerefMut for Frame {
     }
 }
 
-#[derive(Clone)]
 pub struct Frames {
-    frames: Rc<Vec<Frame>>,
+    frames: Vec<Frame>,
     pub early: usize,
-    pub tmp_lit_set: Rc<LitSet>,
+    pub tmp_lit_set: LitSet,
 }
 
 impl Frames {
-    pub fn new(ts: &Rc<Transys>) -> Self {
+    pub fn new(ts: &Grc<Transys>) -> Self {
         let mut tmp_lit_set = LitSet::new();
         tmp_lit_set.reserve(ts.max_latch);
         Self {
             frames: Default::default(),
             early: 1,
-            tmp_lit_set: Rc::new(tmp_lit_set),
+            tmp_lit_set,
         }
     }
 
@@ -91,20 +90,18 @@ impl Frames {
         frame: usize,
         lemma: &Lemma,
     ) -> Option<(usize, &'a mut Option<ProofObligation>)> {
-        let tmp_lit_set = unsafe { Rc::get_mut_unchecked(&mut self.tmp_lit_set) };
-        let frames = unsafe { Rc::get_mut_unchecked(&mut self.frames) };
         for l in lemma.iter() {
-            tmp_lit_set.insert(*l);
+            self.tmp_lit_set.insert(*l);
         }
-        for (i, fi) in frames.iter_mut().enumerate().skip(frame) {
+        for (i, fi) in self.frames.iter_mut().enumerate().skip(frame) {
             for j in 0..fi.len() {
-                if fi[j].lemma.subsume_set(lemma, tmp_lit_set) {
-                    tmp_lit_set.clear();
+                if fi[j].lemma.subsume_set(lemma, &self.tmp_lit_set) {
+                    self.tmp_lit_set.clear();
                     return Some((i, &mut fi[j].po));
                 }
             }
         }
-        tmp_lit_set.clear();
+        self.tmp_lit_set.clear();
         None
     }
 
@@ -198,7 +195,7 @@ impl DerefMut for Frames {
 impl Frames {
     #[inline]
     pub fn get_mut(&mut self) -> &mut Vec<Frame> {
-        unsafe { Rc::get_mut_unchecked(&mut self.frames) }
+        &mut self.frames
     }
 }
 

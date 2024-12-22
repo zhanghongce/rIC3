@@ -14,14 +14,13 @@ use analyze::Analyze;
 pub use cdb::ClauseKind;
 use cdb::{CRef, ClauseDB, CREF_NONE};
 use domain::Domain;
-use giputils::gvec::Gvec;
+use giputils::{grc::Grc, gvec::Gvec};
 use logic_form::{Clause, Cube, Lemma, Lit, LitSet, Var, VarMap};
 use propagate::Watchers;
 use rand::{rngs::StdRng, SeedableRng};
 use search::Value;
 use simplify::Simplify;
 use statistic::SolverStatistic;
-use std::rc::Rc;
 use utils::Lbool;
 use vsids::Vsids;
 
@@ -45,7 +44,7 @@ pub struct Solver {
     prepared_vsids: bool,
     constrain_act: Var,
 
-    ts: Rc<Transys>,
+    ts: Grc<Transys>,
 
     pub assump: Cube,
     pub constrain: Vec<Clause>,
@@ -59,7 +58,7 @@ pub struct Solver {
 }
 
 impl Solver {
-    pub fn new(options: Options, id: Option<usize>, ts: &Rc<Transys>) -> Self {
+    pub fn new(options: Options, id: Option<usize>, ts: &Grc<Transys>) -> Self {
         let mut solver = Self {
             id,
             ts: ts.clone(),

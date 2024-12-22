@@ -1,10 +1,10 @@
 use super::{search::Value, Solver};
 use crate::transys::Transys;
+use giputils::grc::Grc;
 use logic_form::{Var, VarSet};
 use std::{
     collections::HashSet,
     ops::{Deref, DerefMut},
-    rc::Rc,
 };
 
 pub struct Domain {
@@ -24,7 +24,7 @@ impl Domain {
         self.domain.reserve(var);
     }
 
-    pub fn calculate_constrain(&mut self, ts: &Rc<Transys>, value: &Value) {
+    pub fn calculate_constrain(&mut self, ts: &Grc<Transys>, value: &Value) {
         let mut marked = HashSet::new();
         let mut queue = Vec::new();
         for c in ts.constraints.iter() {
@@ -62,7 +62,7 @@ impl Domain {
     pub fn enable_local(
         &mut self,
         domain: impl Iterator<Item = Var>,
-        ts: &Rc<Transys>,
+        ts: &Grc<Transys>,
         _value: &Value,
     ) {
         self.reset();

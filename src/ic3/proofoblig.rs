@@ -1,10 +1,10 @@
 use super::IC3;
+use giputils::grc::Grc;
 use logic_form::{Cube, Lemma};
 use std::cmp::Ordering;
 use std::collections::{btree_set, BTreeSet};
 use std::fmt::{self, Debug};
 use std::ops::{Deref, DerefMut};
-use std::rc::Rc;
 
 #[derive(Default)]
 pub struct ProofObligationInner {
@@ -65,13 +65,13 @@ impl Debug for ProofObligationInner {
 
 #[derive(Clone, Default)]
 pub struct ProofObligation {
-    inner: Rc<ProofObligationInner>,
+    inner: Grc<ProofObligationInner>,
 }
 
 impl ProofObligation {
     pub fn new(frame: usize, lemma: Lemma, input: Cube, depth: usize, next: Option<Self>) -> Self {
         Self {
-            inner: Rc::new(ProofObligationInner {
+            inner: Grc::new(ProofObligationInner {
                 frame,
                 input,
                 lemma,
@@ -112,7 +112,7 @@ impl Deref for ProofObligation {
 impl DerefMut for ProofObligation {
     #[inline]
     fn deref_mut(&mut self) -> &mut Self::Target {
-        unsafe { Rc::get_mut_unchecked(&mut self.inner) }
+        &mut self.inner
     }
 }
 

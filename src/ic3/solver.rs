@@ -2,7 +2,7 @@ use super::IC3;
 use crate::gipsat::ClauseKind;
 use logic_form::{Clause, Cube, Lemma, Lit, Var};
 use rand::seq::SliceRandom;
-use std::{collections::HashSet, rc::Rc, time::Instant};
+use std::{collections::HashSet, time::Instant};
 
 impl IC3 {
     pub fn get_bad(&mut self) -> Option<(Cube, Cube)> {
@@ -118,8 +118,7 @@ impl IC3 {
     }
 
     pub fn new_var(&mut self) -> Var {
-        let ts = unsafe { Rc::get_mut_unchecked(&mut self.ts) };
-        let var = ts.new_var();
+        let var = self.ts.new_var();
         for s in self.solvers.iter_mut() {
             assert!(var == s.new_var());
         }
@@ -146,10 +145,10 @@ impl IC3 {
             }
             trans.push(nt);
         }
-        let ts = unsafe { Rc::get_mut_unchecked(&mut self.ts) };
-        ts.add_latch(state, next, init, trans.clone(), dep.clone());
-        let tmp_lit_set = unsafe { Rc::get_mut_unchecked(&mut self.frame.tmp_lit_set) };
-        tmp_lit_set.reserve(ts.max_latch);
+        self.ts
+            .add_latch(state, next, init, trans.clone(), dep.clone());
+        let tmp_lit_set = &mut self.frame.tmp_lit_set;
+        tmp_lit_set.reserve(self.ts.max_latch);
         for s in self.solvers.iter_mut().chain(Some(&mut self.lift)) {
             s.reset();
             for cls in trans.iter() {
@@ -159,18 +158,18 @@ impl IC3 {
         }
         if !self.solvers[0].value.v(state.lit()).is_none() {
             if self.solvers[0].value.v(state.lit()).is_true() {
-                ts.init.push(state.lit());
-                ts.init_map[state] = Some(true);
+                self.ts.init.push(state.lit());
+                self.ts.init_map[state] = Some(true);
             } else {
-                ts.init.push(!state.lit());
-                ts.init_map[state] = Some(false);
+                self.ts.init.push(!state.lit());
+                self.ts.init_map[state] = Some(false);
             }
         } else if !self.solvers[0].solve_with_domain(&[state.lit()], vec![], true) {
-            ts.init.push(!state.lit());
-            ts.init_map[state] = Some(false);
+            self.ts.init.push(!state.lit());
+            self.ts.init_map[state] = Some(false);
         } else if !self.solvers[0].solve_with_domain(&[!state.lit()], vec![], true) {
-            ts.init.push(state.lit());
-            ts.init_map[state] = Some(true);
+            self.ts.init.push(state.lit());
+            self.ts.init_map[state] = Some(true);
         }
         self.activity.reserve(state);
         self.auxiliary_var.push(state);

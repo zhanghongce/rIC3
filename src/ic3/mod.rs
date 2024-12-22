@@ -7,11 +7,12 @@ use crate::{
 use activity::Activity;
 use aig::{Aig, AigEdge};
 use frame::{Frame, Frames};
+use giputils::grc::Grc;
 use logic_form::{Clause, Cube, Lemma, Lit, Var};
 use mic::{DropVarParameter, MicType};
 use proofoblig::{ProofObligation, ProofObligationQueue};
 use statistic::Statistic;
-use std::{collections::HashMap, rc::Rc, time::Instant};
+use std::{collections::HashMap, time::Instant};
 
 mod activity;
 mod frame;
@@ -23,7 +24,7 @@ mod verify;
 
 pub struct IC3 {
     options: Options,
-    ts: Rc<Transys>,
+    ts: Grc<Transys>,
     frame: Frames,
     solvers: Vec<Solver>,
     lift: Solver,
@@ -64,9 +65,8 @@ impl IC3 {
                     }
                 }
             }
-            let ts = unsafe { Rc::get_mut_unchecked(&mut self.ts) };
             for i in init {
-                ts.add_init(i.var(), Some(i.polarity()));
+                self.ts.add_init(i.var(), Some(i.polarity()));
             }
         } else if self.level() == 1 {
             for cls in self.pre_lemmas.clone().iter() {
@@ -321,7 +321,7 @@ impl IC3 {
             ts = uts.interal_signals();
             ts = ts.simplify(&[], true, false);
         }
-        let ts = Rc::new(ts);
+        let ts = Grc::new(ts);
         let statistic = Statistic::new(&options.model);
         let activity = Activity::new(&ts);
         let frame = Frames::new(&ts);
