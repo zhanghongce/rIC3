@@ -161,14 +161,14 @@ impl Engine for Kind {
             } else {
                 (aux_latchs[i - 1], Some(false))
             };
-            certifaiger.new_latch(input, next, init);
+            certifaiger.add_latch(input, next, init);
         }
         for i in 1..k {
             for j in 0..ni {
-                certifaiger.new_latch(inputs[j + i * ni], inputs[j + (i - 1) * ni].into(), None);
+                certifaiger.add_latch(inputs[j + i * ni], inputs[j + (i - 1) * ni].into(), None);
             }
             for j in 0..nl {
-                certifaiger.new_latch(
+                certifaiger.add_latch(
                     latchs[j + i * nl].input,
                     latchs[j + (i - 1) * nl].input.into(),
                     None,
