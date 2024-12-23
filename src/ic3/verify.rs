@@ -17,12 +17,12 @@ pub fn verify_invariant(ts: &Transys, invariants: &[Lemma]) -> bool {
     for c in ts.constraints.iter() {
         solver.add_clause(&Clause::from([*c]));
     }
-    if solver.solve(&ts.bad) {
+    if solver.solve(&ts.bad.cube()) {
         return false;
     }
     for lemma in invariants {
         let mut assump = ts.constraints.clone();
-        assump.extend_from_slice(&ts.bad);
+        assump.push(ts.bad);
         if solver.solve(&ts.cube_next(lemma)) {
             return false;
         }
@@ -53,7 +53,7 @@ impl IC3 {
             let imply = if let Some(next) = bad.next.clone() {
                 self.ts.cube_next(&next.lemma)
             } else {
-                self.ts.bad.clone()
+                self.ts.bad.cube()
             };
             let mut assump = bad.lemma.deref().clone();
             assump.extend_from_slice(&bad.input);
@@ -86,7 +86,7 @@ impl IC3 {
         for k in 0..=uts.num_unroll {
             assumps.extend_from_slice(&uts.lits_next(constrain, k));
         }
-        assumps.extend_from_slice(&uts.lits_next(&uts.ts.bad, uts.num_unroll));
+        assumps.push(uts.lit_next(uts.ts.bad, uts.num_unroll));
         solver.solve(&assumps)
     }
 

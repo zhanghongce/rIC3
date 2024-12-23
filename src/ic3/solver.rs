@@ -9,9 +9,9 @@ impl IC3 {
         self.statistic.num_get_bad += 1;
         let start = Instant::now();
         let solver = self.solvers.last_mut().unwrap();
-        solver.assump = self.ts.bad.clone();
+        solver.assump = self.ts.bad.cube();
         solver.constrain = Default::default();
-        let res = solver.solve_with_domain(&self.ts.bad, vec![], false);
+        let res = solver.solve_with_domain(&self.ts.bad.cube(), vec![], false);
         self.statistic.block_get_bad_time += start.elapsed();
         if res {
             let frame = self.solvers.len();

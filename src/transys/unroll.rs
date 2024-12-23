@@ -141,7 +141,7 @@ impl TransysUnroll {
             inputs,
             latchs: self.ts.latchs.clone(),
             init: self.ts.init.clone(),
-            bad: self.lits_next(&self.ts.bad, 1),
+            bad: self.lit_next(self.ts.bad, 1),
             init_map: self.ts.init_map.clone(),
             constraints,
             trans,
@@ -236,10 +236,8 @@ impl TransysUnroll {
         for l in self.ts.latchs.iter() {
             keep.insert(self.ts.var_next(*l));
         }
-        for l in self.ts.bad.iter() {
-            if !self.ts.is_latch(l.var()) {
-                keep.insert(l.var());
-            }
+        if !self.ts.is_latch(self.ts.bad.var()) {
+            keep.insert(self.ts.bad.var());
         }
         let mut latchs = Vec::new();
         for v in Var::new(1)..=self.ts.max_var {
@@ -275,7 +273,7 @@ impl TransysUnroll {
             inputs: self.ts.inputs.clone(),
             latchs,
             init,
-            bad: self.ts.bad.clone(),
+            bad: self.ts.bad,
             init_map,
             constraints: self.ts.constraints.clone(),
             trans,

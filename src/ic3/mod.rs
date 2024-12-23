@@ -450,7 +450,7 @@ impl Engine for IC3 {
         let mut assump = if let Some(next) = b.next.clone() {
             self.ts.cube_next(&next.lemma)
         } else {
-            self.ts.bad.clone()
+            self.ts.bad.cube()
         };
         assump.extend_from_slice(&b.input);
         assert!(self.solvers[0].solve_with_domain(&assump, vec![], false));

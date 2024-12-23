@@ -75,7 +75,7 @@ impl Engine for Kind {
                 if bmc_k >= step {
                     for i in 0..=bmc_k - step {
                         self.solver
-                            .add_clause(&!self.uts.lits_next(&self.uts.ts.bad, i));
+                            .add_clause(&!self.uts.lits_next(&self.uts.ts.bad.cube(), i));
                     }
                 }
             }
@@ -85,7 +85,7 @@ impl Engine for Kind {
             }
             if !self.options.kind.no_bmc {
                 let mut assump = self.uts.ts.init.clone();
-                assump.extend_from_slice(&self.uts.lits_next(&self.uts.ts.bad, bmc_k));
+                assump.extend_from_slice(&self.uts.lits_next(&self.uts.ts.bad.cube(), bmc_k));
                 if self.options.verbose > 0 {
                     println!("kind bmc depth: {bmc_k}");
                 }
@@ -98,7 +98,7 @@ impl Engine for Kind {
             }
             for i in bmc_k + 1 - step..=bmc_k {
                 self.solver
-                    .add_clause(&!self.uts.lits_next(&self.uts.ts.bad, i));
+                    .add_clause(&!self.uts.lits_next(&self.uts.ts.bad.cube(), i));
             }
             self.uts.unroll_to(k);
             self.uts.load_trans(self.solver.as_mut(), k, true);
@@ -106,12 +106,13 @@ impl Engine for Kind {
                 println!("kind depth: {k}");
             }
             let res = if self.options.kind.kind_kissat {
-                for l in self.uts.lits_next(&self.uts.ts.bad, k) {
+                for l in self.uts.lits_next(&self.uts.ts.bad.cube(), k) {
                     self.solver.add_clause(&[l]);
                 }
                 self.solver.solve(&[])
             } else {
-                self.solver.solve(&self.uts.lits_next(&self.uts.ts.bad, k))
+                self.solver
+                    .solve(&self.uts.lits_next(&self.uts.ts.bad.cube(), k))
             };
             if !res {
                 println!("k-induction proofed in depth {k}");

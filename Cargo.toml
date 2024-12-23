@@ -16,7 +16,7 @@ aig = { path = "./deps/aig-rs", version = "0.2.4" }
 satif-minisat = { path = "./deps/minisat-rs", version = "0.2" }
 satif-cadical = { path = "./deps/cadical-rs", version = "0.1" }
 satif-kissat = { path = "./deps/kissat-rs", version = "0.4" }
-logic-form = { path = "./deps/logic-form", version = "0.2" }
+logic-form = { path = "./deps/logic-form", version = "0.2.6" }
 giputils = { path = "./deps/giputils", version = "0.2.3" }
 satif = { path = "./deps/satif", version = "0.1" }
 abc-rs = { path = "./deps/abc-rs", version = "0.2" }
