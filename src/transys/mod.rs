@@ -34,7 +34,7 @@ impl Transys {
     }
 
     pub fn from_aig(aig: &Aig, rst: &HashMap<usize, usize>) -> Self {
-        let false_lit: Lit = Lit::constant_lit(false);
+        let false_lit: Lit = Lit::constant(false);
         let mut max_var = false_lit.var();
         let mut new_var = || {
             max_var += 1;

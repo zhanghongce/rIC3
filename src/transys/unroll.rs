@@ -15,7 +15,7 @@ impl TransysUnroll {
     pub fn new(ts: &Transys) -> Self {
         let mut next_map: LitMap<Vec<_>> = LitMap::new();
         next_map.reserve(ts.max_var);
-        let false_lit = Lit::constant_lit(false);
+        let false_lit = Lit::constant(false);
         next_map[false_lit].push(false_lit);
         next_map[!false_lit].push(!false_lit);
         for v in Var::new(0)..=ts.max_var {
@@ -54,7 +54,7 @@ impl TransysUnroll {
     }
 
     pub fn unroll(&mut self) {
-        let false_lit = Lit::constant_lit(false);
+        let false_lit = Lit::constant(false);
         self.next_map[false_lit].push(false_lit);
         self.next_map[!false_lit].push(!false_lit);
         for v in Var::new(0)..=self.ts.max_var {
