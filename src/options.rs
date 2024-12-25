@@ -74,7 +74,7 @@ pub enum Engine {
 
 #[derive(Args, Clone, Debug)]
 pub struct IC3Options {
-    /// disable dynamic generalization
+    /// dynamic generalization
     #[arg(long = "ic3-dynamic", default_value_t = false)]
     pub dynamic: bool,
 
