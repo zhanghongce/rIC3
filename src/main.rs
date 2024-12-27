@@ -66,6 +66,9 @@ fn main() {
         let assert_constrain = matches!(options.engine, options::Engine::IC3);
         let keep_dep = assert_constrain;
         ts = ts.simplify(&[], keep_dep, !assert_constrain);
+        if options.verbose > 1 {
+            ts.print_info();
+        }
         let mut engine: Box<dyn Engine> = match options.engine {
             options::Engine::IC3 => Box::new(IC3::new(options.clone(), ts, pre_lemmas)),
             options::Engine::Kind => Box::new(Kind::new(options.clone(), ts)),

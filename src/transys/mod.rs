@@ -254,6 +254,13 @@ impl Transys {
         Lit::new(var, lit.polarity())
     }
 
+    pub fn print_info(&self) {
+        println!("num input: {}", self.inputs.len());
+        println!("num latch: {}", self.latchs.len());
+        println!("trans size: {}", self.trans.len());
+        println!("num constraint: {}", self.constraints.len());
+    }
+
     // pub fn simplify_eq_latchs(&mut self, eqs: &[(Lit, Lit)], keep_dep: bool) {
     //     let mut marks = HashSet::new();
     //     let mut map = HashMap::new();
