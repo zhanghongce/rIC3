@@ -13,9 +13,6 @@
 [submodule "deps/abc-rs"]
 	path = deps/abc-rs
 	url = https://github.com/gipsyh/abc-rs.git
-[submodule "deps/btor-rs"]
-	path = deps/btor-rs
-	url = https://github.com/gipsyh/btor-rs.git
 [submodule "deps/cadical-rs"]
 	path = deps/cadical-rs
 	url = https://github.com/gipsyh/cadical-rs.git
