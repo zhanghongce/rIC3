@@ -1,7 +1,6 @@
 #![feature(ptr_metadata)]
 
 use aig::Aig;
-use btor::btor_to_aiger;
 use clap::Parser;
 use rIC3::{
     bmc::BMC,
@@ -29,9 +28,7 @@ fn main() {
         println!("the model to be checked: {}", options.model);
     }
     let mut aig = if options.model.ends_with(".btor") || options.model.ends_with(".btor2") {
-        options.certifaiger_path = None;
-        options.certify = false;
-        btor_to_aiger(&options.model)
+        panic!("rIC3 currently does not support parsing BTOR2 files. Please use btor2aiger (https://github.com/hwmcc/btor2tools) to first convert them to AIG format.")
     } else {
         Aig::from_file(&options.model)
     };
