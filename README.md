@@ -1,8 +1,8 @@
 # rIC3 Hardware Model Checker
 
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
-[![Build](https://github.com/gipsyh/rIC3/actions/workflows/build.yml/badge.svg)](https://github.com/gipsyh/rIC3/actions/workflows/build.yml)
-[![Crates.io](https://img.shields.io/crates/v/rIC3.svg)](https://crates.io/crates/rIC3)
+[![CI](https://github.com/gipsyh/rIC3/actions/workflows/build.yml/badge.svg)](https://github.com/gipsyh/rIC3/actions/workflows/build.yml)
+[![Crates.io](https://img.shields.io/crates/v/rIC3.svg?logo=rust)](https://crates.io/crates/rIC3)
 
 ### HWMCC
 rIC3 achieved first place in both the bit-level track and the word-level bit-vector track at the 2024 Hardware Model Checking Competition ([HWMCC'24](https://hwmcc.github.io/2024/)).
