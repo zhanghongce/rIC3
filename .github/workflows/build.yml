@@ -19,6 +19,7 @@ jobs:
         with:
           toolchain: nightly
           override: true
+          components: rustfmt, clippy
       - name: Pull submodules
         run: git submodule update --init --recursive
       - name: Build
