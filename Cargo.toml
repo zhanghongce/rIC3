@@ -5,7 +5,7 @@ edition = "2021"
 authors = ["Yuheng Su <gipsyh.icu@gmail.com>"]
 repository = "https://github.com/gipsyh/rIC3"
 description = "rIC3: An efficient hardware model checker"
-keywords = ["model-checking", "formal-verification", "IC3", "SAT"]
+keywords = ["formal-verification", "model-checking", "IC3"]
 license = "GPL-3.0"
 rust-version = "1.85"
 
@@ -36,6 +36,9 @@ shadow-rs = "0.37.0"
 [features]
 default = ["no_bound_check"]
 no_bound_check = ["logic-form/no_bound_check", "giputils/no_bound_check"]
+
+[profile.dev]
+opt-level = 3
 
 [profile.release]
 lto = true

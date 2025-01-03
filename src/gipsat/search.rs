@@ -112,7 +112,7 @@ impl Solver {
                 let (learnt, btl) = self.analyze(conflict);
                 self.backtrack(btl, true);
                 if learnt.len() == 1 {
-                    assert!(btl == 0);
+                    debug_assert!(btl == 0);
                     if !self.assign_full(learnt[0], CREF_NONE) {
                         self.unsat_core.clear();
                         return Some(false);

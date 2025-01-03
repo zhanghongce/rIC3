@@ -175,7 +175,7 @@ impl Solver {
             if cref[0] == l {
                 cref.swap(0, 1);
             }
-            assert!(cref[1] == l);
+            debug_assert!(cref[1] == l);
             let new_watcher = Watcher::new(cid, cref[0]);
             let v = self.value.v(cref[0]);
             if v == Lbool::TRUE || (v != Lbool::FALSE && !self.domain.has(cref[0].var())) {

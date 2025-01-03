@@ -79,13 +79,13 @@ impl Clause {
 
     #[inline]
     fn get_act(&self) -> f32 {
-        assert!(self.is_learnt());
+        debug_assert!(self.is_learnt());
         unsafe { (*self.data.add(self.len() + 1)).act }
     }
 
     #[inline]
     fn get_mut_act(&mut self) -> &mut f32 {
-        assert!(self.is_learnt());
+        debug_assert!(self.is_learnt());
         unsafe { &mut (*self.data.add(self.len() + 1)).act }
     }
 
@@ -165,7 +165,7 @@ impl Allocator {
 
     #[inline]
     fn alloc(&mut self, clause: &[Lit], trans: bool, learnt: bool) -> CRef {
-        assert!(!(trans && learnt));
+        debug_assert!(!(trans && learnt));
         let cid = self.data.len();
         let mut additional = clause.len() + 1;
         if learnt {
@@ -336,7 +336,7 @@ impl Solver {
     }
 
     pub fn attach_clause(&mut self, clause: &[Lit], kind: ClauseKind) -> CRef {
-        assert!(clause.len() > 1);
+        debug_assert!(clause.len() > 1);
         let id = self.cdb.alloc(clause, kind);
         self.watchers.attach(id, self.cdb.get(id));
         id
@@ -392,7 +392,7 @@ impl Solver {
     #[inline]
     pub fn strengthen_clause(&mut self, cref: CRef, lit: Lit) {
         let mut cls = self.cdb.get(cref);
-        assert!(cls.len() > 2);
+        debug_assert!(cls.len() > 2);
         let pos = cls.slice().iter().position(|l| l.eq(&lit)).unwrap();
         self.watchers.detach(cref, self.cdb.get(cref));
         cls.swap_remove(pos);
@@ -429,7 +429,6 @@ impl Solver {
                 self.cdb.lemmas.push(cref);
             }
         }
-        // assert!(lazy_remove_map.is_empty());
     }
 
     pub fn garbage_collect(&mut self) {
