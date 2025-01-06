@@ -1,5 +1,3 @@
-pub mod others;
-pub mod sec;
 pub mod simplify;
 pub mod simulate;
 pub mod unroll;
@@ -260,23 +258,4 @@ impl Transys {
         println!("trans size: {}", self.trans.len());
         println!("num constraint: {}", self.constraints.len());
     }
-
-    // pub fn simplify_eq_latchs(&mut self, eqs: &[(Lit, Lit)], keep_dep: bool) {
-    //     let mut marks = HashSet::new();
-    //     let mut map = HashMap::new();
-    //     for (x, y) in eqs.iter() {
-    //         assert!(marks.insert(x.var()));
-    //         assert!(marks.insert(y.var()));
-    //         map.insert(*y, *x);
-    //         map.insert(!*y, !*x);
-    //     }
-    //     for cls in self.trans.iter_mut() {
-    //         for l in cls.iter_mut() {
-    //             if let Some(r) = map.get(l) {
-    //                 *l = *r;
-    //             }
-    //         }
-    //     }
-    //     self.simplify(&[], keep_dep, true)
-    // }
 }
