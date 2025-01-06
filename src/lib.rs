@@ -9,7 +9,6 @@ pub mod kind;
 pub mod options;
 pub mod portfolio;
 pub mod transys;
-pub mod wl;
 
 use aig::{Aig, TernarySimulate};
 use logic_form::{ternary::TernaryValue, Cube, Var};
