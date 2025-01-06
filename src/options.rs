@@ -97,10 +97,6 @@ pub struct IC3Options {
     #[arg(long = "ic3-inn", default_value_t = false)]
     pub inn: bool,
 
-    /// ic3 with backward
-    #[arg(long = "ic3-bwd", default_value_t = false)]
-    pub bwd: bool,
-
     /// ic3 with abstract constrains
     #[arg(long = "ic3-abs-cst", default_value_t = false)]
     pub abs_cst: bool,

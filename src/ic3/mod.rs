@@ -8,11 +8,11 @@ use activity::Activity;
 use aig::{Aig, AigEdge};
 use frame::{Frame, Frames};
 use giputils::grc::Grc;
-use logic_form::{Clause, Cube, Lemma, Lit, Var};
+use logic_form::{Clause, Cube, Lemma, Var};
 use mic::{DropVarParameter, MicType};
 use proofoblig::{ProofObligation, ProofObligationQueue};
 use statistic::Statistic;
-use std::{collections::HashMap, time::Instant};
+use std::time::Instant;
 
 mod activity;
 mod frame;
@@ -36,7 +36,6 @@ pub struct IC3 {
     bmc_solver: Option<(Box<dyn satif::Satif>, TransysUnroll)>,
 
     auxiliary_var: Vec<Var>,
-    xor_var: HashMap<(Lit, Lit), Lit>,
 }
 
 impl IC3 {
@@ -343,7 +342,6 @@ impl IC3 {
             abs_cst,
             pre_lemmas,
             auxiliary_var: Vec::new(),
-            xor_var: HashMap::new(),
             bmc_solver: None,
         };
         res.extend();
