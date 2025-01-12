@@ -20,18 +20,19 @@ To view the submission for HWMCC'24, please checkout the `HWMCC24` branch or dow
 ### Install From Crates.io
 ```cargo install rIC3```
 
-```rIC3 <aig model>```
-
-
 ### Install From Source
 Currently, some dependency libraries are linked through pre-compiled static files in the repository, and they have a dependency on the glibc version. Ubuntu 20.04 or later works fine.
 
 - Install the Rust compiler https://www.rust-lang.org/
-- Switch to nightly ````rustup default nightly````
-- ````git clone --recurse-submodules https://github.com/gipsyh/rIC3````
-- ```cd rIC3```
-- Build and Run ````cargo r --release -- <aig model>````
+- Switch to nightly ```rustup default nightly```
+- ```git clone --recurse-submodules https://github.com/gipsyh/rIC3```
+- Build ```cd rIC3 && cargo b --release```
+- Run ```cargo r --release -- <AIGER FILE>```
 - Install ```cargo install --path .```
+
+### Run
+- 16-threads Portfolio ```rIC3 <AIGER FILE>```
+- single-thread IC3 ```rIC3 -e ic3 <AIGER FILE>```
 
 Copyright (C) 2023 - Present, Yuheng Su (gipsyh.icu@gmail.com). All rights reserved.
 

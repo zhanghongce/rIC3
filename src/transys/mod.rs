@@ -60,7 +60,7 @@ impl Transys {
                 new_var().lit().not_if(!l.next.to_lit().polarity())
             })
             .collect();
-        let init = aig.latch_init_cube().to_cube();
+        let init = aig.latch_init_cube();
         let mut init_map = VarMap::new();
         init_map.reserve(max_latch);
         for l in init.iter() {
