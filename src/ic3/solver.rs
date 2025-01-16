@@ -13,12 +13,7 @@ impl IC3 {
         solver.constrain = Default::default();
         let res = solver.solve_with_domain(&self.ts.bad.cube(), vec![], false);
         self.statistic.block_get_bad_time += start.elapsed();
-        if res {
-            let frame = self.solvers.len();
-            Some(self.get_pred(frame, true))
-        } else {
-            None
-        }
+        res.then(|| self.get_pred(self.solvers.len(), true))
     }
 }
 
