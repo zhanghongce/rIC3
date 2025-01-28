@@ -37,3 +37,7 @@ Currently, some dependency libraries are linked through pre-compiled static file
 Copyright (C) 2023 - Present, Yuheng Su (gipsyh.icu@gmail.com). All rights reserved.
 
 Without obtaining authorization, rIC3 is not allowed to be used for any commercial purposes.
+
+### Docker
+- build image: ```docker build -t ric3 .```
+- run: ```docker run -v <AIGER FILE>:/model.aig ric3 model.aig```
