@@ -132,7 +132,7 @@ impl IC3 {
                         return Some(false);
                     }
                 } else if self.options.ic3.inn && po.frame > 0 {
-                    assert!(!self.solvers[0].solve_with_domain(&po.lemma, vec![], true));
+                    assert!(!self.solvers[0].solve(&po.lemma, vec![]));
                 } else {
                     self.add_obligation(po.clone());
                     assert!(po.frame == 0);
@@ -451,7 +451,7 @@ impl Engine for IC3 {
             self.ts.bad.cube()
         };
         assump.extend_from_slice(&b.input);
-        assert!(self.solvers[0].solve_with_domain(&assump, vec![], false));
+        assert!(self.solvers[0].solve(&assump, vec![]));
         for l in self.ts.latchs.iter() {
             let l = l.lit();
             if let Some(v) = self.solvers[0].sat_value(l) {

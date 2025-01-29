@@ -11,7 +11,7 @@ impl IC3 {
         let solver = self.solvers.last_mut().unwrap();
         solver.assump = self.ts.bad.cube();
         solver.constrain = Default::default();
-        let res = solver.solve_with_domain(&self.ts.bad.cube(), vec![], false);
+        let res = solver.solve_without_bucket(&self.ts.bad.cube(), vec![]);
         self.statistic.block_get_bad_time += start.elapsed();
         res.then(|| self.get_pred(self.solvers.len(), true))
     }
@@ -20,7 +20,7 @@ impl IC3 {
 impl IC3 {
     #[inline]
     pub fn sat_contained(&mut self, frame: usize, lemma: &Lemma) -> bool {
-        !self.solvers[frame].solve_with_domain(lemma, vec![], true)
+        !self.solvers[frame].solve(lemma, vec![])
     }
 
     pub fn blocked_with_ordered(
@@ -159,10 +159,10 @@ impl IC3 {
                 self.ts.init.push(!state.lit());
                 self.ts.init_map[state] = Some(false);
             }
-        } else if !self.solvers[0].solve_with_domain(&[state.lit()], vec![], true) {
+        } else if !self.solvers[0].solve(&[state.lit()], vec![]) {
             self.ts.init.push(!state.lit());
             self.ts.init_map[state] = Some(false);
-        } else if !self.solvers[0].solve_with_domain(&[!state.lit()], vec![], true) {
+        } else if !self.solvers[0].solve(&[!state.lit()], vec![]) {
             self.ts.init.push(state.lit());
             self.ts.init_map[state] = Some(true);
         }

@@ -259,12 +259,7 @@ impl Solver {
         true
     }
 
-    pub fn solve_with_domain(
-        &mut self,
-        assump: &[Lit],
-        constrain: Vec<Clause>,
-        bucket: bool,
-    ) -> bool {
+    fn solve_inner(&mut self, assump: &[Lit], constrain: Vec<Clause>, bucket: bool) -> bool {
         if self.trivial_unsat {
             self.unsat_core.clear();
             return false;
@@ -305,6 +300,14 @@ impl Solver {
         self.search_with_restart(assump)
     }
 
+    pub fn solve(&mut self, assump: &[Lit], constrain: Vec<Clause>) -> bool {
+        self.solve_inner(assump, constrain, true)
+    }
+
+    pub fn solve_without_bucket(&mut self, assump: &[Lit], constrain: Vec<Clause>) -> bool {
+        self.solve_inner(assump, constrain, false)
+    }
+
     pub fn inductive_with_constrain(
         &mut self,
         cube: &[Lit],
@@ -315,7 +318,7 @@ impl Solver {
         if strengthen {
             constrain.push(Clause::from_iter(cube.iter().map(|l| !*l)));
         }
-        let res = !self.solve_with_domain(&assump, constrain.clone(), true);
+        let res = !self.solve(&assump, constrain.clone());
         self.assump = assump;
         self.constrain = constrain;
         res
