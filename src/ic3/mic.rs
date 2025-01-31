@@ -53,7 +53,7 @@ impl IC3 {
         cube: &Cube,
         keep: &HashSet<Lit>,
         full: &Cube,
-        constrain: &[Clause],
+        constraint: &[Clause],
         cex: &mut Vec<(Lemma, Lemma)>,
     ) -> Option<Cube> {
         let mut cube = cube.clone();
@@ -75,7 +75,7 @@ impl IC3 {
                 &cube,
                 false,
                 true,
-                constrain.to_vec(),
+                constraint.to_vec(),
             ) {
                 return Some(self.solvers[frame - 1].inductive_core());
             }
@@ -200,7 +200,7 @@ impl IC3 {
         &mut self,
         frame: usize,
         mut cube: Cube,
-        constrain: &[Clause],
+        constraint: &[Clause],
         parameter: DropVarParameter,
     ) -> Cube {
         let start = Instant::now();
@@ -227,7 +227,7 @@ impl IC3 {
             let mut removed_cube = cube.clone();
             removed_cube.remove(i);
             let mic = if parameter.level == 0 {
-                self.down(frame, &removed_cube, &keep, &cube, constrain, &mut cex)
+                self.down(frame, &removed_cube, &keep, &cube, constraint, &mut cex)
             } else {
                 self.ctg_down(frame, &removed_cube, &keep, &cube, parameter)
             };
@@ -262,12 +262,12 @@ impl IC3 {
         &mut self,
         frame: usize,
         cube: Cube,
-        constrain: &[Clause],
+        constraint: &[Clause],
         mic_type: MicType,
     ) -> Cube {
         match mic_type {
             MicType::NoMic => cube,
-            MicType::DropVar(parameter) => self.mic_by_drop_var(frame, cube, constrain, parameter),
+            MicType::DropVar(parameter) => self.mic_by_drop_var(frame, cube, constraint, parameter),
         }
     }
 }

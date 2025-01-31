@@ -82,13 +82,13 @@ impl TransysUnroll {
         }
     }
 
-    pub fn load_trans<S: Satif + ?Sized>(&self, satif: &mut S, u: usize, constrain: bool) {
+    pub fn load_trans<S: Satif + ?Sized>(&self, satif: &mut S, u: usize, constraint: bool) {
         satif.new_var_to(self.max_var);
         for c in self.ts.trans.iter() {
             let c: Vec<Lit> = c.iter().map(|l| self.lit_next(*l, u)).collect();
             satif.add_clause(&c);
         }
-        if constrain {
+        if constraint {
             for c in self.ts.constraints.iter() {
                 let c = self.lit_next(*c, u);
                 satif.add_clause(&[c]);

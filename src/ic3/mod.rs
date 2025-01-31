@@ -209,7 +209,7 @@ impl IC3 {
         &mut self,
         frame: usize,
         lemma: Lemma,
-        constrain: &[Clause],
+        constraint: &[Clause],
         limit: &mut usize,
         parameter: DropVarParameter,
     ) -> bool {
@@ -229,10 +229,10 @@ impl IC3 {
                 &lemma,
                 false,
                 true,
-                constrain.to_vec(),
+                constraint.to_vec(),
             ) {
                 let mut mic = self.solvers[frame - 1].inductive_core();
-                mic = self.mic(frame, mic, constrain, MicType::DropVar(parameter));
+                mic = self.mic(frame, mic, constraint, MicType::DropVar(parameter));
                 let (frame, mic) = self.push_lemma(frame, mic);
                 self.add_lemma(frame - 1, mic, false, None);
                 return true;
@@ -241,7 +241,7 @@ impl IC3 {
                     return false;
                 }
                 let model = Lemma::new(self.get_pred(frame, false).0);
-                if !self.trivial_block_rec(frame - 1, model, constrain, limit, parameter) {
+                if !self.trivial_block_rec(frame - 1, model, constraint, limit, parameter) {
                     return false;
                 }
             }
@@ -252,11 +252,11 @@ impl IC3 {
         &mut self,
         frame: usize,
         lemma: Lemma,
-        constrain: &[Clause],
+        constraint: &[Clause],
         parameter: DropVarParameter,
     ) -> bool {
         let mut limit = parameter.limit;
-        self.trivial_block_rec(frame, lemma, constrain, &mut limit, parameter)
+        self.trivial_block_rec(frame, lemma, constraint, &mut limit, parameter)
     }
 
     fn propagate(&mut self, from: Option<usize>) -> bool {

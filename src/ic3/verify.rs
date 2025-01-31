@@ -80,11 +80,11 @@ impl IC3 {
         &mut self,
         solver: &mut S,
         uts: &TransysUnroll,
-        constrain: &Cube,
+        constraint: &Cube,
     ) -> bool {
         let mut assumps = Cube::new();
         for k in 0..=uts.num_unroll {
-            assumps.extend_from_slice(&uts.lits_next(constrain, k));
+            assumps.extend_from_slice(&uts.lits_next(constraint, k));
         }
         assumps.push(uts.lit_next(uts.ts.bad, uts.num_unroll));
         solver.solve(&assumps)

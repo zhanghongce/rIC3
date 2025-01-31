@@ -234,12 +234,12 @@ impl Transys {
         }
     }
 
-    pub fn load_trans(&self, satif: &mut impl Satif, constrain: bool) {
+    pub fn load_trans(&self, satif: &mut impl Satif, constraint: bool) {
         satif.new_var_to(self.max_var);
         for c in self.trans.iter() {
             satif.add_clause(c);
         }
-        if constrain {
+        if constraint {
             for c in self.constraints.iter() {
                 satif.add_clause(&[*c]);
             }

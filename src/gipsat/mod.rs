@@ -47,7 +47,7 @@ pub struct Solver {
     ts: Grc<Transys>,
 
     pub assump: Cube,
-    pub constrain: Vec<Clause>,
+    pub constraint: Vec<Clause>,
 
     trivial_unsat: bool,
     mark: LitSet,
@@ -80,7 +80,7 @@ impl Solver {
             prepared_vsids: false,
             constrain_act: Var(0),
             assump: Default::default(),
-            constrain: Default::default(),
+            constraint: Default::default(),
             statistic: Default::default(),
             trivial_unsat: false,
             rng: StdRng::seed_from_u64(options.rseed),
@@ -218,7 +218,7 @@ impl Solver {
     fn new_round(
         &mut self,
         domain: impl Iterator<Item = Var>,
-        constrain: Vec<Clause>,
+        constraint: Vec<Clause>,
         bucket: bool,
     ) -> bool {
         self.backtrack(0, self.temporary_domain);
@@ -231,7 +231,7 @@ impl Solver {
         // dbg!(self.cdb.num_leanrt());
         // dbg!(self.cdb.num_lemma());
 
-        for mut c in constrain {
+        for mut c in constraint {
             c.push(!self.constrain_act.lit());
             if let Some(c) = self.simplify_clause(&c) {
                 assert!(!c.is_empty());
@@ -259,7 +259,7 @@ impl Solver {
         true
     }
 
-    fn solve_inner(&mut self, assump: &[Lit], constrain: Vec<Clause>, bucket: bool) -> bool {
+    fn solve_inner(&mut self, assump: &[Lit], constraint: Vec<Clause>, bucket: bool) -> bool {
         if self.trivial_unsat {
             self.unsat_core.clear();
             return false;
@@ -272,19 +272,19 @@ impl Solver {
             self.unsat_core.clear();
             return false;
         }
-        let assump = if !constrain.is_empty() {
+        let assump = if !constraint.is_empty() {
             assumption = Cube::new();
             assumption.push(self.constrain_act.lit());
             assumption.extend_from_slice(assump);
             let mut cc = Vec::new();
-            for c in constrain.iter() {
+            for c in constraint.iter() {
                 for l in c.iter() {
                     cc.push(*l);
                 }
             }
             if !self.new_round(
                 assump.iter().chain(cc.iter()).map(|l| l.var()),
-                constrain,
+                constraint,
                 bucket,
             ) {
                 self.unsat_core.clear();
@@ -300,27 +300,27 @@ impl Solver {
         self.search_with_restart(assump)
     }
 
-    pub fn solve(&mut self, assump: &[Lit], constrain: Vec<Clause>) -> bool {
-        self.solve_inner(assump, constrain, true)
+    pub fn solve(&mut self, assump: &[Lit], constraint: Vec<Clause>) -> bool {
+        self.solve_inner(assump, constraint, true)
     }
 
-    pub fn solve_without_bucket(&mut self, assump: &[Lit], constrain: Vec<Clause>) -> bool {
-        self.solve_inner(assump, constrain, false)
+    pub fn solve_without_bucket(&mut self, assump: &[Lit], constraint: Vec<Clause>) -> bool {
+        self.solve_inner(assump, constraint, false)
     }
 
     pub fn inductive_with_constrain(
         &mut self,
         cube: &[Lit],
         strengthen: bool,
-        mut constrain: Vec<Clause>,
+        mut constraint: Vec<Clause>,
     ) -> bool {
         let assump = self.ts.cube_next(cube);
         if strengthen {
-            constrain.push(Clause::from_iter(cube.iter().map(|l| !*l)));
+            constraint.push(Clause::from_iter(cube.iter().map(|l| !*l)));
         }
-        let res = !self.solve(&assump, constrain.clone());
+        let res = !self.solve(&assump, constraint.clone());
         self.assump = assump;
-        self.constrain = constrain;
+        self.constraint = constraint;
         res
     }
 

@@ -10,7 +10,7 @@ impl IC3 {
         let start = Instant::now();
         let solver = self.solvers.last_mut().unwrap();
         solver.assump = self.ts.bad.cube();
-        solver.constrain = Default::default();
+        solver.constraint = Default::default();
         let res = solver.solve_without_bucket(&self.ts.bad.cube(), vec![]);
         self.statistic.block_get_bad_time += start.elapsed();
         res.then(|| self.get_pred(self.solvers.len(), true))
@@ -41,11 +41,11 @@ impl IC3 {
         cube: &Cube,
         ascending: bool,
         strengthen: bool,
-        constrain: Vec<Clause>,
+        constraint: Vec<Clause>,
     ) -> bool {
         let mut ordered_cube = cube.clone();
         self.activity.sort_by_activity(&mut ordered_cube, ascending);
-        self.solvers[frame - 1].inductive_with_constrain(&ordered_cube, strengthen, constrain)
+        self.solvers[frame - 1].inductive_with_constrain(&ordered_cube, strengthen, constraint)
     }
 
     pub fn get_pred(&mut self, frame: usize, strengthen: bool) -> (Cube, Cube) {
