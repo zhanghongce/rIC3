@@ -28,7 +28,7 @@ pub struct Solver {
     id: Option<usize>,
     cdb: ClauseDB,
     watchers: Watchers,
-    pub value: Value,
+    value: Value,
     trail: Gvec<Lit>,
     pos_in_trail: Vec<u32>,
     level: VarMap<u32>,

@@ -151,8 +151,8 @@ impl IC3 {
             }
             s.add_domain(state, true);
         }
-        if !self.solvers[0].value.v(state.lit()).is_none() {
-            if self.solvers[0].value.v(state.lit()).is_true() {
+        if !self.solvers[0].sat_value(state.lit()).is_none() {
+            if self.solvers[0].sat_value(state.lit()).unwrap() {
                 self.ts.init.push(state.lit());
                 self.ts.init_map[state] = Some(true);
             } else {
