@@ -5,7 +5,7 @@ mod pred;
 mod propagate;
 mod search;
 mod simplify;
-pub mod statistic;
+mod statistic;
 mod utils;
 mod vsids;
 
@@ -20,7 +20,7 @@ use propagate::Watchers;
 use rand::{rngs::StdRng, SeedableRng};
 use search::Value;
 use simplify::Simplify;
-use statistic::SolverStatistic;
+pub use statistic::SolverStatistic;
 use utils::Lbool;
 use vsids::Vsids;
 
@@ -46,8 +46,8 @@ pub struct Solver {
 
     ts: Grc<Transys>,
 
-    pub assump: Cube,
-    pub constraint: Vec<Clause>,
+    assump: Cube,
+    constraint: Vec<Clause>,
 
     trivial_unsat: bool,
     mark: LitSet,
@@ -260,6 +260,8 @@ impl Solver {
     }
 
     fn solve_inner(&mut self, assump: &[Lit], constraint: Vec<Clause>, bucket: bool) -> bool {
+        self.assump = assump.into();
+        self.constraint = constraint.clone();
         if self.trivial_unsat {
             self.unsat_core.clear();
             return false;
@@ -318,10 +320,7 @@ impl Solver {
         if strengthen {
             constraint.push(Clause::from_iter(cube.iter().map(|l| !*l)));
         }
-        let res = !self.solve(&assump, constraint.clone());
-        self.assump = assump;
-        self.constraint = constraint;
-        res
+        !self.solve(&assump, constraint.clone())
     }
 
     pub fn inductive(&mut self, cube: &[Lit], strengthen: bool) -> bool {
@@ -401,6 +400,11 @@ impl Solver {
     #[inline]
     pub fn unsat_has(&self, lit: Lit) -> bool {
         self.unsat_core.has(lit)
+    }
+
+    #[inline]
+    pub fn get_last_assump(&self) -> &Cube {
+        &self.assump
     }
 
     #[inline]

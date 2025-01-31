@@ -9,8 +9,6 @@ impl IC3 {
         self.statistic.num_get_bad += 1;
         let start = Instant::now();
         let solver = self.solvers.last_mut().unwrap();
-        solver.assump = self.ts.bad.cube();
-        solver.constraint = Default::default();
         let res = solver.solve_without_bucket(&self.ts.bad.cube(), vec![]);
         self.statistic.block_get_bad_time += start.elapsed();
         res.then(|| self.get_pred(self.solvers.len(), true))
@@ -51,7 +49,7 @@ impl IC3 {
     pub fn get_pred(&mut self, frame: usize, strengthen: bool) -> (Cube, Cube) {
         let start = Instant::now();
         let solver = &mut self.solvers[frame - 1];
-        let mut cls: Cube = solver.assump.clone();
+        let mut cls: Cube = solver.get_last_assump().clone();
         cls.extend_from_slice(&self.abs_cst);
         if cls.is_empty() {
             return (Cube::new(), Cube::new());
@@ -151,7 +149,7 @@ impl IC3 {
             }
             s.add_domain(state, true);
         }
-        if !self.solvers[0].sat_value(state.lit()).is_none() {
+        if self.solvers[0].sat_value(state.lit()).is_some() {
             if self.solvers[0].sat_value(state.lit()).unwrap() {
                 self.ts.init.push(state.lit());
                 self.ts.init_map[state] = Some(true);

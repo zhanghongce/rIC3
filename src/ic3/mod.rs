@@ -1,5 +1,5 @@
 use crate::{
-    gipsat::{statistic::SolverStatistic, Solver},
+    gipsat::{Solver, SolverStatistic},
     options::Options,
     transys::{unroll::TransysUnroll, Transys},
     witness_encode, Engine,
