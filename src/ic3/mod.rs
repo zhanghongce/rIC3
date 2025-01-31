@@ -11,6 +11,7 @@ use giputils::grc::Grc;
 use logic_form::{Clause, Cube, Lemma, Var};
 use mic::{DropVarParameter, MicType};
 use proofoblig::{ProofObligation, ProofObligationQueue};
+use rand::{rngs::StdRng, SeedableRng};
 use statistic::Statistic;
 use std::time::Instant;
 
@@ -36,6 +37,7 @@ pub struct IC3 {
     bmc_solver: Option<(Box<dyn satif::Satif>, TransysUnroll)>,
 
     auxiliary_var: Vec<Var>,
+    rng: StdRng,
 }
 
 impl IC3 {
@@ -330,6 +332,7 @@ impl IC3 {
         } else {
             ts.constraints.clone()
         };
+        let rng = StdRng::seed_from_u64(options.rseed);
         let mut res = Self {
             options,
             ts,
@@ -343,6 +346,7 @@ impl IC3 {
             pre_lemmas,
             auxiliary_var: Vec::new(),
             bmc_solver: None,
+            rng,
         };
         res.extend();
         res

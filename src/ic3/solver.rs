@@ -99,7 +99,7 @@ impl IC3 {
             if let Some(f) = order.get_mut(i) {
                 f(&mut latchs);
             } else {
-                latchs.shuffle(&mut self.lift.rng);
+                latchs.shuffle(&mut self.rng);
             }
             let olen = latchs.len();
             latchs = self.lift.minimal_pred(&inputs, &latchs, &cls).unwrap();

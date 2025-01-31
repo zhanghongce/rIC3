@@ -51,7 +51,7 @@ pub struct Solver {
 
     trivial_unsat: bool,
     mark: LitSet,
-    pub rng: StdRng,
+    rng: StdRng,
     pub statistic: SolverStatistic,
     #[allow(unused)]
     options: Options,
