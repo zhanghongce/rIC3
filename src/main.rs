@@ -1,18 +1,17 @@
 #![feature(ptr_metadata)]
 
 use aig::Aig;
-use btor::btor_to_aiger;
 use clap::Parser;
 use rIC3::{
     bmc::BMC,
+    check_certifaiger, check_witness,
     frontend::aig::aig_preprocess,
-    general,
+    ic3::IC3,
     kind::Kind,
     options::{self, Options},
     portfolio::Portfolio,
     transys::Transys,
-    verify::{check_certifaiger, check_witness, verify_certifaiger},
-    Engine, IC3,
+    verify_certifaiger, Engine,
 };
 use std::{
     fs,
@@ -29,16 +28,26 @@ fn main() {
         println!("the model to be checked: {}", options.model);
     }
     let mut aig = if options.model.ends_with(".btor") || options.model.ends_with(".btor2") {
-        options.certifaiger_path = None;
-        options.certify = false;
-        btor_to_aiger(&options.model)
+        panic!("rIC3 currently does not support parsing BTOR2 files. Please use btor2aiger (https://github.com/hwmcc/btor2tools) to first convert them to AIG format.")
     } else {
         Aig::from_file(&options.model)
     };
     if !aig.outputs.is_empty() {
-        println!("Warning: The outputs are ignored; the property should be in the 'bad' section of the AIGER.");
-        aig.outputs.clear();
+        if !options.certify {
+            // not certifying, move outputs to bads
+            // Move outputs to bads if no bad properties exist
+            if aig.bads.is_empty() {
+                aig.bads = std::mem::take(&mut aig.outputs);
+                println!(
+                    "Warning: property not found, moved {} outputs to bad properties",
+                    aig.bads.len()
+                );
+            } else {
+                println!("Warning: outputs are ignored");
+            }
+        }
     }
+
     let origin_aig = aig.clone();
     if aig.bads.is_empty() {
         println!("warning: no property to be checked");
@@ -63,11 +72,15 @@ fn main() {
         if options.preprocess.sec {
             panic!("sec not support");
         }
-        let ic3 = matches!(options.engine, options::Engine::IC3);
-        ts = ts.simplify(&[], ic3, !ic3);
+
+        let assert_constrain = matches!(options.engine, options::Engine::IC3);
+        let keep_dep = assert_constrain;
+        ts = ts.simplify(&[], keep_dep, !assert_constrain);
+        if options.verbose > 1 {
+            ts.print_info();
+        }
         let mut engine: Box<dyn Engine> = match options.engine {
             options::Engine::IC3 => Box::new(IC3::new(options.clone(), ts, pre_lemmas)),
-            options::Engine::GIC3 => Box::new(general::IC3::new(options.clone(), ts)),
             options::Engine::Kind => Box::new(Kind::new(options.clone(), ts)),
             options::Engine::BMC => Box::new(BMC::new(options.clone(), ts)),
             _ => unreachable!(),
@@ -76,8 +89,12 @@ fn main() {
             let e: (usize, usize) =
                 unsafe { transmute((engine.as_mut() as *mut dyn Engine).to_raw_parts()) };
             let _ = ctrlc::set_handler(move || {
-                let e: *mut dyn Engine =
-                    unsafe { ptr::from_raw_parts_mut(e.0 as *mut (), transmute(e.1)) };
+                let e: *mut dyn Engine = unsafe {
+                    ptr::from_raw_parts_mut(
+                        e.0 as *mut (),
+                        transmute::<usize, std::ptr::DynMetadata<dyn rIC3::Engine>>(e.1),
+                    )
+                };
                 let e = unsafe { &mut *e };
                 e.statistic();
                 exit(124);

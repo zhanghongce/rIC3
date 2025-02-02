@@ -1,5 +1,3 @@
-pub mod others;
-pub mod sec;
 pub mod simplify;
 pub mod simulate;
 pub mod unroll;
@@ -14,7 +12,7 @@ pub struct Transys {
     pub inputs: Vec<Var>,
     pub latchs: Vec<Var>,
     pub init: Cube,
-    pub bad: Cube,
+    pub bad: Lit,
     pub init_map: VarMap<Option<bool>>,
     pub constraints: Cube,
     pub trans: Vec<Clause>,
@@ -34,7 +32,7 @@ impl Transys {
     }
 
     pub fn from_aig(aig: &Aig, rst: &HashMap<usize, usize>) -> Self {
-        let false_lit: Lit = Lit::constant_lit(false);
+        let false_lit: Lit = Lit::constant(false);
         let mut max_var = false_lit.var();
         let mut new_var = || {
             max_var += 1;
@@ -62,7 +60,7 @@ impl Transys {
                 new_var().lit().not_if(!l.next.to_lit().polarity())
             })
             .collect();
-        let init = aig.latch_init_cube().to_cube();
+        let init = aig.latch_init_cube();
         let mut init_map = VarMap::new();
         init_map.reserve(max_latch);
         for l in init.iter() {
@@ -82,9 +80,9 @@ impl Transys {
             prev_map[!*p] = !l;
         }
         let mut trans = aig.get_cnf();
-        for i in 0..aig.latchs.len() {
-            trans.push(Clause::from([!primes[i], aig.latchs[i].next.to_lit()]));
-            trans.push(Clause::from([primes[i], !aig.latchs[i].next.to_lit()]));
+        for (i, pi) in primes.iter().enumerate() {
+            trans.push(Clause::from([!*pi, aig.latchs[i].next.to_lit()]));
+            trans.push(Clause::from([*pi, !aig.latchs[i].next.to_lit()]));
         }
         let bad = aig_bad.to_lit();
         let mut is_latch = VarMap::new_with(max_var);
@@ -95,18 +93,18 @@ impl Transys {
         for (d, v) in rst.iter() {
             restore.insert(Var::new(*d), Var::new(*v));
         }
-        for i in 0..aig.latchs.len() {
+        for (i, pi) in primes.iter().enumerate() {
             let n = aig.latchs[i].next.to_lit();
-            assert!(primes[i].polarity() == n.polarity());
+            assert!(pi.polarity() == n.polarity());
             if let Some(r) = restore.get(&n.var()) {
-                restore.insert(primes[i].var(), *r);
+                restore.insert(pi.var(), *r);
             }
         }
         Self {
             inputs,
             latchs,
             init,
-            bad: Cube::from([bad]),
+            bad,
             init_map,
             constraints,
             trans,
@@ -236,12 +234,12 @@ impl Transys {
         }
     }
 
-    pub fn load_trans(&self, satif: &mut impl Satif, constrain: bool) {
+    pub fn load_trans(&self, satif: &mut impl Satif, constraint: bool) {
         satif.new_var_to(self.max_var);
         for c in self.trans.iter() {
             satif.add_clause(c);
         }
-        if constrain {
+        if constraint {
             for c in self.constraints.iter() {
                 satif.add_clause(&[*c]);
             }
@@ -254,22 +252,10 @@ impl Transys {
         Lit::new(var, lit.polarity())
     }
 
-    // pub fn simplify_eq_latchs(&mut self, eqs: &[(Lit, Lit)], keep_dep: bool) {
-    //     let mut marks = HashSet::new();
-    //     let mut map = HashMap::new();
-    //     for (x, y) in eqs.iter() {
-    //         assert!(marks.insert(x.var()));
-    //         assert!(marks.insert(y.var()));
-    //         map.insert(*y, *x);
-    //         map.insert(!*y, !*x);
-    //     }
-    //     for cls in self.trans.iter_mut() {
-    //         for l in cls.iter_mut() {
-    //             if let Some(r) = map.get(l) {
-    //                 *l = *r;
-    //             }
-    //         }
-    //     }
-    //     self.simplify(&[], keep_dep, true)
-    // }
+    pub fn print_info(&self) {
+        println!("num input: {}", self.inputs.len());
+        println!("num latch: {}", self.latchs.len());
+        println!("trans size: {}", self.trans.len());
+        println!("num constraint: {}", self.constraints.len());
+    }
 }

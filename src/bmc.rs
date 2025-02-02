@@ -1,8 +1,7 @@
 use crate::{
     options::Options,
     transys::{unroll::TransysUnroll, Transys},
-    verify::witness_encode,
-    Engine,
+    witness_encode, Engine,
 };
 use aig::Aig;
 use logic_form::Cube;
@@ -55,7 +54,7 @@ impl Engine for BMC {
             for s in last_bound..=k {
                 self.uts.load_trans(self.solver.as_mut(), s, true);
             }
-            let mut assump = self.uts.lits_next(&self.uts.ts.bad, k);
+            let mut assump = self.uts.lits_next(&self.uts.ts.bad.cube(), k);
             if self.options.bmc.bmc_kissat {
                 for b in assump.iter() {
                     self.solver.add_clause(&[*b]);

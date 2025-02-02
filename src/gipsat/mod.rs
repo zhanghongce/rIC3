@@ -1,25 +1,26 @@
 mod analyze;
 mod cdb;
 mod domain;
+mod pred;
 mod propagate;
 mod search;
 mod simplify;
-pub mod statistic;
+mod statistic;
 mod utils;
 mod vsids;
 
-use crate::{frame::Frames, options::Options, transys::Transys, IC3};
+use crate::{options::Options, transys::Transys};
 use analyze::Analyze;
-use cdb::{CRef, ClauseDB, ClauseKind, CREF_NONE};
+pub use cdb::ClauseKind;
+use cdb::{CRef, ClauseDB, CREF_NONE};
 use domain::Domain;
-use giputils::gvec::Gvec;
+use giputils::{grc::Grc, gvec::Gvec};
 use logic_form::{Clause, Cube, Lemma, Lit, LitSet, Var, VarMap};
 use propagate::Watchers;
-use rand::{prelude::SliceRandom, rngs::StdRng, SeedableRng};
+use rand::{rngs::StdRng, SeedableRng};
 use search::Value;
 use simplify::Simplify;
-use statistic::SolverStatistic;
-use std::{collections::HashSet, rc::Rc, time::Instant};
+pub use statistic::SolverStatistic;
 use utils::Lbool;
 use vsids::Vsids;
 
@@ -38,16 +39,15 @@ pub struct Solver {
     analyze: Analyze,
     simplify: Simplify,
     unsat_core: LitSet,
-    domain: Domain,
+    pub domain: Domain,
     temporary_domain: bool,
     prepared_vsids: bool,
     constrain_act: Var,
 
-    ts: Rc<Transys>,
-    _frame: Frames,
+    ts: Grc<Transys>,
 
     assump: Cube,
-    constrain: Vec<Clause>,
+    constraint: Vec<Clause>,
 
     trivial_unsat: bool,
     mark: LitSet,
@@ -58,11 +58,10 @@ pub struct Solver {
 }
 
 impl Solver {
-    pub fn new(options: Options, id: Option<usize>, ts: &Rc<Transys>, frame: &Frames) -> Self {
+    pub fn new(options: Options, id: Option<usize>, ts: &Grc<Transys>) -> Self {
         let mut solver = Self {
             id,
             ts: ts.clone(),
-            _frame: frame.clone(),
             cdb: Default::default(),
             watchers: Default::default(),
             value: Default::default(),
@@ -81,7 +80,7 @@ impl Solver {
             prepared_vsids: false,
             constrain_act: Var(0),
             assump: Default::default(),
-            constrain: Default::default(),
+            constraint: Default::default(),
             statistic: Default::default(),
             trivial_unsat: false,
             rng: StdRng::seed_from_u64(options.rseed),
@@ -148,7 +147,7 @@ impl Solver {
         Some(clause)
     }
 
-    fn add_clause_inner(&mut self, clause: &[Lit], mut kind: ClauseKind) -> CRef {
+    pub fn add_clause_inner(&mut self, clause: &[Lit], mut kind: ClauseKind) -> CRef {
         let Some(clause) = self.simplify_clause(clause) else {
             return CREF_NONE;
         };
@@ -219,7 +218,7 @@ impl Solver {
     fn new_round(
         &mut self,
         domain: impl Iterator<Item = Var>,
-        constrain: Vec<Clause>,
+        constraint: Vec<Clause>,
         bucket: bool,
     ) -> bool {
         self.backtrack(0, self.temporary_domain);
@@ -232,7 +231,7 @@ impl Solver {
         // dbg!(self.cdb.num_leanrt());
         // dbg!(self.cdb.num_lemma());
 
-        for mut c in constrain {
+        for mut c in constraint {
             c.push(!self.constrain_act.lit());
             if let Some(c) = self.simplify_clause(&c) {
                 assert!(!c.is_empty());
@@ -260,16 +259,12 @@ impl Solver {
         true
     }
 
-    pub fn solve_with_domain(
-        &mut self,
-        assump: &[Lit],
-        constrain: Vec<Clause>,
-        bucket: bool,
-        limit: bool,
-    ) -> Option<bool> {
+    fn solve_inner(&mut self, assump: &[Lit], constraint: Vec<Clause>, bucket: bool) -> bool {
+        self.assump = assump.into();
+        self.constraint = constraint.clone();
         if self.trivial_unsat {
             self.unsat_core.clear();
-            return Some(false);
+            return false;
         }
         assert!(!assump.is_empty());
         self.statistic.num_solve += 1;
@@ -277,25 +272,25 @@ impl Solver {
         if self.propagate() != CREF_NONE {
             self.trivial_unsat = true;
             self.unsat_core.clear();
-            return Some(false);
+            return false;
         }
-        let assump = if !constrain.is_empty() {
+        let assump = if !constraint.is_empty() {
             assumption = Cube::new();
             assumption.push(self.constrain_act.lit());
             assumption.extend_from_slice(assump);
             let mut cc = Vec::new();
-            for c in constrain.iter() {
+            for c in constraint.iter() {
                 for l in c.iter() {
                     cc.push(*l);
                 }
             }
             if !self.new_round(
                 assump.iter().chain(cc.iter()).map(|l| l.var()),
-                constrain,
+                constraint,
                 bucket,
             ) {
                 self.unsat_core.clear();
-                return Some(false);
+                return false;
             };
             &assumption
         } else {
@@ -304,30 +299,32 @@ impl Solver {
         };
         self.clean_leanrt(true);
         self.simplify();
-        self.search_with_restart(assump, limit)
+        self.search_with_restart(assump)
+    }
+
+    pub fn solve(&mut self, assump: &[Lit], constraint: Vec<Clause>) -> bool {
+        self.solve_inner(assump, constraint, true)
+    }
+
+    pub fn solve_without_bucket(&mut self, assump: &[Lit], constraint: Vec<Clause>) -> bool {
+        self.solve_inner(assump, constraint, false)
     }
 
     pub fn inductive_with_constrain(
         &mut self,
         cube: &[Lit],
         strengthen: bool,
-        mut constrain: Vec<Clause>,
-        limit: bool,
-    ) -> Option<bool> {
+        mut constraint: Vec<Clause>,
+    ) -> bool {
         let assump = self.ts.cube_next(cube);
         if strengthen {
-            constrain.push(Clause::from_iter(cube.iter().map(|l| !*l)));
+            constraint.push(Clause::from_iter(cube.iter().map(|l| !*l)));
         }
-        let res = self
-            .solve_with_domain(&assump, constrain.clone(), true, limit)
-            .map(|l| !l);
-        self.assump = assump;
-        self.constrain = constrain;
-        res
+        !self.solve(&assump, constraint.clone())
     }
 
-    pub fn inductive(&mut self, cube: &[Lit], strengthen: bool, limit: bool) -> Option<bool> {
-        self.inductive_with_constrain(cube, strengthen, vec![], limit)
+    pub fn inductive(&mut self, cube: &[Lit], strengthen: bool) -> bool {
+        self.inductive_with_constrain(cube, strengthen, vec![])
     }
 
     pub fn inductive_core(&mut self) -> Cube {
@@ -406,6 +403,11 @@ impl Solver {
     }
 
     #[inline]
+    pub fn get_last_assump(&self) -> &Cube {
+        &self.assump
+    }
+
+    #[inline]
     #[allow(unused)]
     pub fn assert_value(&mut self, lit: Lit) -> Option<bool> {
         self.reset();
@@ -424,218 +426,5 @@ impl Solver {
             }
         }
         latchs
-    }
-}
-
-impl IC3 {
-    pub fn get_bad(&mut self) -> Option<(Cube, Cube)> {
-        self.statistic.num_get_bad += 1;
-        let start = Instant::now();
-        let solver = self.solvers.last_mut().unwrap();
-        solver.assump = self.ts.bad.clone();
-        solver.constrain = Default::default();
-        let res = solver
-            .solve_with_domain(&self.ts.bad, vec![], false, false)
-            .unwrap();
-        self.statistic.block_get_bad_time += start.elapsed();
-        if res {
-            let frame = self.solvers.len();
-            Some(self.get_predecessor(frame, true))
-        } else {
-            None
-        }
-    }
-}
-
-impl IC3 {
-    #[inline]
-    pub fn sat_contained(&mut self, frame: usize, lemma: &Lemma) -> bool {
-        !self.solvers[frame]
-            .solve_with_domain(lemma, vec![], true, false)
-            .unwrap()
-    }
-
-    pub fn blocked_with_ordered(
-        &mut self,
-        frame: usize,
-        cube: &Cube,
-        ascending: bool,
-        strengthen: bool,
-        limit: bool,
-    ) -> Option<bool> {
-        let mut ordered_cube = cube.clone();
-        self.activity.sort_by_activity(&mut ordered_cube, ascending);
-        self.solvers[frame - 1].inductive(&ordered_cube, strengthen, limit)
-    }
-
-    pub fn blocked_with_ordered_with_constrain(
-        &mut self,
-        frame: usize,
-        cube: &Cube,
-        ascending: bool,
-        strengthen: bool,
-        constrain: Vec<Clause>,
-        limit: bool,
-    ) -> Option<bool> {
-        let mut ordered_cube = cube.clone();
-        self.activity.sort_by_activity(&mut ordered_cube, ascending);
-        self.solvers[frame - 1].inductive_with_constrain(
-            &ordered_cube,
-            strengthen,
-            constrain,
-            limit,
-        )
-    }
-
-    #[inline]
-    fn minimal_predecessor(
-        lift: &mut Solver,
-        inputs: &[Lit],
-        latchs: &[Lit],
-        target_constrain: &Clause,
-    ) -> Option<Cube> {
-        let assump = Cube::from_iter(inputs.iter().chain(latchs.iter()).copied());
-        if lift
-            .solve_with_domain(&assump, vec![target_constrain.clone()], true, false)
-            .unwrap()
-        {
-            return None;
-        }
-        Some(
-            latchs
-                .iter()
-                .filter(|l| lift.unsat_has(**l))
-                .copied()
-                .collect(),
-        )
-    }
-
-    pub fn get_predecessor(&mut self, frame: usize, strengthen: bool) -> (Cube, Cube) {
-        let start = Instant::now();
-        let solver = &mut self.solvers[frame - 1];
-        let mut cls: Cube = solver.assump.clone();
-        cls.extend_from_slice(&self.abs_cst);
-        if cls.is_empty() {
-            return (Cube::new(), Cube::new());
-        }
-        let in_cls: HashSet<Var> = HashSet::from_iter(cls.iter().map(|l| l.var()));
-        let cls = !cls;
-        let mut inputs = Cube::new();
-        for input in self.ts.inputs.iter() {
-            let lit = input.lit();
-            if let Some(v) = solver.sat_value(lit) {
-                inputs.push(lit.not_if(!v));
-            }
-        }
-        self.lift.set_domain(cls.iter().cloned());
-        let mut latchs = Cube::new();
-        for latch in self.ts.latchs.iter() {
-            let lit = latch.lit();
-            if self.lift.domain.has(lit.var()) {
-                if let Some(v) = solver.sat_value(lit) {
-                    if in_cls.contains(latch) || !solver.flip_to_none(*latch) {
-                        latchs.push(lit.not_if(!v));
-                    }
-                }
-            }
-        }
-        let inn: Box<dyn FnMut(&mut Cube)> = Box::new(|cube: &mut Cube| {
-            cube.sort();
-            cube.reverse();
-        });
-        let act: Box<dyn FnMut(&mut Cube)> = Box::new(|cube: &mut Cube| {
-            self.activity.sort_by_activity(cube, false);
-        });
-        let rev: Box<dyn FnMut(&mut Cube)> = Box::new(|cube: &mut Cube| {
-            cube.reverse();
-        });
-        let mut order = if self.options.ic3.inn || !self.auxiliary_var.is_empty() {
-            vec![inn, act, rev]
-        } else {
-            vec![act, rev]
-        };
-        for i in 0.. {
-            if latchs.is_empty() {
-                break;
-            }
-            if let Some(f) = order.get_mut(i) {
-                f(&mut latchs);
-            } else {
-                latchs.shuffle(&mut self.lift.rng);
-            }
-            let olen = latchs.len();
-            latchs = Self::minimal_predecessor(&mut self.lift, &inputs, &latchs, &cls).unwrap();
-            if latchs.len() == olen || !strengthen {
-                break;
-            }
-        }
-        self.lift.unset_domain();
-        self.statistic.block_get_predecessor_time += start.elapsed();
-        (latchs, inputs)
-    }
-
-    pub fn new_var(&mut self) -> Var {
-        let ts = unsafe { Rc::get_mut_unchecked(&mut self.ts) };
-        let var = ts.new_var();
-        for s in self.solvers.iter_mut() {
-            assert!(var == s.new_var());
-        }
-        assert!(var == self.lift.new_var());
-        var
-    }
-
-    pub fn add_latch(
-        &mut self,
-        state: Var,
-        next: Lit,
-        init: Option<bool>,
-        mut trans: Vec<Clause>,
-        dep: Vec<Var>,
-    ) {
-        for i in 0..trans.len() {
-            let mut nt = Clause::new();
-            for l in trans[i].iter() {
-                nt.push(if l.var() == state {
-                    next.not_if(!l.polarity())
-                } else {
-                    self.ts.lit_next(*l)
-                });
-            }
-            trans.push(nt);
-        }
-        let ts = unsafe { Rc::get_mut_unchecked(&mut self.ts) };
-        ts.add_latch(state, next, init, trans.clone(), dep.clone());
-        let tmp_lit_set = unsafe { Rc::get_mut_unchecked(&mut self.frame.tmp_lit_set) };
-        tmp_lit_set.reserve(ts.max_latch);
-        for s in self.solvers.iter_mut().chain(Some(&mut self.lift)) {
-            s.reset();
-            for cls in trans.iter() {
-                s.add_clause_inner(cls, ClauseKind::Trans);
-            }
-            s.add_domain(state, true);
-        }
-        if !self.solvers[0].value.v(state.lit()).is_none() {
-            if self.solvers[0].value.v(state.lit()).is_true() {
-                ts.init.push(state.lit());
-                ts.init_map[state] = Some(true);
-            } else {
-                ts.init.push(!state.lit());
-                ts.init_map[state] = Some(false);
-            }
-        } else if !self.solvers[0]
-            .solve_with_domain(&[state.lit()], vec![], true, false)
-            .unwrap()
-        {
-            ts.init.push(!state.lit());
-            ts.init_map[state] = Some(false);
-        } else if !self.solvers[0]
-            .solve_with_domain(&[!state.lit()], vec![], true, false)
-            .unwrap()
-        {
-            ts.init.push(state.lit());
-            ts.init_map[state] = Some(true);
-        }
-        self.activity.reserve(state);
-        self.auxiliary_var.push(state);
     }
 }

@@ -1,8 +1,7 @@
 use crate::{
     options::Options,
     transys::{unroll::TransysUnroll, Transys},
-    verify::witness_encode,
-    Engine,
+    witness_encode, Engine,
 };
 use aig::{Aig, AigEdge};
 use logic_form::Cube;
@@ -76,7 +75,7 @@ impl Engine for Kind {
                 if bmc_k >= step {
                     for i in 0..=bmc_k - step {
                         self.solver
-                            .add_clause(&!self.uts.lits_next(&self.uts.ts.bad, i));
+                            .add_clause(&!self.uts.lits_next(&self.uts.ts.bad.cube(), i));
                     }
                 }
             }
@@ -86,7 +85,7 @@ impl Engine for Kind {
             }
             if !self.options.kind.no_bmc {
                 let mut assump = self.uts.ts.init.clone();
-                assump.extend_from_slice(&self.uts.lits_next(&self.uts.ts.bad, bmc_k));
+                assump.extend_from_slice(&self.uts.lits_next(&self.uts.ts.bad.cube(), bmc_k));
                 if self.options.verbose > 0 {
                     println!("kind bmc depth: {bmc_k}");
                 }
@@ -99,7 +98,7 @@ impl Engine for Kind {
             }
             for i in bmc_k + 1 - step..=bmc_k {
                 self.solver
-                    .add_clause(&!self.uts.lits_next(&self.uts.ts.bad, i));
+                    .add_clause(&!self.uts.lits_next(&self.uts.ts.bad.cube(), i));
             }
             self.uts.unroll_to(k);
             self.uts.load_trans(self.solver.as_mut(), k, true);
@@ -107,12 +106,13 @@ impl Engine for Kind {
                 println!("kind depth: {k}");
             }
             let res = if self.options.kind.kind_kissat {
-                for l in self.uts.lits_next(&self.uts.ts.bad, k) {
+                for l in self.uts.lits_next(&self.uts.ts.bad.cube(), k) {
                     self.solver.add_clause(&[l]);
                 }
                 self.solver.solve(&[])
             } else {
-                self.solver.solve(&self.uts.lits_next(&self.uts.ts.bad, k))
+                self.solver
+                    .solve(&self.uts.lits_next(&self.uts.ts.bad.cube(), k))
             };
             if !res {
                 println!("k-induction proofed in depth {k}");
@@ -162,14 +162,14 @@ impl Engine for Kind {
             } else {
                 (aux_latchs[i - 1], Some(false))
             };
-            certifaiger.new_latch(input, next, init);
+            certifaiger.add_latch(input, next, init);
         }
         for i in 1..k {
             for j in 0..ni {
-                certifaiger.new_latch(inputs[j + i * ni], inputs[j + (i - 1) * ni].into(), None);
+                certifaiger.add_latch(inputs[j + i * ni], inputs[j + (i - 1) * ni].into(), None);
             }
             for j in 0..nl {
-                certifaiger.new_latch(
+                certifaiger.add_latch(
                     latchs[j + i * nl].input,
                     latchs[j + (i - 1) * nl].input.into(),
                     None,

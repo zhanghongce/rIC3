@@ -1,38 +1,24 @@
 #![allow(non_snake_case)]
 #![feature(assert_matches, get_mut_unchecked, format_args_nl)]
 
-mod activity;
 pub mod bmc;
-mod frame;
 pub mod frontend;
-pub mod general;
 mod gipsat;
+pub mod ic3;
 pub mod kind;
-mod mic;
 pub mod options;
 pub mod portfolio;
-mod proofoblig;
-mod statistic;
 pub mod transys;
-pub mod verify;
-pub mod wl;
 
-use crate::proofoblig::{ProofObligation, ProofObligationQueue};
-use crate::statistic::Statistic;
-use activity::Activity;
-use aig::{Aig, AigEdge};
-use frame::{Frame, Frames};
-use gipsat::statistic::SolverStatistic;
-use gipsat::Solver;
-use logic_form::{Clause, Cube, Lemma, Lit, Var};
-use mic::{DropVarParameter, MicType};
+use aig::{Aig, TernarySimulate};
+use logic_form::{ternary::TernaryValue, Cube, Var};
 use options::Options;
-use std::collections::HashMap;
-use std::rc::Rc;
-use std::time::Instant;
-use transys::unroll::TransysUnroll;
-use transys::Transys;
-use verify::witness_encode;
+use std::{
+    collections::HashMap,
+    fs::File,
+    io::{self, Write},
+    process::Command,
+};
 
 pub trait Engine {
     fn check(&mut self) -> Option<bool>;
@@ -48,487 +34,127 @@ pub trait Engine {
     fn statistic(&mut self) {}
 }
 
-pub struct IC3 {
-    options: Options,
-    ts: Rc<Transys>,
-    frame: Frames,
-    solvers: Vec<Solver>,
-    lift: Solver,
-    obligations: ProofObligationQueue,
-    activity: Activity,
-    statistic: Statistic,
-    pre_lemmas: Vec<Clause>,
-    abs_cst: Cube,
-    bmc_solver: Option<(Box<dyn satif::Satif>, TransysUnroll)>,
-
-    auxiliary_var: Vec<Var>,
-    xor_var: HashMap<(Lit, Lit), Lit>,
+pub fn witness_encode(aig: &Aig, witness: &[Cube]) -> String {
+    let mut wit = vec!["1".to_string(), "b".to_string()];
+    let map: HashMap<Var, bool> =
+        HashMap::from_iter(witness[0].iter().map(|l| (l.var(), l.polarity())));
+    let mut line = String::new();
+    let mut state = Vec::new();
+    for l in aig.latchs.iter() {
+        let r = if let Some(r) = l.init {
+            r
+        } else if let Some(r) = map.get(&Var::new(l.input)) {
+            *r
+        } else {
+            true
+        };
+        state.push(TernaryValue::from(r));
+        line.push(if r { '1' } else { '0' })
+    }
+    wit.push(line);
+    let mut simulate = TernarySimulate::new(aig, state);
+    for c in witness[1..].iter() {
+        let map: HashMap<Var, bool> = HashMap::from_iter(c.iter().map(|l| (l.var(), l.polarity())));
+        let mut line = String::new();
+        let mut input = Vec::new();
+        for l in aig.inputs.iter() {
+            let r = if let Some(r) = map.get(&Var::new(*l)) {
+                *r
+            } else {
+                true
+            };
+            line.push(if r { '1' } else { '0' });
+            input.push(TernaryValue::from(r));
+        }
+        wit.push(line);
+        simulate.simulate(input);
+    }
+    let p = aig
+        .bads
+        .iter()
+        .position(|b| simulate.value(*b) == TernaryValue::True)
+        .unwrap();
+    wit[1] = format!("b{p}");
+    wit.push(".\n".to_string());
+    wit.join("\n")
 }
 
-impl IC3 {
-    #[inline]
-    pub fn level(&self) -> usize {
-        self.solvers.len() - 1
+pub fn check_certifaiger(engine: &mut Box<dyn Engine>, aig: &Aig, option: &Options) {
+    if option.witness {
+        println!("0");
     }
-
-    fn extend(&mut self) {
-        let mut solver = Solver::new(
-            self.options.clone(),
-            Some(self.frame.len()),
-            &self.ts,
-            &self.frame,
+    if option.certifaiger_path.is_none() && !option.certify {
+        return;
+    }
+    let mut certifaiger = engine.certifaiger(aig);
+    certifaiger = certifaiger.reencode();
+    certifaiger.symbols.clear();
+    for i in 0..aig.inputs.len() {
+        certifaiger.set_symbol(certifaiger.inputs[i], &format!("= {}", aig.inputs[i] * 2));
+    }
+    for i in 0..aig.latchs.len() {
+        certifaiger.set_symbol(
+            certifaiger.latchs[i].input,
+            &format!("= {}", aig.latchs[i].input * 2),
         );
-        for v in self.auxiliary_var.iter() {
-            solver.add_domain(*v, true);
-        }
-        self.solvers.push(solver);
-        self.frame.push(Frame::new());
-        if self.level() == 0 {
-            for init in self.ts.init.clone() {
-                self.add_lemma(0, Cube::from([!init]), true, None);
-            }
-            let mut init = Cube::new();
-            for l in self.ts.latchs.iter() {
-                if self.ts.init_map[*l].is_none() {
-                    if let Some(v) = self.solvers[0].sat_value(l.lit()) {
-                        let l = l.lit().not_if(!v);
-                        init.push(l);
-                    }
-                }
-            }
-            let ts = unsafe { Rc::get_mut_unchecked(&mut self.ts) };
-            for i in init {
-                ts.add_init(i.var(), Some(i.polarity()));
-            }
-        } else if self.level() == 1 {
-            for cls in self.pre_lemmas.clone().iter() {
-                self.add_lemma(1, !cls.clone(), true, None);
-            }
-        }
     }
+    verify_certifaiger(&certifaiger, option);
+}
 
-    fn push_lemma(&mut self, frame: usize, mut cube: Cube) -> (usize, Cube) {
-        let start = Instant::now();
-        for i in frame + 1..=self.level() {
-            if let Some(true) = self.solvers[i - 1].inductive(&cube, true, false) {
-                cube = self.solvers[i - 1].inductive_core();
-            } else {
-                return (i, cube);
-            }
-        }
-        self.statistic.block_push_time += start.elapsed();
-        (self.level() + 1, cube)
+pub fn verify_certifaiger(certifaiger: &Aig, option: &Options) {
+    if let Some(witness) = &option.certifaiger_path {
+        certifaiger.to_file(witness, true);
     }
-
-    fn generalize(&mut self, mut po: ProofObligation, mic_type: MicType) -> bool {
-        if self.options.ic3.inn && self.ts.cube_subsume_init(&po.lemma) {
-            po.frame += 1;
-            self.add_obligation(po.clone());
-            return self.add_lemma(po.frame - 1, po.lemma.cube().clone(), false, Some(po));
-        }
-        let mut mic = self.solvers[po.frame - 1].inductive_core();
-        mic = self.mic(po.frame, mic, &[], mic_type);
-        let (frame, mic) = self.push_lemma(po.frame, mic);
-        self.statistic.avg_po_cube_len += po.lemma.len();
-        po.push_to(frame);
-        self.add_obligation(po.clone());
-        if self.add_lemma(frame - 1, mic.clone(), false, Some(po)) {
-            return true;
-        }
-        false
+    if !option.certify {
+        return;
     }
-
-    fn block(&mut self) -> Option<bool> {
-        while let Some(mut po) = self.obligations.pop(self.level()) {
-            if po.removed {
-                continue;
-            }
-            if self.ts.cube_subsume_init(&po.lemma) {
-                if self.options.ic3.abs_cst {
-                    self.add_obligation(po.clone());
-                    if let Some(c) = self.check_witness_by_bmc(po.clone()) {
-                        for c in c {
-                            assert!(!self.abs_cst.contains(&c));
-                            self.abs_cst.push(c);
-                        }
-                        if self.options.verbose > 1 {
-                            println!("abs cst len: {}", self.abs_cst.len(),);
-                        }
-                        self.obligations.clear();
-                        for f in self.frame.iter_mut() {
-                            for l in f.iter_mut() {
-                                l.po = None;
-                            }
-                        }
-                        continue;
-                    } else {
-                        return Some(false);
-                    }
-                } else if self.options.ic3.inn && po.frame > 0 {
-                    assert!(!self.solvers[0]
-                        .solve_with_domain(&po.lemma, vec![], true, false)
-                        .unwrap());
-                } else {
-                    self.add_obligation(po.clone());
-                    assert!(po.frame == 0);
-                    return Some(false);
-                }
-            }
-            if let Some((bf, _)) = self.frame.trivial_contained(po.frame, &po.lemma) {
-                po.push_to(bf + 1);
-                self.add_obligation(po);
-                continue;
-            }
-            if self.options.verbose > 2 {
-                self.frame.statistic();
-            }
-            po.bump_act();
-            let blocked_start = Instant::now();
-            let blocked = self
-                .blocked_with_ordered(po.frame, &po.lemma, false, false, false)
-                .unwrap();
-            self.statistic.block_blocked_time += blocked_start.elapsed();
-            if blocked {
-                let mic_type = if self.options.ic3.dynamic {
-                    if let Some(mut n) = po.next.as_mut() {
-                        let mut act = n.act;
-                        for _ in 0..2 {
-                            if let Some(nn) = n.next.as_mut() {
-                                n = nn;
-                                act = act.max(n.act);
-                            } else {
-                                break;
-                            }
-                        }
-                        const CTG_THRESHOLD: f64 = 10.0;
-                        const EXCTG_THRESHOLD: f64 = 40.0;
-                        let (limit, max, level) = match act {
-                            EXCTG_THRESHOLD.. => {
-                                let limit = ((act - EXCTG_THRESHOLD).powf(0.3) * 2.0 + 5.0).round()
-                                    as usize;
-                                (limit, 5, 1)
-                            }
-                            CTG_THRESHOLD..EXCTG_THRESHOLD => {
-                                let max = (act - CTG_THRESHOLD) as usize / 10 + 2;
-                                (1, max, 1)
-                            }
-                            ..CTG_THRESHOLD => (0, 0, 0),
-                            _ => panic!(),
-                        };
-                        let p = DropVarParameter::new(limit, max, level);
-                        MicType::DropVar(p)
-                    } else {
-                        MicType::DropVar(Default::default())
-                    }
-                } else {
-                    MicType::from_options(&self.options)
-                };
-                if self.generalize(po, mic_type) {
-                    return None;
-                }
-            } else {
-                let (model, inputs) = self.get_predecessor(po.frame, true);
-                self.add_obligation(ProofObligation::new(
-                    po.frame - 1,
-                    Lemma::new(model),
-                    inputs,
-                    po.depth + 1,
-                    Some(po.clone()),
-                ));
-                self.add_obligation(po);
-            }
-        }
-        Some(true)
+    let certifaiger_file = tempfile::NamedTempFile::new().unwrap();
+    let certifaiger_path = certifaiger_file.path().as_os_str().to_str().unwrap();
+    certifaiger.to_file(certifaiger_path, true);
+    let output = Command::new("/root/certifaiger/build/check")
+        .arg(&option.model)
+        .arg(certifaiger_path)
+        .output()
+        .expect("certifaiger not found");
+    if option.verbose > 1 {
+        io::stdout().write_all(&output.stdout).unwrap();
     }
-
-    #[allow(unused)]
-    fn trivial_block_rec(
-        &mut self,
-        frame: usize,
-        lemma: Lemma,
-        constrain: &[Clause],
-        limit: &mut usize,
-        parameter: DropVarParameter,
-    ) -> bool {
-        if frame == 0 {
-            return false;
-        }
-        if self.ts.cube_subsume_init(&lemma) {
-            return false;
-        }
-        if *limit == 0 {
-            return false;
-        }
-        *limit -= 1;
-        loop {
-            if self
-                .blocked_with_ordered_with_constrain(
-                    frame,
-                    &lemma,
-                    false,
-                    true,
-                    constrain.to_vec(),
-                    false,
-                )
-                .unwrap()
-            {
-                let mut mic = self.solvers[frame - 1].inductive_core();
-                mic = self.mic(frame, mic, constrain, MicType::DropVar(parameter));
-                let (frame, mic) = self.push_lemma(frame, mic);
-                self.add_lemma(frame - 1, mic, false, None);
-                return true;
-            } else {
-                if *limit == 0 {
-                    return false;
-                }
-                let model = Lemma::new(self.get_predecessor(frame, false).0);
-                if !self.trivial_block_rec(frame - 1, model, constrain, limit, parameter) {
-                    return false;
-                }
-            }
-        }
-    }
-
-    fn trivial_block(
-        &mut self,
-        frame: usize,
-        lemma: Lemma,
-        constrain: &[Clause],
-        parameter: DropVarParameter,
-    ) -> bool {
-        let mut limit = parameter.limit;
-        self.trivial_block_rec(frame, lemma, constrain, &mut limit, parameter)
-    }
-
-    fn propagate(&mut self, from: Option<usize>) -> bool {
-        let from = from.unwrap_or(self.frame.early).max(1);
-        for frame_idx in from..self.level() {
-            self.frame[frame_idx].sort_by_key(|x| x.len());
-            let frame = self.frame[frame_idx].clone();
-            for mut lemma in frame {
-                if self.frame[frame_idx].iter().all(|l| l.ne(&lemma)) {
-                    continue;
-                }
-                for ctp in 0..3 {
-                    if self
-                        .blocked_with_ordered(frame_idx + 1, &lemma, false, false, false)
-                        .unwrap()
-                    {
-                        let core = if self.options.ic3.inn && self.ts.cube_subsume_init(&lemma) {
-                            lemma.cube().clone()
-                        } else {
-                            self.solvers[frame_idx].inductive_core()
-                        };
-                        if let Some(po) = &mut lemma.po {
-                            if po.frame < frame_idx + 2 && self.obligations.remove(po) {
-                                po.push_to(frame_idx + 2);
-                                self.obligations.add(po.clone());
-                            }
-                        }
-                        self.add_lemma(frame_idx + 1, core, true, lemma.po);
-                        self.statistic.ctp.statistic(ctp > 0);
-                        break;
-                    }
-                    if !self.options.ic3.ctp {
-                        break;
-                    }
-                    let (ctp, _) = self.get_predecessor(frame_idx + 1, false);
-                    if !self.ts.cube_subsume_init(&ctp)
-                        && self.solvers[frame_idx - 1]
-                            .inductive(&ctp, true, false)
-                            .unwrap()
-                    {
-                        let core = self.solvers[frame_idx - 1].inductive_core();
-                        let mic =
-                            self.mic(frame_idx, core, &[], MicType::DropVar(Default::default()));
-                        if self.add_lemma(frame_idx, mic, false, None) {
-                            return true;
-                        }
-                    } else {
-                        break;
-                    }
-                }
-            }
-            if self.frame[frame_idx].is_empty() {
-                return true;
-            }
-        }
-        self.frame.early = self.level();
-        false
+    if output.status.success() {
+        println!("certifaiger check passed");
+    } else {
+        panic!("certifaiger check failed");
     }
 }
 
-impl IC3 {
-    pub fn new(options: Options, mut ts: Transys, pre_lemmas: Vec<Clause>) -> Self {
-        if options.ic3.inn {
-            let mut uts = TransysUnroll::new(&ts);
-            uts.unroll();
-            ts = uts.interal_signals();
-            ts = ts.simplify(&[], true, false);
-        }
-        let ts = Rc::new(ts);
-        let statistic = Statistic::new(&options.model);
-        let activity = Activity::new(&ts);
-        let frame = Frames::new(&ts);
-        let lift = Solver::new(options.clone(), None, &ts, &frame);
-        let abs_cst = if options.ic3.abs_cst {
-            Cube::new()
-        } else {
-            ts.constraints.clone()
-        };
-        let mut res = Self {
-            options,
-            ts,
-            activity,
-            solvers: Vec::new(),
-            lift,
-            statistic,
-            obligations: ProofObligationQueue::new(),
-            frame,
-            abs_cst,
-            pre_lemmas,
-            auxiliary_var: Vec::new(),
-            xor_var: HashMap::new(),
-            bmc_solver: None,
-        };
-        res.extend();
-        res
+pub fn check_witness(engine: &mut Box<dyn Engine>, aig: &Aig, option: &Options) {
+    if option.certifaiger_path.is_none() && !option.certify && !option.witness {
+        return;
     }
-}
-
-impl Engine for IC3 {
-    fn check(&mut self) -> Option<bool> {
-        loop {
-            let start = Instant::now();
-            loop {
-                match self.block() {
-                    Some(false) => {
-                        self.statistic.overall_block_time += start.elapsed();
-                        self.statistic();
-                        return Some(false);
-                    }
-                    None => {
-                        self.statistic.overall_block_time += start.elapsed();
-                        self.statistic();
-                        self.verify();
-                        return Some(true);
-                    }
-                    _ => (),
-                }
-                if let Some((bad, inputs)) = self.get_bad() {
-                    let bad = Lemma::new(bad);
-                    self.add_obligation(ProofObligation::new(self.level(), bad, inputs, 0, None))
-                } else {
-                    break;
-                }
-            }
-            let blocked_time = start.elapsed();
-            if self.options.verbose > 1 {
-                self.frame.statistic();
-                println!(
-                    "[{}:{}] frame: {}, time: {:?}",
-                    file!(),
-                    line!(),
-                    self.level(),
-                    blocked_time,
-                );
-            }
-            self.statistic.overall_block_time += blocked_time;
-            self.extend();
-            let start = Instant::now();
-            let propagate = self.propagate(None);
-            self.statistic.overall_propagate_time += start.elapsed();
-            if propagate {
-                self.statistic();
-                self.verify();
-                return Some(true);
-            }
-        }
+    let witness = engine.witness(aig);
+    if let Some(witness_file) = &option.certifaiger_path {
+        let mut file: File = File::create(witness_file).unwrap();
+        file.write_all(witness.as_bytes()).unwrap();
     }
-
-    fn certifaiger(&mut self, aig: &Aig) -> Aig {
-        let invariants = self.frame.invariant();
-        let invariants = invariants
-            .iter()
-            .map(|l| Cube::from_iter(l.iter().map(|l| self.ts.restore(*l))));
-        let mut certifaiger = aig.clone();
-        let mut certifaiger_dnf = vec![];
-        for cube in invariants {
-            certifaiger_dnf
-                .push(certifaiger.new_ands_node(cube.into_iter().map(AigEdge::from_lit)));
-        }
-        let invariants = certifaiger.new_ors_node(certifaiger_dnf.into_iter());
-        let constrains: Vec<AigEdge> = certifaiger.constraints.iter().map(|e| !*e).collect();
-        let constrains = certifaiger.new_ors_node(constrains.into_iter());
-        let invariants = certifaiger.new_or_node(invariants, constrains);
-        certifaiger.bads.clear();
-        certifaiger.outputs.clear();
-        certifaiger.outputs.push(invariants);
-        certifaiger
+    if option.witness {
+        println!("{}", witness);
     }
-
-    fn witness(&mut self, aig: &Aig) -> String {
-        let mut res: Vec<Cube> = vec![Cube::new()];
-        if let Some((bmc_solver, uts)) = self.bmc_solver.as_mut() {
-            let mut wit = vec![Cube::new()];
-            for l in uts.ts.latchs.iter() {
-                let l = l.lit();
-                if let Some(v) = bmc_solver.sat_value(l) {
-                    wit[0].push(uts.ts.restore(l.not_if(!v)));
-                }
-            }
-            for k in 0..=uts.num_unroll {
-                let mut w = Cube::new();
-                for l in uts.ts.inputs.iter() {
-                    let l = l.lit();
-                    let kl = uts.lit_next(l, k);
-                    if let Some(v) = bmc_solver.sat_value(kl) {
-                        w.push(uts.ts.restore(l.not_if(!v)));
-                    }
-                }
-                wit.push(w);
-            }
-            return witness_encode(aig, &wit);
-        }
-        let b = self.obligations.peak().unwrap();
-        assert!(b.frame == 0);
-        let mut assump = if let Some(next) = b.next.clone() {
-            self.ts.cube_next(&next.lemma)
-        } else {
-            self.ts.bad.clone()
-        };
-        assump.extend_from_slice(&b.input);
-        assert!(self.solvers[0]
-            .solve_with_domain(&assump, vec![], false, false)
-            .unwrap());
-        for l in self.ts.latchs.iter() {
-            let l = l.lit();
-            if let Some(v) = self.solvers[0].sat_value(l) {
-                res[0].push(self.ts.restore(l.not_if(!v)));
-            }
-        }
-        let mut b = Some(b);
-        while let Some(bad) = b {
-            res.push(bad.input.iter().map(|l| self.ts.restore(*l)).collect());
-            b = bad.next.clone();
-        }
-        witness_encode(aig, &res)
+    if !option.certify {
+        return;
     }
-
-    fn statistic(&mut self) {
-        if self.options.verbose > 0 {
-            self.statistic.num_auxiliary_var = self.auxiliary_var.len();
-            self.obligations.statistic();
-            for f in self.frame.iter() {
-                print!("{} ", f.len());
-            }
-            println!();
-            let mut statistic = SolverStatistic::default();
-            for s in self.solvers.iter() {
-                statistic += s.statistic;
-            }
-            println!("{:#?}", statistic);
-            println!("{:#?}", self.statistic);
-        }
+    let mut wit_file = tempfile::NamedTempFile::new().unwrap();
+    wit_file.write_all(witness.as_bytes()).unwrap();
+    let wit_path = wit_file.path().as_os_str().to_str().unwrap();
+    let output = Command::new("/root/certifaiger/build/simulate")
+        .arg(&option.model)
+        .arg(wit_path)
+        .output()
+        .expect("certifaiger not found");
+    if option.verbose > 1 {
+        io::stdout().write_all(&output.stdout).unwrap();
+    }
+    if output.status.success() {
+        println!("certifaiger check passed");
+    } else {
+        panic!("certifaiger check failed");
     }
 }

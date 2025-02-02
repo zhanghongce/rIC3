@@ -67,7 +67,7 @@ impl DerefMut for Analyze {
 
 impl Solver {
     fn lit_redundant(&mut self, lit: Lit) -> bool {
-        assert!(matches!(self.analyze[lit], Mark::Unseen | Mark::Seen));
+        debug_assert!(matches!(self.analyze[lit], Mark::Unseen | Mark::Seen));
         if self.reason[lit] == CREF_NONE {
             return false;
         }

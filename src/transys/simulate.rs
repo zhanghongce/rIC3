@@ -1,4 +1,5 @@
-use crate::{transys::unroll::TransysUnroll, Transys};
+use super::Transys;
+use crate::transys::unroll::TransysUnroll;
 use logic_form::{Cube, Var};
 use satif::Satif;
 use satif_cadical::Solver;

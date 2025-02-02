@@ -67,9 +67,7 @@ impl Transys {
             frozens.push(*l);
             frozens.push(self.var_next(*l))
         }
-        for b in self.bad.iter() {
-            frozens.push(b.var());
-        }
+        frozens.push(self.bad.var());
         for c in self.constraints.iter() {
             if assert_constrain {
                 simp_solver.add_clause(&[*c]);
@@ -108,7 +106,7 @@ impl Transys {
         let inputs = self.inputs.iter().map(|v| domain_map[v]).collect();
         let latchs: Vec<Var> = self.latchs.iter().map(|v| domain_map[v]).collect();
         let init = self.init.iter().map(map_lit).collect();
-        let bad = self.bad.iter().map(map_lit).collect();
+        let bad = map_lit(&self.bad);
         let max_latch = domain_map[&self.max_latch];
         let mut init_map: VarMap<Option<bool>> = VarMap::new_with(max_latch);
         for l in self.latchs.iter() {

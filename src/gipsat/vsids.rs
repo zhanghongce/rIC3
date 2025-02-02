@@ -313,7 +313,7 @@ impl Solver {
         while let Some(decide) = self.vsids.pop() {
             if self.value.v(decide.lit()).is_none() {
                 let decide = if self.phase_saving[decide].is_none() {
-                    Lit::new(decide, self.rng.gen_bool(0.5))
+                    Lit::new(decide, self.rng.random_bool(0.5))
                 } else {
                     Lit::new(decide, self.phase_saving[decide] != Lbool::FALSE)
                 };
