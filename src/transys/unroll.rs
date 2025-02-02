@@ -9,6 +9,7 @@ pub struct TransysUnroll {
     pub num_unroll: usize,
     pub max_var: Var,
     next_map: LitMap<Vec<Lit>>,
+    // HZ: map of a literal to (multiple) future frames
 }
 
 impl TransysUnroll {
@@ -21,16 +22,20 @@ impl TransysUnroll {
         for v in Var::new(0)..=ts.max_var {
             let l = v.lit();
             if next_map[l].is_empty() {
+                // map to current frame
                 next_map[l].push(l);
                 next_map[!l].push(!l);
             }
         }
         for l in ts.latchs.iter() {
             let l = l.lit();
+             // using the next map of input ts
             let next = ts.lit_next(l);
             next_map[l].push(next);
             next_map[!l].push(!next);
         }
+        // so at this point, latches will have 2 next,
+        // but others will only have 1 next
         Self {
             ts: ts.clone(),
             num_unroll: 0,
@@ -59,12 +64,19 @@ impl TransysUnroll {
         self.next_map[!false_lit].push(!false_lit);
         for v in Var::new(0)..=self.ts.max_var {
             let l = v.lit();
+            // for those have only one next, create the variables
+            // for them
             if self.next_map[l].len() == self.num_unroll + 1 {
                 self.max_var += 1;
                 let new = self.max_var.lit();
                 self.next_map[l].push(new);
                 self.next_map[!l].push(!new);
             }
+            // create literals to be mapped
+            // for latches, you don't need to do this
+            // and finally, every var has two next
+            // some are bound by transiton relation
+            // some are free vars created above
             assert!(self.next_map[l].len() == self.num_unroll + 2);
         }
         for l in self.ts.latchs.iter() {
@@ -175,6 +187,7 @@ impl TransysUnroll {
             prev_map[n] = l;
             next_map[!l] = !n;
             prev_map[!n] = !l;
+            // map dependence using existing next map
             if dependence[n].is_empty() {
                 dependence[n] = dependence[l]
                     .iter()
@@ -195,6 +208,10 @@ impl TransysUnroll {
         if !self.ts.is_latch(self.ts.bad.var()) {
             keep.insert(self.ts.bad.var());
         }
+        // here seems to be the magic of inn option
+        // basically, you make all these vars as latches
+        // there is a question, when running ic3, can we dynamically
+        // adjust this?
         let mut latchs = Vec::new();
         for v in Var::new(1)..=self.ts.max_var {
             if !keep.contains(&v) {
@@ -214,6 +231,8 @@ impl TransysUnroll {
         for c in self.ts.constraints.iter() {
             solver.add_clause(&[*c]);
         }
+        // use the sat solver to check if init value
+        // can be implied from transitions relations and constraints
         let implies: HashSet<Lit> = HashSet::from_iter(solver.implies(&init));
         for l in latchs.iter() {
             let l = l.lit();
