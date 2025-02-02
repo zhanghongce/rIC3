@@ -45,6 +45,14 @@ impl IC3 {
                 invariants.len()
             );
         }
+        let mut file = File::create("inv.cnf").expect("Unable to create inv.cnf");
+        writeln!(&mut file, "{}", invariants.len()).expect("Failed to write to file");
+        for clause in invariants.iter() {
+            for lit in clause.cube().iter() {
+                write!(&mut file, "{} ", lit).expect("Failed to write to file");
+            }
+            writeln!(&mut file,"").expect("Failed to write to file");
+        }
     }
 
     pub fn check_witness(&mut self) -> Option<Lit> {
