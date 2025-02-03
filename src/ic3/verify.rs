@@ -3,7 +3,7 @@ use crate::transys::{unroll::TransysUnroll, Transys};
 use logic_form::{Clause, Cube, Lemma, Lit};
 use satif::Satif;
 use satif_minisat::Solver;
-use std::ops::Deref;
+use std::{io::Write, fs::File, ops::Deref};
 
 pub fn verify_invariant(ts: &Transys, invariants: &[Lemma]) -> bool {
     let mut solver = Solver::new();
