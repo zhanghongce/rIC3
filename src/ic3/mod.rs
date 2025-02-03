@@ -97,10 +97,16 @@ impl IC3 {
         }
         let mut mic = self.solvers[po.frame - 1].inductive_core();
         mic = self.mic(po.frame, mic, &[], mic_type);
+        // below is try to push "mic" to the last frame
+        // because it will extract unsatcore, so "mic" may be changed
+        // we can perhaps start from this point
+        // and add some internal points???
         let (frame, mic) = self.push_lemma(po.frame, mic);
         self.statistic.avg_po_cube_len += po.lemma.len();
+        // this is just adjusting the internal of po
         po.push_to(frame);
         self.add_obligation(po.clone());
+        // this is adding the lemma to the frame
         if self.add_lemma(frame - 1, mic.clone(), false, Some(po)) {
             return true;
         }
