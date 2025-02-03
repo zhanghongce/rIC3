@@ -70,6 +70,7 @@ impl IC3 {
                 self.ts.add_init(i.var(), Some(i.polarity()));
             }
         } else if self.level() == 1 {
+            // self.pre_lemmas are passed from outside (if given)
             for cls in self.pre_lemmas.clone().iter() {
                 self.add_lemma(1, !cls.clone(), true, None);
             }
@@ -268,8 +269,11 @@ impl IC3 {
     }
 
     fn propagate(&mut self, from: Option<usize>) -> bool {
+        // if from is not given, use max(1, self.frame.early)
         let from = from.unwrap_or(self.frame.early).max(1);
         for frame_idx in from..self.level() {
+            // ordered from small to large
+            // this means it will first try shorter clauses
             self.frame[frame_idx].sort_by_key(|x| x.len());
             let frame = self.frame[frame_idx].clone();
             for mut lemma in frame {
@@ -293,9 +297,20 @@ impl IC3 {
                         self.statistic.ctp.statistic(ctp > 0);
                         break;
                     }
+                    // else below, (when it was not pushed successfully)
                     if !self.options.ic3.ctp {
                         break;
+                        // if you have a map from lemma to the pred it blocked
+                        // you can insert it back to proofobligation,
+                        // because it has to be blocked anyway
+                        // otherwise, it will lead to bad states
+                        // but since SAT solving is very fast in rIC3
+                        // maybe it does not make sense to save the time?
                     }
+                    // check whether the model that causes the problem
+                    // can be blocked in the previous frame?
+                    // this is not recursively done (not adding may-block)
+                    // will try 3 times...
                     let (ctp, _) = self.get_pred(frame_idx + 1, false);
                     if !self.ts.cube_subsume_init(&ctp)
                         && self.solvers[frame_idx - 1].inductive(&ctp, true)

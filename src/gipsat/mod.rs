@@ -322,7 +322,7 @@ impl Solver {
         }
         !self.solve(&assump, constraint.clone())
     }
-
+    // strength: means whether to strengh the previous frame with cube(clause)
     pub fn inductive(&mut self, cube: &[Lit], strengthen: bool) -> bool {
         self.inductive_with_constrain(cube, strengthen, vec![])
     }

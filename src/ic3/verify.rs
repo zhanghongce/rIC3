@@ -17,12 +17,15 @@ pub fn verify_invariant(ts: &Transys, invariants: &[Lemma]) -> bool {
     for c in ts.constraints.iter() {
         solver.add_clause(&Clause::from([*c]));
     }
+    // check: inv (/\ Tr /\ C) => not bad
     if solver.solve(&ts.bad.cube()) {
         return false;
     }
     for lemma in invariants {
         let mut assump = ts.constraints.clone();
         assump.push(ts.bad);
+        // variable `assump` is not used? why?
+        // inv (/\ Tr /\ C) => inv
         if solver.solve(&ts.cube_next(lemma)) {
             return false;
         }

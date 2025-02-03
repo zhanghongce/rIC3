@@ -216,9 +216,15 @@ impl IC3 {
         self.statistic.avg_mic_cube_len += cube.len();
         self.statistic.num_mic += 1;
         let mut cex = Vec::new();
+        println!("F{frame} Cube: {cube}");
         self.activity.sort_by_activity(&mut cube, true);
+        // in general, if we want to have more internal nodes
+        // to be used, we may want to change this sorting...
         let mut keep = HashSet::new();
         let mut i = 0;
+        // it is unclear if the assumptions firstly presented are more likely
+        // to be used...
+        // ic3inn paper suggests to remove from the back
         while i < cube.len() {
             if keep.contains(&cube[i]) {
                 i += 1;
@@ -229,6 +235,9 @@ impl IC3 {
             let mic = if parameter.level == 0 {
                 self.down(frame, &removed_cube, &keep, &cube, constraint, &mut cex)
             } else {
+                // because DropVarParameter implements copy trait
+                // so below parameter will be copied (no ownership transfer)
+                // but why not just a reference?
                 self.ctg_down(frame, &removed_cube, &keep, &cube, parameter)
             };
             if let Some(new_cube) = mic {

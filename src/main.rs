@@ -75,6 +75,7 @@ fn main() {
 
         let assert_constrain = matches!(options.engine, options::Engine::IC3);
         let keep_dep = assert_constrain;
+        // below is to use minisat::SimpSolver to simplify the clauses
         ts = ts.simplify(&[], keep_dep, !assert_constrain);
         if options.verbose > 1 {
             ts.print_info();

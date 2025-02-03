@@ -196,6 +196,7 @@ impl TransysUnroll {
             }
         }
         let mut keep: HashSet<Var> = HashSet::from_iter(self.ts.inputs.iter().cloned());
+        // add transitive fan-out of inputs to keep?
         for i in 0..self.ts.num_var() {
             let v = Var::new(i);
             if dependence[v].iter().any(|d| keep.contains(d)) {
@@ -208,15 +209,24 @@ impl TransysUnroll {
         if !self.ts.is_latch(self.ts.bad.var()) {
             keep.insert(self.ts.bad.var());
         }
+        println!("ts.latches: {:?}", self.ts.latchs);
+        println!("ts.inputs: {:?}", self.ts.inputs);
         // here seems to be the magic of inn option
         // basically, you make all these vars as latches
         // there is a question, when running ic3, can we dynamically
         // adjust this?
+        println!("keep: {:?}", keep);
         let mut latchs = Vec::new();
         for v in Var::new(1)..=self.ts.max_var {
+            // this will exclude TFO of inputs, latch_next_var
+            // unless bad is a latch, it will be excluded as well
+            // even with assumptions, it is okay to only find lemmas over
+            // latches. This is different from D-COI where we had no control
+            // over the cubes
             if !keep.contains(&v) {
                 latchs.push(v);
                 is_latch[v] = true;
+                println!("adding variable: {v} in latch");
             }
         }
         let max_latch = *latchs.last().unwrap_or(&Var::new(0));
