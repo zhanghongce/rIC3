@@ -4,14 +4,14 @@ use aig::Aig;
 use clap::Parser;
 use rIC3::{
     bmc::BMC,
-    check_certifaiger, check_witness,
+    certificate,
     frontend::aig::aig_preprocess,
     ic3::IC3,
     kind::Kind,
     options::{self, Options},
     portfolio::Portfolio,
     transys::Transys,
-    verify_certifaiger, Engine,
+    Engine,
 };
 use std::{
     fs,
@@ -24,13 +24,17 @@ fn main() {
     procspawn::init();
     fs::create_dir_all("/tmp/rIC3").unwrap();
     let mut options = Options::parse();
+    options.model = options.model.canonicalize().unwrap();
+    if let Some(certifaiger_path) = options.certificate.as_mut() {
+        *certifaiger_path = certifaiger_path.canonicalize().unwrap();
+    }
     if options.verbose > 0 {
-        println!("the model to be checked: {}", options.model);
+        println!("the model to be checked: {}", options.model.display());
     }
     let mut aig = if options.model.ends_with(".btor") || options.model.ends_with(".btor2") {
         panic!("rIC3 currently does not support parsing BTOR2 files. Please use btor2aiger (https://github.com/hwmcc/btor2tools) to first convert them to AIG format.")
     } else {
-        Aig::from_file(&options.model)
+        Aig::from_file(options.model.to_str().unwrap())
     };
     if !aig.outputs.is_empty() && !options.certify {
         // not certifying, move outputs to bads
@@ -49,7 +53,9 @@ fn main() {
     let origin_aig = aig.clone();
     if aig.bads.is_empty() {
         println!("warning: no property to be checked");
-        verify_certifaiger(&aig, &options);
+        if let Some(certificate) = &options.certificate {
+            aig.to_file(certificate.to_str().unwrap(), true);
+        }
         exit(20);
     } else if aig.bads.len() > 1 {
         if options.certify {
@@ -109,13 +115,13 @@ fn main() {
             if options.verbose > 0 {
                 println!("safe");
             }
-            check_certifaiger(&mut engine, &origin_aig, &options)
+            certificate(&mut engine, &origin_aig, &options, true)
         }
         Some(false) => {
             if options.verbose > 0 {
                 println!("unsafe");
             }
-            check_witness(&mut engine, &origin_aig, &options)
+            certificate(&mut engine, &origin_aig, &options, false)
         }
         _ => {
             if options.verbose > 0 {

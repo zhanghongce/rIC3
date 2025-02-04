@@ -323,7 +323,7 @@ impl IC3 {
             ts = ts.simplify(&[], true, false);
         }
         let ts = Grc::new(ts);
-        let statistic = Statistic::new(&options.model);
+        let statistic = Statistic::new(options.model.to_str().unwrap());
         let activity = Activity::new(&ts);
         let frame = Frames::new(&ts);
         let lift = Solver::new(options.clone(), None, &ts);

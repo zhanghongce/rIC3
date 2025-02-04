@@ -79,76 +79,77 @@ pub fn witness_encode(aig: &Aig, witness: &[Cube]) -> String {
     wit.join("\n")
 }
 
-pub fn check_certifaiger(engine: &mut Box<dyn Engine>, aig: &Aig, option: &Options) {
-    if option.witness {
-        println!("0");
-    }
-    if option.certifaiger_path.is_none() && !option.certify {
+pub fn certificate(engine: &mut Box<dyn Engine>, aig: &Aig, option: &Options, res: bool) {
+    if option.certificate.is_none() && !option.certify && !option.witness {
         return;
     }
-    let mut certifaiger = engine.certifaiger(aig);
-    certifaiger = certifaiger.reencode();
-    certifaiger.symbols.clear();
-    for i in 0..aig.inputs.len() {
-        certifaiger.set_symbol(certifaiger.inputs[i], &format!("= {}", aig.inputs[i] * 2));
-    }
-    for i in 0..aig.latchs.len() {
-        certifaiger.set_symbol(
-            certifaiger.latchs[i].input,
-            &format!("= {}", aig.latchs[i].input * 2),
-        );
-    }
-    verify_certifaiger(&certifaiger, option);
-}
-
-pub fn verify_certifaiger(certifaiger: &Aig, option: &Options) {
-    if let Some(witness) = &option.certifaiger_path {
-        certifaiger.to_file(witness, true);
-    }
-    if !option.certify {
-        return;
-    }
-    let certifaiger_file = tempfile::NamedTempFile::new().unwrap();
-    let certifaiger_path = certifaiger_file.path().as_os_str().to_str().unwrap();
-    certifaiger.to_file(certifaiger_path, true);
-    let output = Command::new("/root/certifaiger/build/check")
-        .arg(&option.model)
-        .arg(certifaiger_path)
-        .output()
-        .expect("certifaiger not found");
-    if option.verbose > 1 {
-        io::stdout().write_all(&output.stdout).unwrap();
-    }
-    if output.status.success() {
-        println!("certifaiger check passed");
+    if res {
+        if option.witness {
+            println!("0");
+        }
+        if option.certificate.is_none() && !option.certify {
+            return;
+        }
+        let mut certifaiger = engine.certifaiger(aig);
+        certifaiger = certifaiger.reencode();
+        certifaiger.symbols.clear();
+        for i in 0..aig.inputs.len() {
+            certifaiger.set_symbol(certifaiger.inputs[i], &format!("= {}", aig.inputs[i] * 2));
+        }
+        for i in 0..aig.latchs.len() {
+            certifaiger.set_symbol(
+                certifaiger.latchs[i].input,
+                &format!("= {}", aig.latchs[i].input * 2),
+            );
+        }
+        if let Some(certificate_path) = &option.certificate {
+            certifaiger.to_file(certificate_path.to_str().unwrap(), true);
+        }
+        if !option.certify {
+            return;
+        }
+        let certificate_file = tempfile::NamedTempFile::new().unwrap();
+        let certificate_path = certificate_file.path().as_os_str().to_str().unwrap();
+        certifaiger.to_file(certificate_path, true);
+        certifaiger_check(option, certificate_path);
     } else {
-        panic!("certifaiger check failed");
+        let witness = engine.witness(aig);
+        if option.witness {
+            println!("{}", witness);
+        }
+        if let Some(certificate_path) = &option.certificate {
+            let mut file: File = File::create(certificate_path).unwrap();
+            file.write_all(witness.as_bytes()).unwrap();
+        }
+        if !option.certify {
+            return;
+        }
+        let mut wit_file = tempfile::NamedTempFile::new().unwrap();
+        wit_file.write_all(witness.as_bytes()).unwrap();
+        let wit_path = wit_file.path().as_os_str().to_str().unwrap();
+        certifaiger_check(option, wit_path);
     }
 }
 
-pub fn check_witness(engine: &mut Box<dyn Engine>, aig: &Aig, option: &Options) {
-    if option.certifaiger_path.is_none() && !option.certify && !option.witness {
-        return;
-    }
-    let witness = engine.witness(aig);
-    if let Some(witness_file) = &option.certifaiger_path {
-        let mut file: File = File::create(witness_file).unwrap();
-        file.write_all(witness.as_bytes()).unwrap();
-    }
-    if option.witness {
-        println!("{}", witness);
-    }
-    if !option.certify {
-        return;
-    }
-    let mut wit_file = tempfile::NamedTempFile::new().unwrap();
-    wit_file.write_all(witness.as_bytes()).unwrap();
-    let wit_path = wit_file.path().as_os_str().to_str().unwrap();
-    let output = Command::new("/root/certifaiger/build/simulate")
+fn certifaiger_check(option: &Options, certificate: &str) {
+    let output = Command::new("docker")
+        .args([
+            "run",
+            "--rm",
+            "-v",
+            &format!(
+                "{}:{}",
+                option.model.as_path().display(),
+                option.model.as_path().display()
+            ),
+            "-v",
+            &format!("{}:{}", certificate, certificate),
+            "certifaiger",
+        ])
         .arg(&option.model)
-        .arg(wit_path)
+        .arg(certificate)
         .output()
-        .expect("certifaiger not found");
+        .expect("certifaiger not found, please build docker image from https://github.com/Froleyks/certifaiger");
     if option.verbose > 1 {
         io::stdout().write_all(&output.stdout).unwrap();
     }

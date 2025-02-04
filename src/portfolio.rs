@@ -119,7 +119,7 @@ impl Portfolio {
     fn check_inner(&mut self) -> Option<bool> {
         let lock = self.result.0.lock().unwrap();
         for mut engine in take(&mut self.engines) {
-            let certificate = if self.option.certifaiger_path.is_some()
+            let certificate = if self.option.certificate.is_some()
                 || self.option.certify
                 || self.option.witness
             {

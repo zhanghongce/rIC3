@@ -1,5 +1,6 @@
 use clap::{Args, Parser, ValueEnum};
 use shadow_rs::shadow;
+use std::path::PathBuf;
 
 shadow!(build);
 /// rIC3 model checker
@@ -17,10 +18,10 @@ pub struct Options {
 
     /// model file in aiger format or in btor2 format.
     /// for btor model, the file name should be suffixed with .btor or .btor2
-    pub model: String,
+    pub model: PathBuf,
 
-    /// certifaiger output path
-    pub certifaiger_path: Option<String>,
+    /// certificate path
+    pub certificate: Option<PathBuf>,
 
     /// certify with certifaiger
     #[arg(long, default_value_t = false)]
