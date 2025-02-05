@@ -6,7 +6,6 @@ mod propagate;
 mod search;
 mod simplify;
 mod statistic;
-mod utils;
 mod vsids;
 
 use crate::{options::Options, transys::Transys};
@@ -15,13 +14,13 @@ pub use cdb::ClauseKind;
 use cdb::{CRef, ClauseDB, CREF_NONE};
 use domain::Domain;
 use giputils::{grc::Grc, gvec::Gvec};
+use logic_form::Lbool;
 use logic_form::{Clause, Cube, Lemma, Lit, LitSet, Var, VarMap};
 use propagate::Watchers;
 use rand::{rngs::StdRng, SeedableRng};
 use search::Value;
 use simplify::Simplify;
 pub use statistic::SolverStatistic;
-use utils::Lbool;
 use vsids::Vsids;
 
 pub struct Solver {

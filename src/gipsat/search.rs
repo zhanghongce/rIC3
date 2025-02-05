@@ -1,9 +1,8 @@
 use super::{
     cdb::{CRef, ClauseKind, CREF_NONE},
-    utils::Lbool,
     Solver,
 };
-use logic_form::{Lit, Var, VarMap};
+use logic_form::{Lbool, Lit, Var, VarMap};
 
 #[derive(Default)]
 pub struct Value {

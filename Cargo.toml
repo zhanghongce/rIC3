@@ -1,6 +1,6 @@
 [package]
 name = "rIC3"
-version = "1.3.3"
+version = "1.3.4"
 edition = "2021"
 authors = ["Yuheng Su <gipsyh.icu@gmail.com>"]
 repository = "https://github.com/gipsyh/rIC3"
@@ -16,7 +16,7 @@ aig = { path = "./deps/aig-rs", version = "0.2.6" }
 satif-minisat = { path = "./deps/minisat-rs", version = "0.2" }
 satif-cadical = { path = "./deps/cadical-rs", version = "0.1" }
 satif-kissat = { path = "./deps/kissat-rs", version = "0.4" }
-logic-form = { path = "./deps/logic-form", version = "0.2.6" }
+logic-form = { path = "./deps/logic-form", version = "0.2.10" }
 giputils = { path = "./deps/giputils", version = "0.2.3" }
 satif = { path = "./deps/satif", version = "0.1" }
 abc-rs = { path = "./deps/abc-rs", version = "0.2" }
