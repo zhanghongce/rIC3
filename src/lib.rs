@@ -1,5 +1,5 @@
 #![allow(non_snake_case)]
-#![feature(assert_matches, get_mut_unchecked, format_args_nl)]
+#![feature(get_mut_unchecked)]
 
 pub mod bmc;
 pub mod frontend;
@@ -80,13 +80,7 @@ pub fn witness_encode(aig: &Aig, witness: &[Cube]) -> String {
 }
 
 pub fn certificate(engine: &mut Box<dyn Engine>, aig: &Aig, option: &Options, res: bool) {
-    if option.certificate.is_none() && !option.certify && !option.witness {
-        return;
-    }
     if res {
-        if option.witness {
-            println!("0");
-        }
         if option.certificate.is_none() && !option.certify {
             return;
         }
@@ -113,6 +107,9 @@ pub fn certificate(engine: &mut Box<dyn Engine>, aig: &Aig, option: &Options, re
         certifaiger.to_file(certificate_path, true);
         certifaiger_check(option, certificate_path);
     } else {
+        if option.certificate.is_none() && !option.certify && !option.witness {
+            return;
+        }
         let witness = engine.witness(aig);
         if option.witness {
             println!("{}", witness);

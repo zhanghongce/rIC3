@@ -127,6 +127,10 @@ impl Engine for Kind {
     }
 
     fn certifaiger(&mut self, aig: &Aig) -> Aig {
+        if self.options.kind.simple_path {
+            //TODO: support certifaiger with simple path constraint
+            panic!("k-induction with simple path constraint not support certifaiger");
+        }
         let mut certifaiger = aig.clone();
         let ni = aig.inputs.len();
         let nl = aig.latchs.len();

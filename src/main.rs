@@ -25,9 +25,6 @@ fn main() {
     fs::create_dir_all("/tmp/rIC3").unwrap();
     let mut options = Options::parse();
     options.model = options.model.canonicalize().unwrap();
-    if let Some(certifaiger_path) = options.certificate.as_mut() {
-        *certifaiger_path = certifaiger_path.canonicalize().unwrap();
-    }
     if options.verbose > 0 {
         println!("the model to be checked: {}", options.model.display());
     }
@@ -114,6 +111,9 @@ fn main() {
         Some(true) => {
             if options.verbose > 0 {
                 println!("safe");
+            }
+            if options.witness {
+                println!("0");
             }
             certificate(&mut engine, &origin_aig, &options, true)
         }
