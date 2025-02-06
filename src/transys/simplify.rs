@@ -1,15 +1,15 @@
 use super::Transys;
+use giputils::hash::{GHashMap, GHashSet};
 use logic_form::{Clause, Lit, LitMap, Var, VarMap};
 use satif::Satif;
 use satif_minisat::SimpSolver;
-use std::collections::{HashMap, HashSet};
 
 impl Transys {
     fn compress_deps_rec(
         v: Var,
         deps: &mut VarMap<Vec<Var>>,
-        domain: &HashSet<Var>,
-        compressed: &mut HashSet<Var>,
+        domain: &GHashSet<Var>,
+        compressed: &mut GHashSet<Var>,
     ) {
         if compressed.contains(&v) {
             return;
@@ -17,7 +17,7 @@ impl Transys {
         for d in 0..deps[v].len() {
             Self::compress_deps_rec(deps[v][d], deps, domain, compressed);
         }
-        let mut dep = HashSet::new();
+        let mut dep = GHashSet::new();
         for d in deps[v].iter() {
             if domain.contains(d) {
                 dep.insert(*d);
@@ -32,8 +32,8 @@ impl Transys {
         compressed.insert(v);
     }
 
-    fn compress_deps(mut deps: VarMap<Vec<Var>>, domain: &HashSet<Var>) -> VarMap<Vec<Var>> {
-        let mut compressed: HashSet<Var> = HashSet::new();
+    fn compress_deps(mut deps: VarMap<Vec<Var>>, domain: &GHashSet<Var>) -> VarMap<Vec<Var>> {
+        let mut compressed: GHashSet<Var> = GHashSet::new();
         for v in 0..deps.len() {
             let v = Var::new(v);
             Self::compress_deps_rec(v, &mut deps, domain, &mut compressed)
@@ -84,7 +84,7 @@ impl Transys {
         let mut trans = simp_solver.clauses();
         trans.push(Clause::from([!false_lit]));
         let mut max_var = false_lit.var();
-        let mut domain = HashSet::from_iter(frozens);
+        let mut domain = GHashSet::from_iter(frozens);
         max_var = *domain.iter().max().unwrap_or(&max_var);
         for cls in trans.iter() {
             for l in cls.iter() {
@@ -98,7 +98,7 @@ impl Transys {
         let dep = Self::compress_deps(self.dependence.clone(), &domain);
         let mut domain = Vec::from_iter(domain);
         domain.sort();
-        let mut domain_map = HashMap::new();
+        let mut domain_map = GHashMap::new();
         for (i, d) in domain.iter().enumerate() {
             domain_map.insert(*d, Var::new(i));
         }
@@ -143,7 +143,7 @@ impl Transys {
         for l in latchs.iter() {
             is_latch[*l] = true;
         }
-        let mut restore = HashMap::new();
+        let mut restore = GHashMap::new();
         for d in domain.iter() {
             if let Some(r) = self.restore.get(d) {
                 restore.insert(domain_map[d], *r);

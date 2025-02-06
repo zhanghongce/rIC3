@@ -10,7 +10,7 @@ use rIC3::{
     kind::Kind,
     options::{self, Options},
     portfolio::Portfolio,
-    transys::Transys,
+    transys::builder::TransysBuilder,
     Engine,
 };
 use std::{
@@ -68,7 +68,7 @@ fn main() {
         Box::new(Portfolio::new(options.clone(), &origin_aig))
     } else {
         let (aig, restore) = aig_preprocess(&aig, &options);
-        let mut ts = Transys::from_aig(&aig, &restore);
+        let mut ts = TransysBuilder::from_aig(&aig, &restore).build();
         let pre_lemmas = vec![];
         if options.preprocess.sec {
             panic!("sec not support");

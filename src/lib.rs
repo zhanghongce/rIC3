@@ -11,10 +11,10 @@ pub mod portfolio;
 pub mod transys;
 
 use aig::{Aig, TernarySimulate};
-use logic_form::{ternary::TernaryValue, Cube, Var};
+use giputils::hash::GHashMap;
+use logic_form::{Cube, Lbool, Var};
 use options::Options;
 use std::{
-    collections::HashMap,
     fs::File,
     io::{self, Write},
     process::Command,
@@ -36,8 +36,8 @@ pub trait Engine {
 
 pub fn witness_encode(aig: &Aig, witness: &[Cube]) -> String {
     let mut wit = vec!["1".to_string(), "b".to_string()];
-    let map: HashMap<Var, bool> =
-        HashMap::from_iter(witness[0].iter().map(|l| (l.var(), l.polarity())));
+    let map: GHashMap<Var, bool> =
+        GHashMap::from_iter(witness[0].iter().map(|l| (l.var(), l.polarity())));
     let mut line = String::new();
     let mut state = Vec::new();
     for l in aig.latchs.iter() {
@@ -48,13 +48,14 @@ pub fn witness_encode(aig: &Aig, witness: &[Cube]) -> String {
         } else {
             true
         };
-        state.push(TernaryValue::from(r));
+        state.push(Lbool::from(r));
         line.push(if r { '1' } else { '0' })
     }
     wit.push(line);
     let mut simulate = TernarySimulate::new(aig, state);
     for c in witness[1..].iter() {
-        let map: HashMap<Var, bool> = HashMap::from_iter(c.iter().map(|l| (l.var(), l.polarity())));
+        let map: GHashMap<Var, bool> =
+            GHashMap::from_iter(c.iter().map(|l| (l.var(), l.polarity())));
         let mut line = String::new();
         let mut input = Vec::new();
         for l in aig.inputs.iter() {
@@ -64,7 +65,7 @@ pub fn witness_encode(aig: &Aig, witness: &[Cube]) -> String {
                 true
             };
             line.push(if r { '1' } else { '0' });
-            input.push(TernaryValue::from(r));
+            input.push(Lbool::from(r));
         }
         wit.push(line);
         simulate.simulate(input);
@@ -72,7 +73,7 @@ pub fn witness_encode(aig: &Aig, witness: &[Cube]) -> String {
     let p = aig
         .bads
         .iter()
-        .position(|b| simulate.value(*b) == TernaryValue::True)
+        .position(|b| simulate.value(*b).is_true())
         .unwrap();
     wit[1] = format!("b{p}");
     wit.push(".\n".to_string());

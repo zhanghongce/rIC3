@@ -1,7 +1,8 @@
 use super::IC3;
 use crate::options::Options;
+use giputils::hash::GHashSet;
 use logic_form::{Clause, Cube, Lemma, Lit};
-use std::{collections::HashSet, time::Instant};
+use std::time::Instant;
 
 #[derive(Clone, Copy, Debug, Default)]
 pub struct DropVarParameter {
@@ -51,7 +52,7 @@ impl IC3 {
         &mut self,
         frame: usize,
         cube: &Cube,
-        keep: &HashSet<Lit>,
+        keep: &GHashSet<Lit>,
         full: &Cube,
         constraint: &[Clause],
         cex: &mut Vec<(Lemma, Lemma)>,
@@ -120,7 +121,7 @@ impl IC3 {
         &mut self,
         frame: usize,
         cube: &Cube,
-        keep: &HashSet<Lit>,
+        keep: &GHashSet<Lit>,
         full: &Cube,
         parameter: DropVarParameter,
     ) -> Option<Cube> {
@@ -142,7 +143,7 @@ impl IC3 {
                 }
             }
             let (model, _) = self.get_pred(frame, false);
-            let cex_set: HashSet<Lit> = HashSet::from_iter(model.iter().cloned());
+            let cex_set: GHashSet<Lit> = GHashSet::from_iter(model.iter().cloned());
             for lit in cube.iter() {
                 if keep.contains(lit) && !cex_set.contains(lit) {
                     return None;
@@ -217,7 +218,7 @@ impl IC3 {
         self.statistic.num_mic += 1;
         let mut cex = Vec::new();
         self.activity.sort_by_activity(&mut cube, true);
-        let mut keep = HashSet::new();
+        let mut keep = GHashSet::new();
         let mut i = 0;
         while i < cube.len() {
             if keep.contains(&cube[i]) {

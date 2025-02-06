@@ -1,7 +1,7 @@
 use super::Transys;
+use giputils::hash::{GHashMap, GHashSet};
 use logic_form::{Clause, Cube, Lit, LitMap, Var};
 use satif::Satif;
-use std::collections::{HashMap, HashSet};
 
 #[derive(Debug)]
 pub struct TransysUnroll {
@@ -204,7 +204,7 @@ impl TransysUnroll {
             dependence,
             max_latch: self.ts.max_latch,
             is_latch: self.ts.is_latch.clone(),
-            restore: HashMap::new(),
+            restore: GHashMap::new(),
         }
     }
 
@@ -235,7 +235,7 @@ impl TransysUnroll {
                     .collect()
             }
         }
-        let mut keep: HashSet<Var> = HashSet::from_iter(self.ts.inputs.iter().cloned());
+        let mut keep: GHashSet<Var> = GHashSet::from_iter(self.ts.inputs.iter().cloned());
         for i in 0..self.ts.num_var() {
             let v = Var::new(i);
             if dependence[v].iter().any(|d| keep.contains(d)) {
@@ -267,7 +267,7 @@ impl TransysUnroll {
         for c in self.ts.constraints.iter() {
             solver.add_clause(&[*c]);
         }
-        let implies: HashSet<Lit> = HashSet::from_iter(solver.implies(&init));
+        let implies: GHashSet<Lit> = GHashSet::from_iter(solver.implies(&init));
         for l in latchs.iter() {
             let l = l.lit();
             if implies.contains(&l) {
