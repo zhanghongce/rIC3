@@ -1,11 +1,9 @@
 use super::{proofoblig::ProofObligation, IC3};
 use crate::transys::Transys;
 use giputils::grc::Grc;
+use giputils::hash::GHashSet;
 use logic_form::{Cube, Lemma, Lit, LitSet};
-use std::{
-    collections::HashSet,
-    ops::{Deref, DerefMut},
-};
+use std::ops::{Deref, DerefMut};
 
 #[derive(Clone)]
 pub struct FrameLemma {
@@ -145,8 +143,8 @@ impl Frames {
 
     #[allow(unused)]
     pub fn similar(&self, cube: &[Lit], frame: usize) -> Vec<Cube> {
-        let cube_set: HashSet<Lit> = HashSet::from_iter(cube.iter().copied());
-        let mut res = HashSet::new();
+        let cube_set: GHashSet<Lit> = GHashSet::from_iter(cube.iter().copied());
+        let mut res = GHashSet::new();
         for frame in self.frames[frame..].iter() {
             for lemma in frame.iter() {
                 let sec: Cube = lemma
@@ -268,7 +266,7 @@ impl IC3 {
     }
 
     // pub fn remove_lemma(&mut self, frame: usize, lemmas: Vec<Cube>) {
-    //     let lemmas: HashSet<Lemma> = HashSet::from_iter(lemmas.into_iter().map(Lemma::new));
+    //     let lemmas: GHashSet<Lemma> = GHashSet::from_iter(lemmas.into_iter().map(Lemma::new));
     //     for i in (1..=frame).rev() {
     //         let mut j = 0;
     //         while j < self.frame[i].len() {

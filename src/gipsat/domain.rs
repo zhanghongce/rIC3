@@ -1,11 +1,9 @@
 use super::{search::Value, Solver};
 use crate::transys::Transys;
 use giputils::grc::Grc;
+use giputils::hash::GHashSet;
 use logic_form::{Var, VarSet};
-use std::{
-    collections::HashSet,
-    ops::{Deref, DerefMut},
-};
+use std::ops::{Deref, DerefMut};
 
 pub struct Domain {
     domain: VarSet,
@@ -25,7 +23,7 @@ impl Domain {
     }
 
     pub fn calculate_constrain(&mut self, ts: &Grc<Transys>, value: &Value) {
-        let mut marked = HashSet::new();
+        let mut marked = GHashSet::new();
         let mut queue = Vec::new();
         for c in ts.constraints.iter() {
             if !marked.contains(&c.var()) {
@@ -41,8 +39,6 @@ impl Domain {
                 }
             }
         }
-        let mut marked = Vec::from_iter(marked);
-        marked.sort();
         for v in marked.iter() {
             if value.v(v.lit()).is_none() {
                 self.domain.insert(*v);

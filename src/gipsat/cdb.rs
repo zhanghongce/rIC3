@@ -1,9 +1,9 @@
 use super::Solver;
 use bitfield_struct::bitfield;
 use giputils::gvec::Gvec;
+use giputils::hash::GHashMap;
 use logic_form::{Lemma, Lit};
 use std::{
-    collections::HashMap,
     mem::take,
     ops::{AddAssign, Index, MulAssign},
     ptr,
@@ -404,7 +404,7 @@ impl Solver {
         if self.simplify.lazy_remove.len() as u32 * 10 <= self.cdb.num_lemma() {
             return;
         }
-        let mut lazy_remove_map: HashMap<Lemma, u32> = HashMap::new();
+        let mut lazy_remove_map: GHashMap<Lemma, u32> = GHashMap::new();
         for mut lr in take(&mut self.simplify.lazy_remove) {
             if lr.iter().any(|l| self.value.v(*l).is_false()) {
                 continue;

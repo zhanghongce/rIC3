@@ -1,10 +1,9 @@
 use super::{
     cdb::{CRef, Clause, CREF_NONE},
-    utils::Lbool,
     Solver,
 };
 use giputils::gvec::Gvec;
-use logic_form::{Lit, LitMap, Var};
+use logic_form::{Lbool, Lit, LitMap, Var};
 
 #[derive(Clone, Copy, Debug, Default)]
 pub struct Watcher {

@@ -119,7 +119,7 @@ impl Portfolio {
     fn check_inner(&mut self) -> Option<bool> {
         let lock = self.result.0.lock().unwrap();
         for mut engine in take(&mut self.engines) {
-            let certificate = if self.option.certifaiger_path.is_some()
+            let certificate = if self.option.certificate.is_some()
                 || self.option.certify
                 || self.option.witness
             {
@@ -144,12 +144,15 @@ impl Portfolio {
                 if option.verbose > 1 {
                     println!("start engine: {config}");
                 }
+                #[cfg(target_os = "linux")]
                 let status = child
                     .controlled()
                     .memory_limit(1024 * 1024 * 1024 * 16)
                     .wait()
                     .unwrap()
                     .unwrap();
+                #[cfg(target_os = "macos")]
+                let status = child.controlled().wait().unwrap().unwrap();
                 let res = match status.code() {
                     Some(10) => false,
                     Some(20) => true,

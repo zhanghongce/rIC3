@@ -1,7 +1,7 @@
 use super::Solver;
+use giputils::hash::GHashSet;
 use logic_form::{Clause, Cube, Lit, Var};
 use rand::seq::SliceRandom;
-use std::collections::HashSet;
 
 impl Solver {
     #[inline]
@@ -31,7 +31,7 @@ impl Solver {
         if cls.is_empty() {
             return (Cube::new(), Cube::new());
         }
-        let in_cls: HashSet<Var> = HashSet::from_iter(cls.iter().map(|l| l.var()));
+        let in_cls: GHashSet<Var> = GHashSet::from_iter(cls.iter().map(|l| l.var()));
         let cls = !cls;
         let mut inputs = Cube::new();
         for input in self.ts.inputs.iter() {

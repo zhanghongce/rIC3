@@ -1,9 +1,9 @@
 use super::Transys;
 use crate::transys::unroll::TransysUnroll;
+use giputils::hash::GHashMap;
 use logic_form::{Cube, Var};
 use satif::Satif;
 use satif_cadical::Solver;
-use std::collections::HashMap;
 
 impl Transys {
     pub fn simulations(&self) -> Vec<Cube> {
@@ -43,8 +43,8 @@ impl Transys {
         res
     }
 
-    pub fn simulation_bv(&self, simulation: Vec<Cube>) -> Option<HashMap<Var, u64>> {
-        let mut bv = HashMap::new();
+    pub fn simulation_bv(&self, simulation: Vec<Cube>) -> Option<GHashMap<Var, u64>> {
+        let mut bv = GHashMap::new();
         for v in self.latchs.iter() {
             bv.insert(*v, 0);
         }

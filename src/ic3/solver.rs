@@ -1,8 +1,9 @@
 use super::IC3;
 use crate::gipsat::ClauseKind;
+use giputils::hash::GHashSet;
 use logic_form::{Clause, Cube, Lemma, Lit, Var};
 use rand::seq::SliceRandom;
-use std::{collections::HashSet, time::Instant};
+use std::time::Instant;
 
 impl IC3 {
     pub fn get_bad(&mut self) -> Option<(Cube, Cube)> {
@@ -54,7 +55,7 @@ impl IC3 {
         if cls.is_empty() {
             return (Cube::new(), Cube::new());
         }
-        let in_cls: HashSet<Var> = HashSet::from_iter(cls.iter().map(|l| l.var()));
+        let in_cls: GHashSet<Var> = GHashSet::from_iter(cls.iter().map(|l| l.var()));
         let cls = !cls;
         let mut inputs = Cube::new();
         for input in self.ts.inputs.iter() {

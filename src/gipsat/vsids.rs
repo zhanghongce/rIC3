@@ -1,6 +1,6 @@
-use super::{cdb::CREF_NONE, utils::Lbool, Solver};
+use super::{cdb::CREF_NONE, Solver};
 use giputils::{gvec::Gvec, OptionU32};
-use logic_form::{Cube, Lit, Var, VarMap};
+use logic_form::{Cube, Lbool, Lit, Var, VarMap};
 use rand::Rng;
 use std::ops::{Index, MulAssign};
 
