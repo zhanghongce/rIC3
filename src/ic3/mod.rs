@@ -102,6 +102,8 @@ impl IC3 {
         // because it will extract unsatcore, so "mic" may be changed
         // we can perhaps start from this point
         // and add some internal points???
+        println!("[generalize] po.frame:{}, mic:{:?}", po.frame, mic);
+        // note here, the returned `frame` can be as large as level() + 1
         let (frame, mic) = self.push_lemma(po.frame, mic);
         self.statistic.avg_po_cube_len += po.lemma.len();
         // this is just adjusting the internal of po
@@ -120,6 +122,8 @@ impl IC3 {
                 continue;
             }
             if self.ts.cube_subsume_init(&po.lemma) {
+                // if what the lemma tries to block
+                // has any intersection with init state...
                 if self.options.ic3.abs_cst {
                     self.add_obligation(po.clone());
                     if let Some(c) = self.check_witness_by_bmc(po.clone()) {
@@ -141,8 +145,15 @@ impl IC3 {
                         return Some(false);
                     }
                 } else if self.options.ic3.inn && po.frame > 0 {
+                    // since cube_subsume_init is just a syntactic check
+                    // it may mislead us in case we use have internal signals
+                    // so we will call the solver to make sure
+                    // it actually has no intersection with init
                     assert!(!self.solvers[0].solve(&po.lemma, vec![]));
                 } else {
+                    // even when we arrive at F0, we still keep the po
+                    // in queue (maybe there are some future uses, when
+                    // constructing the witness?)
                     self.add_obligation(po.clone());
                     assert!(po.frame == 0);
                     return Some(false);
@@ -287,6 +298,8 @@ impl IC3 {
                         } else {
                             self.solvers[frame_idx].inductive_core()
                         };
+                        // note here that po is ahead of lemma by one frame!
+                        // and it maintain this as well
                         if let Some(po) = &mut lemma.po {
                             if po.frame < frame_idx + 2 && self.obligations.remove(po) {
                                 po.push_to(frame_idx + 2);
@@ -300,17 +313,23 @@ impl IC3 {
                     // else below, (when it was not pushed successfully)
                     if !self.options.ic3.ctp {
                         break;
+                        // (old question, turns out that there is already such a thing)
                         // if you have a map from lemma to the pred it blocked
                         // you can insert it back to proofobligation,
+                        // when lemma cannot be pushed
                         // because it has to be blocked anyway
                         // otherwise, it will lead to bad states
-                        // but since SAT solving is very fast in rIC3
-                        // maybe it does not make sense to save the time?
+
+                        // --> there is such a map: FrameLemma records that.
+                        // rIC3 does not explicitly push proofobligation here,
+                        // that was maintained in a different way by `generalize`
+                        // and the above push of po
                     }
                     // check whether the model that causes the problem
                     // can be blocked in the previous frame?
                     // this is not recursively done (not adding may-block)
-                    // will try 3 times...
+                    // but CTG-down is in some sense doing the same as 
+                    // having may-blocks
                     let (ctp, _) = self.get_pred(frame_idx + 1, false);
                     if !self.ts.cube_subsume_init(&ctp)
                         && self.solvers[frame_idx - 1].inductive(&ctp, true)

@@ -107,6 +107,9 @@ impl IC3 {
         }
         self.lift.unset_domain();
         self.statistic.block_get_predecessor_time += start.elapsed();
+        // this is actually the solver on frame-1!
+        println!("F{} [get_pred] latchs {:?}", frame, latchs);
+        println!("F{} [get_pred] inputs {:?}", frame, inputs); // is it really useful?
         (latchs, inputs)
     }
 

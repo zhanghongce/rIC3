@@ -84,6 +84,7 @@ impl Frames {
         }
     }
 
+    // a syntactic check if the cube is already blocked
     #[inline]
     pub fn trivial_contained<'a>(
         &'a mut self,

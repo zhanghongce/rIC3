@@ -216,7 +216,7 @@ impl IC3 {
         self.statistic.avg_mic_cube_len += cube.len();
         self.statistic.num_mic += 1;
         let mut cex = Vec::new();
-        println!("F{frame} Cube: {cube}");
+        println!("[mic] F{frame} Cube: {cube}");
         self.activity.sort_by_activity(&mut cube, true);
         // in general, if we want to have more internal nodes
         // to be used, we may want to change this sorting...
