@@ -30,6 +30,7 @@ pub fn verify_invariant(ts: &Transys, invariants: &[Lemma]) -> bool {
             return false;
         }
     }
+    // questions: why init seems to be not used here?
     true
 }
 
